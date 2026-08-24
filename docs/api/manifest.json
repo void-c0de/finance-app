@@ -1,11 +1,11 @@
 {
-  "id": "f6e13d30-1d56-4e69-8f27-a8ee48ea95a3",
-  "createdAt": "2026-08-24T20:38:36.375Z",
+  "id": "1cb69b38-c6c9-451b-a7ad-a905d9bb7e20",
+  "createdAt": "2026-08-24T21:19:27.062Z",
   "runtimeVersion": "1.0.0",
   "launchAsset": {
-    "key": "_expo/static/js/android/entry-24082ca6043f60146d483d5baf361962.hbc",
+    "key": "_expo/static/js/android/entry-8982d53571878da8d2fe3476c833a605.hbc",
     "contentType": "application/javascript",
-    "url": "/finance-app/updates/1.0.0/_expo/static/js/android/entry-24082ca6043f60146d483d5baf361962.hbc"
+    "url": "/finance-app/updates/1.0.0/_expo/static/js/android/entry-8982d53571878da8d2fe3476c833a605.hbc"
   },
   "assets": [
     {

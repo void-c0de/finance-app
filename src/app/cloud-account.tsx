@@ -17,8 +17,8 @@ import {
 } from 'react-native';
 
 import {
-    SafeAreaView,
-} from 'react-native-safe-area-context';
+    FinanceKeyboardScreen,
+} from '@/components/layout/FinanceKeyboardScreen';
 
 import {
     SettingsRow,
@@ -311,20 +311,10 @@ export default function CloudAccountScreen() {
       true;
 
   return (
-    <SafeAreaView
-      edges={[
-        'top',
-        'bottom',
-      ]}
-
-      style={[
-        styles.safeArea,
-
-        {
-          backgroundColor:
-            colors.background,
-        },
-      ]}
+    <FinanceKeyboardScreen
+      backgroundColor={
+        colors.background
+      }
     >
       <View
         style={[
@@ -786,7 +776,7 @@ export default function CloudAccountScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </FinanceKeyboardScreen>
   );
 }
 
