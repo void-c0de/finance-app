@@ -92,6 +92,14 @@ type FinanceKeyboardScreenProps = {
     ReactNode;
 
   /**
+   * Fixierter Kopfbereich (z.B. Header
+   * mit Zurueck-Button). Bleibt oberhalb
+   * der scrollenden Flaeche sichtbar.
+   */
+  header?:
+    ReactNode;
+
+  /**
    * Hintergrundfarbe wird vom Theme
    * durch den Aufrufer gesetzt.
    */
@@ -107,25 +115,39 @@ type FinanceKeyboardScreenProps = {
   extraBottomPadding?:
     number;
 
+  contentContainerStyle?:
+    StyleProp<ViewStyle>;
+
   scrollViewProps?: Omit<
     ScrollViewProps,
     | 'keyboardShouldPersistTaps'
     | 'style'
+    | 'contentContainerStyle'
   >;
 };
 
 /**
  * Keyboard-sichere Standard-Screen-Huelle
  * fuer ALLE Formular-/Eingabe-Screens.
+ *
+ * WICHTIG: Kinder liegen in EINER zentralen
+ * Scroll-Flaeche. Keine verschachtelten
+ * ScrollViews innerhalb dieses Wrappers
+ * verwenden - sonst greift das Keyboard-
+ * Padding an der falschen Stelle.
  */
 export function FinanceKeyboardScreen({
   children,
+
+  header,
 
   backgroundColor,
 
   style,
 
   extraBottomPadding = 0,
+
+  contentContainerStyle,
 
   scrollViewProps,
 }: FinanceKeyboardScreenProps) {
@@ -155,6 +177,8 @@ export function FinanceKeyboardScreen({
           : undefined
       }
     >
+      {header}
+
       <ScrollView
         {...scrollViewProps}
 
@@ -167,10 +191,12 @@ export function FinanceKeyboardScreen({
             : 'interactive'
         }
 
+        style={styles.flex}
+
         contentContainerStyle={[
           styles.grow,
 
-          scrollViewProps?.contentContainerStyle,
+          contentContainerStyle,
 
           {
             paddingBottom:

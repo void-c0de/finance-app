@@ -9,7 +9,6 @@ import {
 
 import {
     Alert,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -315,14 +314,18 @@ export default function CloudAccountScreen() {
       backgroundColor={
         colors.background
       }
-    >
+      contentContainerStyle={{
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.sm,
+      }}
+      header={
       <View
         style={[
           styles.header,
 
           {
             paddingHorizontal:
-              spacing.lg,
+              spacing.md,
 
             paddingVertical:
               spacing.md,
@@ -389,25 +392,8 @@ export default function CloudAccountScreen() {
           }
         />
       </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={
-          false
-        }
-
-        keyboardShouldPersistTaps="handled"
-
-        contentContainerStyle={{
-          paddingHorizontal:
-            spacing.lg,
-
-          paddingTop:
-            spacing.lg,
-
-          paddingBottom:
-            spacing.huge,
-        }}
-      >
+      }
+    >
         <Text
           style={[
             typography.caption,
@@ -775,7 +761,6 @@ export default function CloudAccountScreen() {
             )}
           </>
         )}
-      </ScrollView>
     </FinanceKeyboardScreen>
   );
 }
