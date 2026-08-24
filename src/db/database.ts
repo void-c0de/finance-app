@@ -513,6 +513,77 @@ const migrations:
         END;
       `,
     },
+
+    {
+      /**
+       * M3 — Sparziele mit Beitrags-Historie.
+       *
+       * savings_goals wird erweitert
+       * (Beschreibung, Tracking-Modus,
+       *  Startbetrag, Waehrung, Status,
+       *  optionales verknuepftes Konto).
+       *
+       * goal_contributions: jede Einzahlung/
+       * Anpassung ist ein eigener, pruefbarer
+       * Datensatz. current_amount_minor wird
+       * aus starting + Summe aktiver Beitraege
+       * abgeleitet (keine Phantom-Money).
+       */
+      version: 9,
+
+      sql: `
+        ALTER TABLE savings_goals ADD COLUMN description TEXT;
+        ALTER TABLE savings_goals ADD COLUMN tracking_mode TEXT NOT NULL DEFAULT 'manual';
+        ALTER TABLE savings_goals ADD COLUMN linked_account_id TEXT;
+        ALTER TABLE savings_goals ADD COLUMN currency TEXT NOT NULL DEFAULT 'EUR';
+        ALTER TABLE savings_goals ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+        ALTER TABLE savings_goals ADD COLUMN starting_amount_minor INTEGER NOT NULL DEFAULT 0;
+
+        CREATE TABLE IF NOT EXISTS goal_contributions (
+          id TEXT PRIMARY KEY NOT NULL,
+          goal_id TEXT NOT NULL,
+          amount_minor INTEGER NOT NULL,
+          source TEXT NOT NULL DEFAULT 'manual',
+          source_transaction_id TEXT,
+          note TEXT,
+          occurred_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS
+          idx_goal_contributions_goal
+        ON goal_contributions(goal_id, deleted_at);
+
+        CREATE TRIGGER IF NOT EXISTS trg_goal_contrib_insert
+        AFTER INSERT ON goal_contributions
+        BEGIN
+          UPDATE goal_contributions SET
+            created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_goal_contrib_update
+        AFTER UPDATE ON goal_contributions
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+          UPDATE goal_contributions SET
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_savings_goals_update
+        AFTER UPDATE ON savings_goals
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+          UPDATE savings_goals SET
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+      `,
+    },
   ];
 
 async function configureDatabase(
