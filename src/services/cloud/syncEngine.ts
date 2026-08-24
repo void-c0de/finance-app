@@ -1129,6 +1129,66 @@ async function executeCloudSync(): Promise<CloudSyncResult> {
     );
 
     /*
+     * Besitzerwechsel-Erkennung:
+     *
+     * Sync-Cursor gehören immer zu einem
+     * Datenraum. Wechselt der Owner
+     * (z. B. Anmeldung am persönlichen
+     * Konto), müssen alle Cursor zurück-
+     * gesetzt werden, damit sämtliche
+     * lokalen Daten in den neuen Raum
+     * übernommen werden.
+     */
+    try {
+      const lastOwner =
+        await getSyncMetadata(
+          'last_owner',
+        );
+
+      if (
+        lastOwner &&
+        lastOwner !==
+          session.userId
+      ) {
+        debugLog.info(
+          'CLOUD',
+          'Besitzerwechsel erkannt - Cursor werden zurückgesetzt',
+        );
+
+        for (const mapping of TABLE_MAPPINGS) {
+          await setSyncMetadata(
+            `pull_cursor_${mapping.remoteTable}`,
+
+            EPOCH_CURSOR,
+          );
+
+          await setSyncMetadata(
+            `push_cursor_${mapping.remoteTable}`,
+
+            EPOCH_CURSOR,
+          );
+        }
+      }
+
+      if (
+        lastOwner !==
+        session.userId
+      ) {
+        await setSyncMetadata(
+          'last_owner',
+
+          session.userId,
+        );
+      }
+    } catch (ownerError) {
+      debugLog.warn(
+        'CLOUD',
+        'Besitzerwechsel-Prüfung fehlgeschlagen',
+        ownerError,
+      );
+    }
+
+    /*
      * Diagnose: lokales Schema der
      * Sync-Tabellen dokumentieren,
      * damit Diskrepanzen zwischen

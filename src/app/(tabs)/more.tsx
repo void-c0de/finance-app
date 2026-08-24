@@ -616,6 +616,44 @@ export default function MoreScreen() {
           />
 
           <SettingsRow
+            title="Cloud-Konto"
+
+            description="Eigenes Konto verbinden oder abmelden"
+
+            icon={
+              <Text
+                style={[
+                  styles.rowGlyph,
+
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
+              >
+                ●
+              </Text>
+            }
+
+            onPress={() => {
+              router.push(
+                '/cloud-account' as never
+              );
+            }}
+          />
+
+          <View
+            style={[
+              styles.divider,
+
+              {
+                backgroundColor:
+                  colors.border,
+              },
+            ]}
+          />
+
+          <SettingsRow
             title="Bankkonten"
 
             description="Verbindungen, Sync und lokale Konten verwalten"
