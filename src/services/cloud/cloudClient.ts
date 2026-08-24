@@ -15,11 +15,9 @@ const SUPABASE_URL =
 const SUPABASE_PUBLISHABLE_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-const SYNC_EMAIL =
-  process.env.EXPO_PUBLIC_SUPABASE_SYNC_EMAIL;
 
-const SYNC_PASSWORD =
-  process.env.EXPO_PUBLIC_SUPABASE_SYNC_PASSWORD;
+
+
 
 /**
  * SecureStore-Adapter für
@@ -59,9 +57,7 @@ let cachedClient:
 export function isCloudConfigured(): boolean {
   return Boolean(
     SUPABASE_URL &&
-      SUPABASE_PUBLISHABLE_KEY &&
-      SYNC_EMAIL &&
-      SYNC_PASSWORD,
+      SUPABASE_PUBLISHABLE_KEY
   );
 }
 
@@ -115,10 +111,11 @@ export type CloudSignInResult =
  * Stellt sicher, dass eine gültige
  * Cloud-Session existiert.
  *
- * Bestehende Sessions werden wiederverwendet
- * (persistiert in SecureStore), sonst erfolgt
- * ein Password-Grant mit dem dedizierten
- * Sync-Account.
+ * Sessions werden in SecureStore persistiert.
+ * Ohne Session wird bewusst KEIN Fallback-
+ * Passwort verwendet (keine Geheimnisse im
+ * Bundle!): Die App fordert dann eine
+ * Anmeldung über den Cloud-Konto-Bildschirm.
  */
 export async function ensureCloudSession(): Promise<CloudSignInResult> {
   const client =
@@ -155,34 +152,11 @@ export async function ensureCloudSession(): Promise<CloudSignInResult> {
       };
     }
 
-    const { data, error } =
-      await client.auth.signInWithPassword({
-        email:
-          SYNC_EMAIL as string,
-
-        password:
-          SYNC_PASSWORD as string,
-      });
-
-    if (error || !data.user) {
-      console.error(
-        '[CLOUD] Anmeldung fehlgeschlagen:',
-        error?.message,
-      );
-
-      return {
-        ok: false,
-
-        message:
-          'Cloud-Anmeldung fehlgeschlagen',
-      };
-    }
-
     return {
-      ok: true,
+      ok: false,
 
-      userId:
-        data.user.id,
+      message:
+        'Anmeldung erforderlich',
     };
   } catch (error) {
     console.error(

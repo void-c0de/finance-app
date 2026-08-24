@@ -42,7 +42,7 @@ import {
 
 import {
     setTransactionCategory,
-} from '@/db/repositories/transactions';
+} from '@/db/repositories/categorization';
 
 import {
     useCloudSyncStore,

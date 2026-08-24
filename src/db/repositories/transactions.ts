@@ -13,6 +13,7 @@ import type {
 } from '@/types/banking';
 
 import type {
+    CategorySource,
     Transaction,
     TransactionDirection,
 } from '@/types/finance';
@@ -45,6 +46,9 @@ type TransactionRow = {
     string | null;
 
   category_id:
+    string | null;
+
+  category_source:
     string | null;
 
   is_recurring: number;
@@ -97,6 +101,10 @@ function mapTransactionRow(
     categoryId:
       row.category_id ??
       undefined,
+
+    categorySource:
+      (row.category_source as CategorySource) ??
+      'auto',
 
     isRecurring:
       row.is_recurring === 1,
@@ -265,6 +273,7 @@ export async function getTransactions(
           counterparty_name,
           counterparty_iban,
           category_id,
+          category_source,
           is_recurring,
           created_at
         FROM transactions WHERE deleted_at IS NULL
@@ -279,50 +288,6 @@ export async function getTransactions(
   return rows.map(
     mapTransactionRow
   );
-}
-
-/**
- * Manuelle Kategorie-Korrektur (M2).
- *
- * - Überschreibt category_id bewusst
- * - aktualisiert updated_at, damit der
- *   Cloud-Sync die Änderung propagiert
- * - Auto-Kategorisierung greift nur bei
- *   NULL-Kategorien und überschreibt
- *   diese Wahl daher nie
- */
-export async function setTransactionCategory(
-  transactionId:
-    string,
-
-  categoryId:
-    | string
-    | null
-): Promise<void> {
-  const db =
-    await getDatabase();
-
-  const result =
-    await db.runAsync(
-      `
-        UPDATE transactions
-        SET category_id = ?
-        WHERE id = ?;
-      `,
-
-      categoryId,
-
-      transactionId,
-    );
-
-  if (
-    result.changes ===
-    0
-  ) {
-    throw new Error(
-      `Transaktion nicht gefunden: ${transactionId}`,
-    );
-  }
 }
 
 export async function getTransactionsForAccount(
@@ -357,6 +322,7 @@ export async function getTransactionsForAccount(
           counterparty_name,
           counterparty_iban,
           category_id,
+          category_source,
           is_recurring,
           created_at
         FROM transactions

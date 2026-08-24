@@ -303,6 +303,13 @@ export default function CloudAccountScreen() {
 
           : 'Unbekannt';
 
+  const showSuperuserBadge =
+    !isLoadingAccount &&
+    account?.mode ===
+      'personal' &&
+    account.isSuperuser ===
+      true;
+
   return (
     <SafeAreaView
       edges={[
@@ -440,7 +447,11 @@ export default function CloudAccountScreen() {
           }}
         >
           <SettingsRow
-            title="Aktueller Modus"
+            title={
+              showSuperuserBadge
+                ? 'Superuser'
+                : 'Aktueller Modus'
+            }
 
             description={modeLabel}
           />

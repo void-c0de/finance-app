@@ -230,6 +230,42 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
 
     {
       localTable:
+        'category_rules',
+
+      remoteTable:
+        'finance_category_rules',
+
+      booleanColumns: [
+        'enabled',
+      ],
+
+      pushColumns: [
+        'id',
+        'name',
+        'match_type',
+        'match_value',
+        'category_id',
+        'enabled',
+        'priority',
+        'deleted_at',
+      ],
+
+      pullColumns: [
+        'id',
+        'name',
+        'match_type',
+        'match_value',
+        'category_id',
+        'enabled',
+        'priority',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+      ],
+    },
+
+    {
+      localTable:
         'accounts',
 
       remoteTable:
@@ -333,6 +369,7 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
         'counterparty_name',
         'counterparty_iban',
         'category_id',
+        'category_source',
         'is_recurring',
         'deleted_at',
       ],
@@ -350,6 +387,7 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
         'counterparty_name',
         'counterparty_iban',
         'category_id',
+        'category_source',
         'is_recurring',
         'deleted_at',
         'created_at',

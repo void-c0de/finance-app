@@ -452,6 +452,67 @@ const migrations:
         );
       `,
     },
+
+    {
+      /**
+       * M2 — Kategorie-Regeln + Zuordnungsquelle.
+       *
+       * category_rules: nutzerdefinierte Regeln
+       *   ("immer Händler X -> Kategorie Y").
+       *
+       * transactions.category_source: woher kommt
+       *   die aktuelle Kategorie?
+       *   manual > rule > auto > none.
+       *   Auto-/Rule-Pfade dürfen 'manual' nie
+       *   überschreiben.
+       */
+      version: 8,
+
+      sql: `
+        CREATE TABLE IF NOT EXISTS category_rules (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          match_type TEXT NOT NULL,
+          match_value TEXT NOT NULL,
+          category_id TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          priority INTEGER NOT NULL DEFAULT 100,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS
+          idx_category_rules_enabled_priority
+        ON category_rules(enabled, priority);
+
+        ALTER TABLE transactions ADD COLUMN category_source TEXT;
+
+        UPDATE transactions
+        SET category_source = CASE
+          WHEN category_id IS NULL THEN 'none'
+          ELSE 'auto'
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_category_rules_insert
+        AFTER INSERT ON category_rules
+        BEGIN
+          UPDATE category_rules SET
+            created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_category_rules_update
+        AFTER UPDATE ON category_rules
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+          UPDATE category_rules SET
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+      `,
+    },
   ];
 
 async function configureDatabase(

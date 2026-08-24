@@ -707,7 +707,11 @@ export default function MoreScreen() {
               </Text>
             }
 
-            value="Demo"
+            onPress={() => {
+              router.push(
+                '/category-rules' as Href
+              );
+            }}
           />
         </FinanceCard>
 

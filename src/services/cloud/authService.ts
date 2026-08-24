@@ -30,6 +30,9 @@ export type PersonalAccountInfo = {
 
   userId?:
     string;
+
+  isSuperuser?:
+    boolean;
 };
 
 const SHARED_ACCOUNT_EMAIL =
@@ -62,6 +65,27 @@ export async function getPersonalAccountInfo(): Promise<PersonalAccountInfo> {
       data.user?.email ??
       undefined;
 
+    let isSuperuser =
+      false;
+
+    try {
+      const { data: profile } =
+        await supabase
+          .from('profiles')
+          .select('is_superuser')
+          .eq('id', session.userId)
+          .single();
+
+      isSuperuser =
+        profile?.is_superuser ===
+        true;
+    } catch {
+      /*
+       * Profil nicht lesbar ist kein
+       * Fehler fuer den Sync-Modus.
+       */
+    }
+
     const isShared =
       email ===
       SHARED_ACCOUNT_EMAIL;
@@ -73,6 +97,8 @@ export async function getPersonalAccountInfo(): Promise<PersonalAccountInfo> {
         : 'personal',
 
       email,
+
+      isSuperuser,
 
       userId: session.userId,
     };

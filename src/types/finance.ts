@@ -87,6 +87,13 @@ export interface Transaction {
   categoryId?:
     string;
 
+  /**
+   * Woher kommt die aktuelle Kategorie?
+   * manual > rule > auto > none.
+   */
+  categorySource?:
+    CategorySource;
+
   isRecurring?:
     boolean;
 
@@ -139,5 +146,47 @@ export interface SavingsGoal {
     number;
 
   targetDate?:
+    string;
+}
+export type CategorySource =
+  | 'manual'
+  | 'rule'
+  | 'auto'
+  | 'none';
+
+export type CategoryRuleMatchType =
+  | 'merchant_contains'
+  | 'merchant_equals'
+  | 'description_contains';
+
+export interface CategoryRule {
+  id:
+    string;
+
+  name:
+    string;
+
+  matchType:
+    CategoryRuleMatchType;
+
+  matchValue:
+    string;
+
+  categoryId:
+    string;
+
+  enabled:
+    boolean;
+
+  priority:
+    number;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+
+  deletedAt?:
     string;
 }
