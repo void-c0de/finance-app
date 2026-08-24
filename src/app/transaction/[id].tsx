@@ -37,6 +37,10 @@ import {
 } from '@/services/haptics';
 
 import {
+    debugLog,
+} from '@/core/debugLog';
+
+import {
     setTransactionCategory,
 } from '@/db/repositories/transactions';
 
@@ -279,14 +283,15 @@ export default function TransactionDetailScreen() {
 
       setIsCategoryPickerOpen(false);
     } catch (error) {
-      console.error(
-        '[CATEGORY] Korrektur fehlgeschlagen:',
+      debugLog.error(
+        'CATEGORY',
+        'CAT-SAVE-001: Kategorie konnte nicht gespeichert werden',
         error,
       );
 
       Alert.alert(
-        'Kategorie konnte nicht gespeichert werden',
-        'Bitte versuche es erneut.',
+        'Kategorie',
+        'Konnte nicht gespeichert werden. Versuch es bitte erneut.',
       );
     } finally {
       setIsSavingCategory(false);

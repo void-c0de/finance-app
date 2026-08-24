@@ -254,6 +254,11 @@ export async function signUpPersonalAccount(
         email,
 
         password,
+
+        options: {
+          emailRedirectTo:
+            'financeapp://auth/confirm',
+        },
       });
 
     if (error) {

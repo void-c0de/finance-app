@@ -2,6 +2,10 @@ import {
     setTransactionCategory,
 } from '@/db/repositories/categorization';
 
+import {
+    normalizeMerchantName,
+} from '@/services/merchantNormalization';
+
 import type {
     Transaction,
 } from '@/types/finance';
@@ -167,10 +171,13 @@ function buildTransactionSearchText(
 ): string {
   return normalizeSearchText(
     [
-      transaction.counterpartyName ??
-        '',
+      normalizeMerchantName(
+        transaction.counterpartyName
+      ),
 
-      transaction.description,
+      normalizeMerchantName(
+        transaction.description
+      ),
 
       transaction.counterpartyIBAN ??
         '',

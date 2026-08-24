@@ -4,6 +4,17 @@ import {
     runCloudSync,
 } from '@/services/cloud/syncEngine';
 
+/**
+ * UX-Policy für Sync-Fehler:
+ *
+ * Hintergrund-Synchronisierung darf den
+ * Nutzer niemals mit Fehlerdialogen oder
+ * Alarmfarben belasten. Fehler werden
+ * still (Debug-Journal + Upload) behandelt
+ * und automatisch beim nächsten Anlass
+ * erneut versucht.
+ */
+
 type CloudSyncStatus =
   | 'idle'
   | 'unconfigured'
@@ -18,6 +29,9 @@ interface CloudSyncState {
   message:
     string;
 
+  errorCode?:
+    string;
+
   lastSyncedAt:
     string | null;
 
@@ -25,6 +39,33 @@ interface CloudSyncState {
     boolean;
 
   refreshCloudSync: () => Promise<void>;
+}
+
+function friendlyMessage(
+  status: CloudSyncStatus,
+): string {
+  if (
+    status ===
+    'syncing'
+  ) {
+    return 'Synchronisiere…';
+  }
+
+  if (
+    status ===
+    'unconfigured'
+  ) {
+    return 'Cloud inaktiv';
+  }
+
+  if (
+    status ===
+    'error'
+  ) {
+    return 'Später erneut versucht wird';
+  }
+
+  return 'Auf dem neuesten Stand';
 }
 
 export const useCloudSyncStore =
@@ -54,32 +95,50 @@ export const useCloudSyncStore =
 
         status: 'syncing',
 
-        message:
-          'Synchronisiere…',
+        message: friendlyMessage('syncing'),
+
+        errorCode: undefined,
       });
 
       const result =
         await runCloudSync();
 
+      const nextStatus: CloudSyncStatus =
+        result.status ===
+          'unconfigured'
+          ? 'unconfigured'
+
+          : result.status ===
+                'error'
+            ? 'error'
+
+            : 'synced';
+
       set({
         isBusy: false,
 
-        status:
-          result.status ===
-            'unconfigured'
-            ? 'unconfigured'
+        status: nextStatus,
 
-            : result.status ===
-                  'error'
-              ? 'error'
-
-              : 'synced',
-
+        /*
+         * Bewusst ruhige Formulierungen -
+         * technische Details leben im
+         * Debug-Journal, nicht in der UI.
+         */
         message:
-          result.message,
+          nextStatus ===
+          'synced'
+            ? `Aktuell · ${result.pushed ?? 0}↑ ${result.pulled ?? 0}↓`
+
+            : friendlyMessage(nextStatus),
+
+        errorCode:
+          nextStatus ===
+          'error'
+            ? 'CLD-UNK-001'
+            : undefined,
 
         lastSyncedAt:
-          result.status ===
+          nextStatus ===
           'synced'
             ? new Date().toISOString()
             : useCloudSyncStore.getState()

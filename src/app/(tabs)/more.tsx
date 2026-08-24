@@ -587,11 +587,7 @@ export default function MoreScreen() {
                         'synced'
                         ? colors.positive
 
-                        : cloudSync.status ===
-                              'error'
-                            ? colors.negative
-
-                            : colors.info,
+                        : colors.info,
                   },
                 ]}
               >

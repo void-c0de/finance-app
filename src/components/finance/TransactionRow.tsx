@@ -15,6 +15,10 @@ import {
 } from '@/core/money';
 
 import {
+    buildDisplayTitle,
+} from '@/services/merchantNormalization';
+
+import {
     useFinanceTheme,
 } from '@/hooks/use-finance-theme';
 
@@ -106,11 +110,9 @@ export function getTransactionTitle(
   transaction:
     Transaction
 ): string {
-  return (
-    transaction
-      .counterpartyName ??
-    transaction
-      .description
+  return buildDisplayTitle(
+    transaction.counterpartyName,
+    transaction.description,
   );
 }
 
