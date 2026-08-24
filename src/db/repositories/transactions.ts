@@ -281,6 +281,50 @@ export async function getTransactions(
   );
 }
 
+/**
+ * Manuelle Kategorie-Korrektur (M2).
+ *
+ * - Überschreibt category_id bewusst
+ * - aktualisiert updated_at, damit der
+ *   Cloud-Sync die Änderung propagiert
+ * - Auto-Kategorisierung greift nur bei
+ *   NULL-Kategorien und überschreibt
+ *   diese Wahl daher nie
+ */
+export async function setTransactionCategory(
+  transactionId:
+    string,
+
+  categoryId:
+    | string
+    | null
+): Promise<void> {
+  const db =
+    await getDatabase();
+
+  const result =
+    await db.runAsync(
+      `
+        UPDATE transactions
+        SET category_id = ?
+        WHERE id = ?;
+      `,
+
+      categoryId,
+
+      transactionId,
+    );
+
+  if (
+    result.changes ===
+    0
+  ) {
+    throw new Error(
+      `Transaktion nicht gefunden: ${transactionId}`,
+    );
+  }
+}
+
 export async function getTransactionsForAccount(
   accountId: string,
   limit = 500

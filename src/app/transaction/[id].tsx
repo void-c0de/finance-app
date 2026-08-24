@@ -5,9 +5,11 @@ import {
 
 import {
     useMemo,
+    useState,
 } from 'react';
 
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -29,6 +31,18 @@ import {
 import {
     FinancePressable,
 } from '@/components/interaction/FinancePressable';
+
+import {
+    performFinanceHaptic,
+} from '@/services/haptics';
+
+import {
+    setTransactionCategory,
+} from '@/db/repositories/transactions';
+
+import {
+    useCloudSyncStore,
+} from '@/stores/useCloudSyncStore';
 
 import {
     useFinanceTheme,
@@ -159,6 +173,28 @@ export default function TransactionDetailScreen() {
         state.accounts
     );
 
+  const categories =
+    useFinanceStore(
+      (state) =>
+        state.categories
+    );
+
+  const refreshFinanceData =
+    useFinanceStore(
+      (state) =>
+        state.refreshFinanceData
+    );
+
+  const [
+    isCategoryPickerOpen,
+    setIsCategoryPickerOpen,
+  ] = useState(false);
+
+  const [
+    isSavingCategory,
+    setIsSavingCategory,
+  ] = useState(false);
+
   const transaction =
     useMemo(
       () =>
@@ -192,6 +228,70 @@ export default function TransactionDetailScreen() {
         transaction,
       ]
     );
+
+  const selectedCategory =
+    useMemo(
+      () =>
+        transaction?.categoryId
+          ? categories.find(
+              (item) =>
+                item.id ===
+                transaction.categoryId,
+            ) ??
+            null
+          : null,
+
+      [
+        categories,
+        transaction,
+      ],
+    );
+
+  async function applyCategory(
+    categoryId:
+      | string
+      | null,
+  ) {
+    if (
+      !transaction ||
+      isSavingCategory
+    ) {
+      return;
+    }
+
+    setIsSavingCategory(true);
+
+    try {
+      await setTransactionCategory(
+        transaction.id,
+        categoryId,
+      );
+
+      await refreshFinanceData();
+
+      void useCloudSyncStore
+        .getState()
+        .refreshCloudSync();
+
+      await performFinanceHaptic(
+        'success',
+      );
+
+      setIsCategoryPickerOpen(false);
+    } catch (error) {
+      console.error(
+        '[CATEGORY] Korrektur fehlgeschlagen:',
+        error,
+      );
+
+      Alert.alert(
+        'Kategorie konnte nicht gespeichert werden',
+        'Bitte versuche es erneut.',
+      );
+    } finally {
+      setIsSavingCategory(false);
+    }
+  }
 
   if (!transaction) {
     return (
@@ -574,15 +674,251 @@ export default function TransactionDetailScreen() {
 
           <DetailDivider />
 
-          <DetailRow
-            label="Kategorie"
+          {isCategoryPickerOpen ? (
+            <View>
+              <Text
+                style={[
+                  typography.caption,
 
-            value={
-              transaction.categoryId
-                ? 'Zugeordnet'
-                : 'Noch nicht kategorisiert'
-            }
-          />
+                  {
+                    color:
+                      colors.textMuted,
+                  },
+                ]}
+              >
+                KATEGORIE WÄHLEN
+              </Text>
+
+              <FinancePressable
+                accessibilityRole="button"
+
+                onPress={() => {
+                  void applyCategory(
+                    null,
+                  );
+                }}
+
+                intent="navigation"
+
+                disabled={
+                  isSavingCategory
+                }
+
+                style={[
+                  styles.categoryOption,
+
+                  {
+                    borderBottomColor:
+                      colors.border,
+                  },
+                ]}
+
+                contentStyle={
+                  styles.categoryOptionContent
+                }
+              >
+                <Text
+                  style={[
+                    typography.bodyMedium,
+
+                    {
+                      color:
+                        transaction.categoryId
+                          ? colors.textSecondary
+
+                          : colors.primary,
+                    },
+                  ]}
+                >
+                  Keine Kategorie
+                </Text>
+
+                {!transaction.categoryId && (
+                  <Text
+                    style={[
+                      styles.checkGlyph,
+
+                      {
+                        color:
+                          colors.primary,
+                      },
+                    ]}
+                  >
+                    ✓
+                  </Text>
+                )}
+              </FinancePressable>
+
+              {categories.map(
+                (
+                  category,
+                ) => {
+                  const isSelected =
+                    transaction.categoryId ===
+                    category.id;
+
+                  return (
+                    <FinancePressable
+                      key={category.id}
+
+                      accessibilityRole="button"
+
+                      onPress={() => {
+                        void applyCategory(
+                          category.id,
+                        );
+                      }}
+
+                      intent="navigation"
+
+                      disabled={
+                        isSavingCategory
+                      }
+
+                      style={[
+                        styles.categoryOption,
+
+                        {
+                          borderBottomColor:
+                            colors.border,
+                        },
+                      ]}
+
+                      contentStyle={
+                        styles.categoryOptionContent
+                      }
+                    >
+                      <View style={styles.categoryLabelRow}>
+                        {category.icon ? (
+                          <Text
+                            style={[
+                              styles.categoryIconText,
+
+                              {
+                                color:
+                                  colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {category.icon}
+                          </Text>
+                        ) : null}
+
+                        <Text
+                          style={[
+                            typography.bodyMedium,
+
+                            {
+                              color:
+                                isSelected
+                                  ? colors.primary
+
+                                  : colors.text,
+                            },
+                          ]}
+                        >
+                          {category.name}
+                        </Text>
+                      </View>
+
+                      {isSelected ? (
+                        <Text
+                          style={[
+                            styles.checkGlyph,
+
+                            {
+                              color:
+                                colors.primary,
+                            },
+                          ]}
+                        >
+                          ✓
+                        </Text>
+                      ) : null}
+                    </FinancePressable>
+                  );
+                },
+              )}
+            </View>
+          ) : (
+            <DetailRow
+              label="Kategorie"
+
+              value={
+                selectedCategory
+                  ? `${selectedCategory.icon ?? ''} ${selectedCategory.name}`.trim()
+                  : 'Noch nicht kategorisiert'
+              }
+            />
+          )}
+
+          <DetailDivider />
+
+          {!isCategoryPickerOpen && (
+            <FinancePressable
+              accessibilityRole="button"
+
+              accessibilityLabel="Kategorie bearbeiten"
+
+              onPress={() => {
+                void performFinanceHaptic('selection');
+
+                setIsCategoryPickerOpen(true);
+              }}
+
+              intent="navigation"
+
+              contentStyle={
+                styles.editCategoryButton
+              }
+            >
+              <Text
+                style={[
+                  typography.smallMedium,
+
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
+              >
+                Kategorie bearbeiten
+              </Text>
+            </FinancePressable>
+          )}
+
+          {isCategoryPickerOpen && (
+            <FinancePressable
+              accessibilityRole="button"
+
+              accessibilityLabel="Auswahl schließen"
+
+              onPress={() => {
+                void performFinanceHaptic('selection');
+
+                setIsCategoryPickerOpen(false);
+              }}
+
+              intent="navigation"
+
+              contentStyle={
+                styles.editCategoryButton
+              }
+            >
+              <Text
+                style={[
+                  typography.smallMedium,
+
+                  {
+                    color:
+                      colors.textSecondary,
+                  },
+                ]}
+              >
+                Abbrechen
+              </Text>
+            </FinancePressable>
+          )}
         </FinanceCard>
 
         {(transaction.counterpartyIBAN ||
@@ -851,5 +1187,74 @@ const styles =
 
       justifyContent:
         'center',
+    },
+
+    categoryOption: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+
+      minHeight:
+        48,
+
+      paddingVertical:
+        10,
+
+      borderBottomWidth:
+        StyleSheet.hairlineWidth,
+    },
+
+    categoryOptionContent: {
+      width:
+        '100%',
+    },
+
+    categoryLabelRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      gap:
+        8,
+
+      flex:
+        1,
+    },
+
+    categoryIconText: {
+      fontSize:
+        15,
+    },
+
+    checkGlyph: {
+      fontSize:
+        16,
+
+      fontWeight:
+        '700',
+
+      marginLeft:
+        8,
+    },
+
+    editCategoryButton: {
+      minHeight:
+        40,
+
+      alignItems:
+        'flex-start',
+
+      justifyContent:
+        'center',
+
+      marginTop:
+        12,
     },
   });
