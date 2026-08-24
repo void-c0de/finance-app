@@ -1,8 +1,18 @@
 import {
+    createContext,
+    useContext,
     useEffect,
+    useMemo,
+    useRef,
     useState,
     type ReactNode,
+    type MutableRefObject,
 } from 'react';
+
+import type {
+    StyleProp,
+    ViewStyle,
+} from 'react-native';
 
 import {
     Keyboard,
@@ -10,9 +20,6 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    type ScrollViewProps,
-    type StyleProp,
-    type ViewStyle,
 } from 'react-native';
 
 import {
@@ -24,67 +31,155 @@ import {
  * ========================================
  *
  * Globale Invariante (PLAN.md):
- *
- *   KEIN Texteingabe-Feld darf jemals
- *   von der Software-Tastatur verdeckt
- *   werden - auf jedem Geraet, in jedem
- *   Theme, in jeder Zukunft.
+ *   Das FOKUSIERTE Eingabefeld bleibt immer
+ *   deutlich ueber der Tastatur sichtbar.
  *
  * Funktionsweise:
- * - Misst die tatsaechliche Keyboard-Hoehe
- *   ueber Keyboard-Events (funktioniert
- *   unabhaengig von windowSoftInputMode,
- *   auch bei Edge-to-Edge).
- * - Legt dynamisches unteres Padding auf
- *   den Scroll-Inhalt -> Fokus-Felder sind
- *   immer erreichbar/scrollbar.
- * - keyboardShouldPersistTaps: Buttons
- *   brauchen keinen Doppel-Tap.
- * - Tap auf Scrollflaeche schliesst die
- *   Tastatur (natuerliches Dismissal).
+ * 1. Tatsaechliche Keyboard-Hoehe wird ueber
+ *    Keyboard-Events gemessen (unabhaengig von
+ *    windowSoftInputMode / Edge-to-Edge).
+ * 2. Der zentrale ScrollView erhaelt dynamisches
+ *    unteres Padding in Hoehe der Tastatur.
+ * 3. Eingabefelder melden sich per Hook an:
+ *      useAutoScrollOnFocus(fieldWrapperRef)
+ *    Beim Fokus misst die Flaeche das Feld und
+ *    scrollt es sanft oberhalb der Tastatur.
+ * 4. keyboardShouldPersistTaps="handled": Buttons
+ *    (z.B. Passwort-Augen-Symbol) brauchen keinen
+ *    Doppel-Tap und rauben nicht den Fokus.
  */
 
-export function useKeyboardVisibleHeight(): number {
+type ScrollIntoViewFn = (
+  fieldRef:
+    MutableRefObject<
+      | import('react-native').View
+      | null
+    >,
+) => void;
+
+type KeyboardScrollContextValue =
+  | {
+      scrollFieldIntoView:
+        ScrollIntoViewFn;
+
+      keyboardVisible:
+        boolean;
+    }
+  | null;
+
+const KeyboardScrollContext =
+  createContext<KeyboardScrollContextValue>(
+    null,
+  );
+
+export function useFinanceKeyboardScroll():
+  KeyboardScrollContextValue {
+  return useContext(
+    KeyboardScrollContext,
+  );
+}
+
+/**
+ * Hook fuer Eingabefelder:
+ * Wrapper-Ref uebergeben; beim Fokus
+ * scrollt der Screen das Feld automatisch
+ * ins sichtbare Bereich oberhalb der Tastatur.
+ */
+export function useAutoScrollOnFocus(
+  fieldWrapperRef:
+    MutableRefObject<
+      import('react-native').View
+      | null
+    >,
+
+  deps:
+    readonly unknown[] = [],
+): {
+  onFocus:
+    () => void;
+} {
+  const context =
+    useContext(
+      KeyboardScrollContext,
+    );
+
   const [
-    height,
-    setHeight,
+    focused,
+    setFocused,
   ] =
-    useState(0);
+    useState(false);
 
   useEffect(() => {
-    const showListener =
+    if (
+      focused &&
+      context
+    ) {
+      /*
+       * Nach dem Layout-Pass messen, damit
+       * evtl. eingeblendete Labels korrekt
+       * beruecksichtigt werden.
+       */
+      const timer =
+        setTimeout(() => {
+          context.scrollFieldIntoView(
+            fieldWrapperRef,
+          );
+        }, 60);
+
+      return () =>
+        clearTimeout(timer);
+    }
+
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    focused,
+    context,
+    ...deps,
+  ]);
+
+  return {
+    onFocus: () =>
+      setFocused(true),
+  };
+}
+
+export function useKeyboardVisible(): boolean {
+  const [
+    visible,
+    setVisible,
+  ] =
+    useState(false);
+
+  useEffect(() => {
+    const show =
       Keyboard.addListener(
         Platform.OS === 'ios'
           ? 'keyboardWillShow'
           : 'keyboardDidShow',
 
-        (event) => {
-          setHeight(
-            event.endCoordinates?.height ??
-              0,
-          );
-        },
+        () =>
+          setVisible(true),
       );
 
-    const hideListener =
+    const hide =
       Keyboard.addListener(
         Platform.OS === 'ios'
           ? 'keyboardWillHide'
           : 'keyboardDidHide',
 
-        () => {
-          setHeight(0);
-        },
+        () =>
+          setVisible(false),
       );
 
     return () => {
-      showListener.remove();
+      show.remove();
 
-      hideListener.remove();
+      hide.remove();
     };
   }, []);
 
-  return height;
+  return visible;
 }
 
 type FinanceKeyboardScreenProps = {
@@ -93,16 +188,11 @@ type FinanceKeyboardScreenProps = {
 
   /**
    * Fixierter Kopfbereich (z.B. Header
-   * mit Zurueck-Button). Bleibt oberhalb
-   * der scrollenden Flaeche sichtbar.
+   * mit Zurueck-Button).
    */
   header?:
     ReactNode;
 
-  /**
-   * Hintergrundfarbe wird vom Theme
-   * durch den Aufrufer gesetzt.
-   */
   backgroundColor?:
     string;
 
@@ -110,32 +200,16 @@ type FinanceKeyboardScreenProps = {
     StyleProp<ViewStyle>;
 
   /**
-   * Extra-Padding unten (z.B. Tab-Bar-Hoehe).
+   * Extra-Padding unten
+   * (z.B. Tab-Bar-Hoehe).
    */
   extraBottomPadding?:
     number;
 
   contentContainerStyle?:
     StyleProp<ViewStyle>;
-
-  scrollViewProps?: Omit<
-    ScrollViewProps,
-    | 'keyboardShouldPersistTaps'
-    | 'style'
-    | 'contentContainerStyle'
-  >;
 };
 
-/**
- * Keyboard-sichere Standard-Screen-Huelle
- * fuer ALLE Formular-/Eingabe-Screens.
- *
- * WICHTIG: Kinder liegen in EINER zentralen
- * Scroll-Flaeche. Keine verschachtelten
- * ScrollViews innerhalb dieses Wrappers
- * verwenden - sonst greift das Keyboard-
- * Padding an der falschen Stelle.
- */
 export function FinanceKeyboardScreen({
   children,
 
@@ -148,14 +222,114 @@ export function FinanceKeyboardScreen({
   extraBottomPadding = 0,
 
   contentContainerStyle,
-
-  scrollViewProps,
 }: FinanceKeyboardScreenProps) {
   const insets =
     useSafeAreaInsets();
 
-  const keyboardHeight =
-    useKeyboardVisibleHeight();
+  const [
+    keyboardHeight,
+    setKeyboardHeight,
+  ] =
+    useState(0);
+
+  const scrollerRef =
+    useRef<ScrollView | null>(
+      null,
+    );
+
+  const scrollerHeightRef =
+    useRef(0);
+
+  const scrollerYRef =
+    useRef(0);
+
+  useEffect(() => {
+    const show =
+      Keyboard.addListener(
+        Platform.OS === 'ios'
+          ? 'keyboardWillShow'
+          : 'keyboardDidShow',
+
+        (event) => {
+          setKeyboardHeight(
+            event.endCoordinates?.height ??
+              0,
+          );
+        },
+      );
+
+    const hide =
+      Keyboard.addListener(
+        Platform.OS === 'ios'
+          ? 'keyboardWillHide'
+          : 'keyboardDidHide',
+
+        () => {
+          setKeyboardHeight(0);
+        },
+      );
+
+    return () => {
+      show.remove();
+
+      hide.remove();
+    };
+  }, []);
+
+  const scrollFieldIntoView:
+    ScrollIntoViewFn =
+    (fieldRef) => {
+      const scroller =
+        scrollerRef.current;
+
+      const field =
+        fieldRef.current;
+
+      if (!scroller || !field) {
+        return;
+      }
+
+      field.measureLayout(
+        scroller as never,
+
+        (_x, y, _w, h) => {
+          const keyboardTop =
+            scrollerHeightRef.current -
+            keyboardHeight;
+
+          const fieldBottom =
+            y + h + 12;
+
+          if (
+            fieldBottom >
+            keyboardTop
+          ) {
+            scroller.scrollTo({
+              y:
+                Math.max(
+                  0,
+                  scrollerYRef.current +
+                    fieldBottom -
+                    keyboardTop,
+                ),
+
+              animated: true,
+            });
+          }
+        },
+
+        () => undefined,
+      );
+    };
+
+  const contextValue =
+    useMemo<KeyboardScrollContextValue>(() => ({
+      scrollFieldIntoView,
+
+      keyboardVisible:
+        keyboardHeight >
+        0,
+    }), [scrollFieldIntoView, keyboardHeight]);
 
   return (
     <KeyboardAvoidingView
@@ -179,36 +353,54 @@ export function FinanceKeyboardScreen({
     >
       {header}
 
-      <ScrollView
-        {...scrollViewProps}
-
-        keyboardShouldPersistTaps="handled"
-
-        keyboardDismissMode={
-          Platform.OS === 'android'
-            ? 'on-drag'
-
-            : 'interactive'
-        }
-
-        style={styles.flex}
-
-        contentContainerStyle={[
-          styles.grow,
-
-          contentContainerStyle,
-
-          {
-            paddingBottom:
-              keyboardHeight +
-              insets.bottom +
-              24 +
-              extraBottomPadding,
-          },
-        ]}
+      <KeyboardScrollContext.Provider
+        value={contextValue}
       >
-        {children}
-      </ScrollView>
+        <ScrollView
+          ref={(instance) => {
+            scrollerRef.current = instance;
+          }}
+
+          keyboardShouldPersistTaps="handled"
+
+          keyboardDismissMode={
+            Platform.OS === 'android'
+              ? 'on-drag'
+
+              : 'interactive'
+          }
+
+          style={styles.flex}
+
+          scrollEventThrottle={16}
+
+          onLayout={(event) => {
+            scrollerHeightRef.current =
+              event.nativeEvent.layout.height;
+          }}
+
+          onScroll={(event) => {
+            scrollerYRef.current =
+              event.nativeEvent.contentOffset.y;
+          }}
+
+          contentContainerStyle={[
+            styles.grow,
+
+            contentContainerStyle,
+
+            {
+              paddingBottom:
+                keyboardHeight +
+                insets.bottom +
+                24 +
+                extraBottomPadding,
+            },
+          ]}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardScrollContext.Provider>
     </KeyboardAvoidingView>
   );
 }

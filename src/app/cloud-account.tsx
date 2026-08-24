@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useRef,
     useState,
 } from 'react';
 
@@ -14,10 +15,6 @@ import {
     TextInput,
     View,
 } from 'react-native';
-
-import {
-    FinanceKeyboardScreen,
-} from '@/components/layout/FinanceKeyboardScreen';
 
 import {
     SettingsRow,
@@ -50,6 +47,14 @@ import {
 import {
     useCloudSyncStore,
 } from '@/stores/useCloudSyncStore';
+
+import {
+    FinanceKeyboardScreen,
+} from '@/components/layout/FinanceKeyboardScreen';
+
+import {
+    FinanceTextField,
+} from '@/components/forms/FinanceTextField';
 
 import {
     useFinanceTheme,
@@ -101,6 +106,16 @@ export default function CloudAccountScreen() {
     setPasswordInput,
   ] =
     useState('');
+
+  const emailRef =
+    useRef<TextInput | null>(
+      null,
+    );
+
+  const passwordRef =
+    useRef<TextInput | null>(
+      null,
+    );
 
   const [
     isBusy,
@@ -314,54 +329,73 @@ export default function CloudAccountScreen() {
       backgroundColor={
         colors.background
       }
+
       contentContainerStyle={{
-        paddingHorizontal: spacing.lg,
-        paddingTop: spacing.sm,
+        paddingHorizontal:
+          spacing.lg,
+
+        paddingTop:
+          spacing.sm,
       }}
+
       header={
-      <View
-        style={[
-          styles.header,
-
-          {
-            paddingHorizontal:
-              spacing.md,
-
-            paddingVertical:
-              spacing.md,
-          },
-        ]}
-      >
-        <FinancePressable
-          accessibilityRole="button"
-
-          accessibilityLabel="Zurück"
-
-          onPress={() =>
-            router.back()
-          }
-
-          intent="navigation"
-
+        <View
           style={[
-            styles.backButton,
+            styles.header,
 
             {
-              backgroundColor:
-                colors.surface,
+              paddingHorizontal:
+                spacing.md,
 
-              borderRadius:
-                radius.round,
+              paddingVertical:
+                spacing.md,
             },
           ]}
-
-          contentStyle={
-            styles.backContent
-          }
         >
+          <FinancePressable
+            accessibilityRole="button"
+
+            accessibilityLabel="Zurück"
+
+            onPress={() =>
+              router.back()
+            }
+
+            intent="navigation"
+
+            style={[
+              styles.backButton,
+
+              {
+                backgroundColor:
+                  colors.surface,
+
+                borderRadius:
+                  radius.round,
+              },
+            ]}
+
+            contentStyle={
+              styles.backContent
+            }
+          >
+            <Text
+              style={[
+                styles.backIcon,
+
+                {
+                  color:
+                    colors.text,
+                },
+              ]}
+            >
+              ‹
+            </Text>
+          </FinancePressable>
+
           <Text
             style={[
-              styles.backIcon,
+              typography.bodyMedium,
 
               {
                 color:
@@ -369,162 +403,334 @@ export default function CloudAccountScreen() {
               },
             ]}
           >
-            ‹
+            Cloud-Konto
           </Text>
-        </FinancePressable>
 
-        <Text
-          style={[
-            typography.bodyMedium,
-
-            {
-              color:
-                colors.text,
-            },
-          ]}
-        >
-          Cloud-Konto
-        </Text>
-
-        <View
-          style={
-            styles.headerSpacer
-          }
-        />
-      </View>
+          <View
+            style={
+              styles.headerSpacer
+            }
+          />
+        </View>
       }
     >
-        <Text
-          style={[
-            typography.caption,
+      <Text
+        style={[
+          typography.caption,
 
-            styles.eyebrow,
+          styles.eyebrow,
 
-            {
-              color:
-                colors.textMuted,
-            },
-          ]}
-        >
-          KONTOTYP
-        </Text>
+          {
+            color:
+              colors.textMuted,
+          },
+        ]}
+      >
+        KONTOTYP
+      </Text>
 
-        <FinanceCard
-          variant={
-            account?.mode ===
-              'personal'
-              ? 'highlight'
+      <FinanceCard
+        variant={
+          account?.mode ===
+            'personal'
+            ? 'highlight'
 
-              : 'default'
+            : 'default'
+        }
+
+        style={{
+          marginTop:
+            spacing.sm,
+        }}
+      >
+        <SettingsRow
+          title={
+            showSuperuserBadge
+              ? 'Superuser'
+              : 'Aktueller Modus'
           }
-          style={{
+
+          description={modeLabel}
+        />
+      </FinanceCard>
+
+      <Text
+        style={[
+          typography.small,
+
+          styles.explanation,
+
+          {
+            color:
+              colors.textSecondary,
+
             marginTop:
-              spacing.sm,
-          }}
-        >
-          <SettingsRow
-            title={
-              showSuperuserBadge
-                ? 'Superuser'
-                : 'Aktueller Modus'
-            }
+              spacing.lg,
+          },
+        ]}
+      >
+        Standardmäßig synchronisiert die App über das integrierte App-Konto.
+        Verbinde ein eigenes Konto, um deine Finanzdaten in einem vollständig
+        separaten, passwortgeschützten Datenraum zu speichern.
+      </Text>
 
-            description={modeLabel}
-          />
-        </FinanceCard>
-
-        <Text
-          style={[
-            typography.small,
-
-            styles.explanation,
-
-            {
-              color:
-                colors.textSecondary,
-
+      {account?.mode ===
+      'personal' ? (
+        <>
+          <FinanceCard
+            style={{
               marginTop:
-                spacing.lg,
-            },
-          ]}
-        >
-          Standardmäßig synchronisiert die App über das integrierte App-Konto.
-          Verbinde ein eigenes Konto, um deine Finanzdaten in einem vollständig
-          separaten, passwortgeschützten Datenraum zu speichern.
-        </Text>
+                spacing.xl,
+            }}
+          >
+            <SettingsRow
+              title="Angemeldet als"
 
-        {account?.mode ===
-        'personal' ? (
-          <>
+              description={
+                account.email ??
+                ''
+              }
+            />
+
+            <FinanceButton
+              label="Von diesem Konto abmelden"
+
+              size="small"
+
+              variant="danger"
+
+              loading={
+                isBusy
+              }
+
+              onPress={() => {
+                void handleSignOut();
+              }}
+
+              style={{
+                width:
+                  '100%',
+
+                marginTop:
+                  spacing.lg,
+              }}
+            />
+          </FinanceCard>
+
+          <Text
+            style={[
+              typography.caption,
+
+              {
+                color:
+                  colors.textMuted,
+
+                marginTop:
+                  spacing.md,
+
+                textAlign:
+                  'center',
+              },
+            ]}
+          >
+            Nach dem Abmelden kehrt die App zum App-Konto zurück.
+          </Text>
+        </>
+      ) : (
+        <>
+          {!showForm ? (
+            <FinanceButton
+              label="Eigenes Konto verbinden"
+
+              onPress={() => {
+                void performFinanceHaptic('action');
+
+                setShowForm(true);
+              }}
+
+              style={{
+                width:
+                  '100%',
+
+                marginTop:
+                  spacing.xl,
+              }}
+            />
+          ) : (
             <FinanceCard
               style={{
                 marginTop:
                   spacing.xl,
               }}
             >
-              <SettingsRow
-                title="Angemeldet als"
+              <View
+                style={[
+                  styles.formSwitcher,
 
-                description={
-                  account.email ??
-                  ''
+                  {
+                    gap:
+                      spacing.sm,
+                  },
+                ]}
+              >
+                {(
+                  ['signIn', 'signUp'] as const
+                ).map(
+                  (
+                    mode,
+                  ) => {
+                    const selected =
+                      formMode ===
+                      mode;
+
+                    return (
+                      <FinancePressable
+                        key={mode}
+
+                        accessibilityRole="button"
+
+                        onPress={() => {
+                          setFormMode(mode);
+                        }}
+
+                        feedbackVariant="subtle"
+
+                        tapScale={0.98}
+
+                        style={[
+                          styles.formSwitchOption,
+
+                          {
+                            backgroundColor:
+                              selected
+                                ? colors.primarySoft
+
+                                : colors.surfaceInteractive,
+
+                            borderColor:
+                              selected
+                                ? colors.primary
+
+                                : colors.border,
+
+                            borderRadius:
+                              radius.md,
+                          },
+                        ]}
+
+                        contentStyle={
+                          styles.formSwitchContent
+                        }
+                      >
+                        <Text
+                          style={[
+                            typography.smallMedium,
+
+                            {
+                              color:
+                                selected
+                                  ? colors.primary
+
+                                  : colors.textSecondary,
+                            },
+                          ]}
+                        >
+                          {mode === 'signIn'
+                            ? 'Anmelden'
+
+                            : 'Registrieren'}
+                        </Text>
+                      </FinancePressable>
+                    );
+                  },
+                )}
+              </View>
+
+              <FinanceTextField
+                label="E-Mail"
+
+                inputRef={
+                  emailRef
                 }
+
+                value={emailInput}
+
+                onChangeText={
+                  setEmailInput
+                }
+
+                placeholder="E-Mail"
+
+                autoCapitalize="none"
+
+                autoComplete="email"
+
+                keyboardType="email-address"
+
+                returnKeyType="next"
+
+                onSubmitEditing={() => {
+                  passwordRef.current?.focus();
+                }}
+
+                containerStyle={{
+                  marginTop:
+                    spacing.xl,
+                }}
+              />
+
+              <FinanceTextField
+                label="Passwort"
+
+                inputRef={
+                  passwordRef
+                }
+
+                value={passwordInput}
+
+                onChangeText={
+                  setPasswordInput
+                }
+
+                placeholder="Passwort (min. 8 Zeichen)"
+
+                secureTextEntry
+
+                autoCapitalize="none"
+
+                autoComplete="password"
+
+                returnKeyType="done"
+
+                onSubmitEditing={() => {
+                  if (
+                    !isBusy &&
+                    validateInputs()
+                  ) {
+                    void handleSubmit();
+                  }
+                }}
+
+                containerStyle={{
+                  marginTop:
+                    spacing.md,
+                }}
               />
 
               <FinanceButton
-                label="Von diesem Konto abmelden"
+                label={
+                  formMode === 'signIn'
+                    ? 'Anmelden'
 
-                size="small"
-
-                variant="danger"
+                    : 'Konto erstellen'
+                }
 
                 loading={
                   isBusy
                 }
 
                 onPress={() => {
-                  void handleSignOut();
-                }}
-
-                style={{
-                  width:
-                    '100%',
-
-                  marginTop:
-                    spacing.lg,
-                }}
-              />
-            </FinanceCard>
-
-            <Text
-              style={[
-                typography.caption,
-
-                {
-                  color:
-                    colors.textMuted,
-
-                  marginTop:
-                    spacing.md,
-
-                  textAlign:
-                    'center',
-                },
-              ]}
-            >
-              Nach dem Abmelden kehrt die App zum App-Konto zurück.
-            </Text>
-          </>
-        ) : (
-          <>
-            {!showForm ? (
-              <FinanceButton
-                label="Eigenes Konto verbinden"
-
-                onPress={() => {
-                  void performFinanceHaptic('action');
-
-                  setShowForm(true);
+                  void handleSubmit();
                 }}
 
                 style={{
@@ -535,241 +741,42 @@ export default function CloudAccountScreen() {
                     spacing.xl,
                 }}
               />
-            ) : (
-              <FinanceCard
-                style={{
-                  marginTop:
-                    spacing.xl,
-                }}
-              >
-                <View
+
+              {statusMessage ? (
+                <Text
                   style={[
-                    styles.formSwitcher,
+                    typography.small,
 
                     {
-                      gap:
-                        spacing.sm,
-                    },
-                  ]}
-                >
-                  {(
-                    ['signIn', 'signUp'] as const
-                  ).map(
-                    (mode) => {
-                      const selected =
-                        formMode ===
-                        mode;
-
-                      return (
-                        <FinancePressable
-                          key={mode}
-
-                          accessibilityRole="button"
-
-                          onPress={() => {
-                            setFormMode(mode);
-                          }}
-
-                          feedbackVariant="subtle"
-
-                          tapScale={0.98}
-
-                          style={[
-                            styles.formSwitchOption,
-
-                            {
-                              backgroundColor:
-                                selected
-                                  ? colors.primarySoft
-
-                                  : colors.surfaceInteractive,
-
-                              borderColor:
-                                selected
-                                  ? colors.primary
-
-                                  : colors.border,
-
-                              borderRadius:
-                                radius.md,
-                            },
-                          ]}
-
-                          contentStyle={
-                            styles.formSwitchContent
-                          }
-                        >
-                          <Text
-                            style={[
-                              typography.smallMedium,
-
-                              {
-                                color:
-                                  selected
-                                    ? colors.primary
-
-                                    : colors.textSecondary,
-                              },
-                            ]}
-                          >
-                            {mode === 'signIn'
-                              ? 'Anmelden'
-
-                              : 'Registrieren'}
-                          </Text>
-                        </FinancePressable>
-                      );
-                    },
-                  )}
-                </View>
-
-                <TextInput
-                  value={emailInput}
-
-                  onChangeText={
-                    setEmailInput
-                  }
-
-                  placeholder="E-Mail"
-
-                  placeholderTextColor={
-                    colors.textMuted
-                  }
-
-                  autoCapitalize="none"
-
-                  autoComplete="email"
-
-                  keyboardType="email-address"
-
-                  selectionColor={
-                    colors.primary
-                  }
-
-                  style={[
-                    typography.body,
-
-                    styles.input,
-
-                    {
-                      backgroundColor:
-                        colors.surfaceInteractive,
-
-                      borderColor:
-                        colors.border,
-
-                      borderRadius:
-                        radius.md,
-
                       color:
-                        colors.text,
-
-                      marginTop:
-                        spacing.xl,
-                    },
-                  ]}
-                />
-
-                <TextInput
-                  value={passwordInput}
-
-                  onChangeText={
-                    setPasswordInput
-                  }
-
-                  placeholder="Passwort (min. 8 Zeichen)"
-
-                  placeholderTextColor={
-                    colors.textMuted
-                  }
-
-                  secureTextEntry
-
-                  autoCapitalize="none"
-
-                  selectionColor={
-                    colors.primary
-                  }
-
-                  style={[
-                    typography.body,
-
-                    styles.input,
-
-                    {
-                      backgroundColor:
-                        colors.surfaceInteractive,
-
-                      borderColor:
-                        colors.border,
-
-                      borderRadius:
-                        radius.md,
-
-                      color:
-                        colors.text,
+                        colors.info,
 
                       marginTop:
                         spacing.md,
                     },
                   ]}
-                />
-
-                <FinanceButton
-                  label={
-                    formMode === 'signIn'
-                      ? 'Anmelden'
-
-                      : 'Konto erstellen'
-                  }
-
-                  loading={
-                    isBusy
-                  }
-
-                  onPress={() => {
-                    void handleSubmit();
-                  }}
-
-                  style={{
-                    width:
-                      '100%',
-
-                    marginTop:
-                      spacing.xl,
-                  }}
-                />
-
-                {statusMessage ? (
-                  <Text
-                    style={[
-                      typography.small,
-
-                      {
-                        color:
-                          colors.info,
-
-                        marginTop:
-                          spacing.md,
-                      },
-                    ]}
-                  >
-                    {statusMessage}
-                  </Text>
-                ) : null}
-              </FinanceCard>
-            )}
-          </>
-        )}
+                >
+                  {statusMessage}
+                </Text>
+              ) : null}
+            </FinanceCard>
+          )}
+        </>
+      )}
     </FinanceKeyboardScreen>
   );
 }
 
 const styles =
   StyleSheet.create({
-    safeArea: {
-      flex:
-        1,
+    eyebrow: {
+      letterSpacing:
+        1.4,
+    },
+
+    explanation: {
+      lineHeight:
+        20,
     },
 
     header: {
@@ -827,16 +834,6 @@ const styles =
         42,
     },
 
-    eyebrow: {
-      letterSpacing:
-        1.4,
-    },
-
-    explanation: {
-      lineHeight:
-        20,
-    },
-
     formSwitcher: {
       flexDirection:
         'row',
@@ -859,16 +856,5 @@ const styles =
 
       justifyContent:
         'center',
-    },
-
-    input: {
-      borderWidth:
-        1,
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        12,
     },
   });
