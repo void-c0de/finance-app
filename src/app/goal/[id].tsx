@@ -161,6 +161,21 @@ export default function GoalDetailScreen() {
   ] =
     useState('');
 
+  /*
+   * +1 = Einzahlung,
+   * -1 = Entnahme/Korrektur.
+   * Der decimal-pad hat keine
+   * Minus-Taste - deshalb der
+   * dedizierte Vorzeichen-Toggle.
+   */
+  const [
+    depositSign,
+    setDepositSign,
+  ] =
+    useState<
+      1 | -1
+    >(1);
+
   const [
     isBusy,
     setIsBusy,
@@ -315,18 +330,24 @@ export default function GoalDetailScreen() {
       return;
     }
 
-    let amountMinor =
+    let magnitudeMinor =
       0;
 
     try {
-      amountMinor =
-        decimalToMinorUnits(
-          normalized,
+      magnitudeMinor =
+        Math.abs(
+          decimalToMinorUnits(
+            normalized,
+          ),
         );
     } catch {
-      amountMinor =
+      magnitudeMinor =
         0;
     }
+
+    const amountMinor =
+      depositSign *
+        magnitudeMinor;
 
     if (
       amountMinor ===
@@ -335,7 +356,7 @@ export default function GoalDetailScreen() {
       setDialog({
         title: 'Betrag prüfen',
 
-        message: 'Bitte einen Betrag ungleich Null eingeben. Negative Beträge sind Entnahmen.',
+        message: 'Bitte einen Betrag größer Null eingeben.',
 
         confirmLabel: 'Verstanden',
       });
@@ -346,10 +367,16 @@ export default function GoalDetailScreen() {
     await persistContribution(
       amountMinor,
 
-      'Manuelle Einzahlung',
+      depositSign ===
+        1
+        ? 'Manuelle Einzahlung'
+
+        : 'Manuelle Korrektur/Entnahme',
     );
 
     setDepositAmount('');
+
+    setDepositSign(1);
   }
 
   async function quickAdd(
@@ -841,6 +868,21 @@ export default function GoalDetailScreen() {
                 Zieldatum: {goal.targetDate}
               </Text>
             ) : null}
+
+            {goal.ruleKeyword ? (
+              <Text
+                style={[
+                  typography.caption,
+
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
+              >
+                Automatisch · Stichwort „{goal.ruleKeyword}“
+              </Text>
+            ) : null}
           </View>
         </FinanceCard>
 
@@ -902,35 +944,137 @@ export default function GoalDetailScreen() {
             )}
           </View>
 
-          <FinanceTextField
-            containerStyle={{
-              marginTop:
-                spacing.md,
-            }}
+          <View
+            style={[
+              styles.depositRow,
 
-            label="BETRAG (EUR)"
+              {
+                marginTop:
+                  spacing.md,
+              },
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
 
-            value={
-              depositAmount
+              accessibilityLabel={
+                depositSign ===
+                1
+                  ? 'Auf Entnahme umschalten'
+
+                  : 'Auf Einzahlung umschalten'
+              }
+
+              onPress={() =>
+                setDepositSign(
+                  (sign) =>
+                    -sign as
+                      1 |
+                      -1,
+                )
+              }
+
+              style={[
+                styles.signToggle,
+
+                {
+                  backgroundColor:
+
+                    depositSign ===
+                    1
+                      ? colors.positiveSoft
+
+                      : colors.negativeSoft,
+
+                  borderColor:
+
+                    depositSign ===
+                    1
+                      ? colors.positive
+
+                      : colors.negative,
+
+                  borderRadius:
+                    12,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  typography.bodyMedium,
+
+                  {
+                    color:
+
+                      depositSign ===
+                      1
+                        ? colors.positive
+
+                        : colors.negative,
+                  },
+                ]}
+              >
+                {depositSign ===
+                1
+                  ? '+'
+
+                  : '−'}
+              </Text>
+            </Pressable>
+
+            <View
+              style={
+                styles.depositField
+              }
+            >
+              <FinanceTextField
+                label="BETRAG (EUR)"
+
+                value={
+                  depositAmount
+                }
+
+                onChangeText={
+                  setDepositAmount
+                }
+
+                placeholder="0,00"
+
+                keyboardType="decimal-pad"
+
+                returnKeyType="done"
+
+                onSubmitEditing={() => {
+                  void saveManualDeposit();
+                }}
+              />
+            </View>
+          </View>
+
+          <Text
+            style={[
+              typography.caption,
+
+              {
+                color:
+                  colors.textMuted,
+
+                marginTop:
+                  spacing.xs,
+              },
+            ]}
+          >
+            {
+              depositSign ===
+              1
+                ? 'Einzahlung'
+                : 'Entnahme'
             }
-
-            onChangeText={
-              setDepositAmount
-            }
-
-            placeholder="0,00 · negativ = Entnahme"
-
-            keyboardType="decimal-pad"
-
-            returnKeyType="done"
-
-            onSubmitEditing={() => {
-              void saveManualDeposit();
-            }}
-          />
+            {' · Mit +/− korrigieren'}
+          </Text>
 
           <FinanceButton
-            label="Einzahlen"
+            label="Buchung speichern"
 
             loading={
               isBusy &&
@@ -1343,6 +1487,39 @@ const styles =
     quickButton: {
       minWidth:
         72,
+    },
+
+    depositRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'flex-start',
+    },
+
+    signToggle: {
+      width:
+        48,
+
+      minHeight:
+        48,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      borderWidth:
+        1,
+
+      marginRight:
+        10,
+    },
+
+    depositField: {
+      flex:
+        1,
     },
 
     contributionRow: {

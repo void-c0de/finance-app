@@ -32,6 +32,10 @@ import {
 } from '@/services/bankSync';
 
 import {
+    applySavingsGoalRules,
+} from '@/services/goalTracking';
+
+import {
     withDbLock,
 } from '@/core/dbWriteLock';
 
@@ -138,6 +142,29 @@ export async function refreshFinanceSnapshot(
   ) {
     transactions =
       await getTransactions();
+  }
+
+  /*
+   * Automatisches Sparziel-Tracking:
+   * passende Eingaenge erzeugen
+   * idempotente Beitraege (source
+   * 'transaction'), bevor die Ziele
+   * frisch geladen werden. Fehler
+   * duerfen den Refresh nicht
+   * scheitern lassen.
+   */
+  try {
+    await applySavingsGoalRules(
+      transactions,
+    );
+  } catch (trackError) {
+    debugLog.error(
+      'PLANNING',
+
+      `${APP_ERROR_CODES.GOALS_TRACK_FAILED}: applySavingsGoalRules fehlgeschlagen`,
+
+      trackError,
+    );
   }
 
   /*

@@ -125,6 +125,12 @@ export default function GoalEditScreen() {
     useState('');
 
   const [
+    ruleKeyword,
+    setRuleKeyword,
+  ] =
+    useState('');
+
+  const [
     isLoaded,
     setIsLoaded,
   ] =
@@ -199,6 +205,11 @@ export default function GoalEditScreen() {
 
               setTargetDate(
                 goal.targetDate ??
+                  '',
+              );
+
+              setRuleKeyword(
+                goal.ruleKeyword ??
                   '',
               );
             }
@@ -323,6 +334,11 @@ export default function GoalEditScreen() {
           targetDate:
 
             normalizedDate ||
+            null,
+
+          ruleKeyword:
+
+            ruleKeyword.trim() ||
             null,
         },
       );
@@ -674,6 +690,35 @@ export default function GoalEditScreen() {
           placeholder="JJJJ-MM-TT"
 
           returnKeyType="done"
+
+          onSubmitEditing={() => {
+            void saveChanges();
+          }}
+        />
+
+        <FinanceTextField
+          containerStyle={{
+            marginTop:
+              spacing.lg,
+          }}
+
+          label="AUTOMATISCHES TRACKING (OPTIONAL)"
+
+          value={
+            ruleKeyword
+          }
+
+          onChangeText={
+            setRuleKeyword
+          }
+
+          placeholder="z. B. SPARPLAN"
+
+          autoCapitalize="characters"
+
+          returnKeyType="done"
+
+          helperText="Eingehende Umsätze mit diesem Stichwort zählen automatisch auf das Ziel. Leer = nur manuell."
 
           onSubmitEditing={() => {
             void saveChanges();

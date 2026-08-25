@@ -616,6 +616,34 @@ const migrations:
         END;
       `,
     },
+
+    {
+      /**
+       * M3 — Automatisches Sparziel-Tracking.
+       *
+       * rule_keyword: Transaktionen, deren
+       * Beschreibung/Empfaenger das Stichwort
+       * enthaelt, erzeugen automatisch einen
+       * Beitraeg (source 'transaction').
+       *
+       * Idempotenz: Partial-Unique-Index auf
+       * (goal_id, source_transaction_id) -
+       * dieselbe Transaktion kann pro Ziel
+       * GENAU EINEN aktiven Beitraeg erzeugen,
+       * egal wie oft der Sync laeuft.
+       */
+      version: 11,
+
+      sql: `
+        ALTER TABLE savings_goals ADD COLUMN rule_keyword TEXT;
+
+        CREATE UNIQUE INDEX IF NOT EXISTS
+          idx_goal_contrib_goal_tx_active
+        ON goal_contributions(goal_id, source_transaction_id)
+        WHERE source_transaction_id IS NOT NULL
+          AND deleted_at IS NULL;
+      `,
+    },
   ];
 
 async function configureDatabase(

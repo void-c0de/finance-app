@@ -170,6 +170,16 @@ export interface SavingsGoal {
   linkedAccountId?:
     string;
 
+  /**
+   * Automatisches Tracking: Transaktionen,
+   * deren Beschreibung/Empfaenger dieses
+   * Stichwort enthalten, erzeugen
+   * automatisch Beitraege (idempotent
+   * ueber source_transaction_id).
+   */
+  ruleKeyword?:
+    string;
+
   trackingMode:
     SavingsGoalTrackingMode;
 

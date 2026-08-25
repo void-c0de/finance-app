@@ -48,6 +48,9 @@ type GoalRow = {
   linked_account_id:
     string | null;
 
+  rule_keyword:
+    string | null;
+
   tracking_mode:
     string;
 
@@ -128,6 +131,10 @@ function mapGoalRow(
 
     linkedAccountId:
       row.linked_account_id ??
+      undefined,
+
+    ruleKeyword:
+      row.rule_keyword ??
       undefined,
 
     trackingMode:
@@ -262,6 +269,7 @@ Promise<SavingsGoal[]> {
         currency,
         target_date,
         linked_account_id,
+        rule_keyword,
         tracking_mode,
         status,
         created_at,
@@ -467,6 +475,15 @@ export async function updateGoal(
 
     currency?:
       string;
+
+    /**
+     * Stichwort fuer automatisches
+     * Tracking. Leer/null schaltet
+     * den Modus auf 'manual' zurueck.
+     */
+    ruleKeyword?:
+      string |
+      null;
   }
 ): Promise<void> {
   const db =
@@ -550,6 +567,34 @@ export async function updateGoal(
   }
 
   if (
+    fields.ruleKeyword !==
+    undefined
+  ) {
+    const keyword =
+      fields.ruleKeyword?.trim() ||
+      null;
+
+    assignments.push(
+      'rule_keyword = ?',
+    );
+
+    values.push(
+      keyword,
+    );
+
+    assignments.push(
+      'tracking_mode = ?',
+    );
+
+    values.push(
+      keyword
+        ? 'transaction_rule'
+
+        : 'manual',
+    );
+  }
+
+  if (
     assignments.length ===
     0
   ) {
@@ -622,6 +667,48 @@ export async function deleteGoal(
     new Date().toISOString(),
 
     id,
+  );
+}
+
+/**
+ * Existiert fuer dieses Ziel bereits ein
+ * AKTIVER Beitraeg zu genau dieser
+ * Transaktion? Grundlage der
+ * Idempotenz beim automatischen
+ * Tracking (Unique-Index aus v11
+ * erzwingt das auch auf DB-Ebene).
+ */
+export async function hasActiveContributionForTransaction(
+  goalId:
+    string,
+
+  sourceTransactionId:
+    string,
+): Promise<boolean> {
+  const db =
+    await getDatabase();
+
+  const row =
+    await db.getFirstAsync<{
+      x:
+        number;
+    }>(
+      `
+        SELECT 1 AS x
+        FROM goal_contributions
+        WHERE goal_id = ?
+          AND source_transaction_id = ?
+          AND deleted_at IS NULL
+        LIMIT 1;
+      `,
+
+      goalId,
+
+      sourceTransactionId,
+    );
+
+  return Boolean(
+    row,
   );
 }
 

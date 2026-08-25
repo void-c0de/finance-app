@@ -100,6 +100,9 @@ export const APP_ERROR_CODES = {
 
   GOALS_LOAD_FAILED:
     'PLN-LOAD-001',
+
+  GOALS_TRACK_FAILED:
+    'PLN-TRACK-001',
 } as const;
 
 export type AppErrorCode =
@@ -190,4 +193,7 @@ export const APP_ERROR_MESSAGES: Record<
 
   'PLN-LOAD-001':
     'Sparziele konnten nicht geladen werden.',
+
+  'PLN-TRACK-001':
+    'Automatisches Sparziel-Tracking fehlgeschlagen.',
 };
