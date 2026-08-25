@@ -12,6 +12,7 @@ import {
 
 import {
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,6 +39,8 @@ import {
 
 import {
   addContribution,
+
+  deleteContribution,
 
   deleteGoal,
 
@@ -342,6 +345,90 @@ export default function GoalDetailScreen() {
 
       `Schnell-Buchung +${euros} €`,
     );
+  }
+
+  function requestRemoveContribution(
+    contribution:
+      GoalContribution,
+  ) {
+    Alert.alert(
+      'Beitrag entfernen?',
+
+      `${formatMinorUnits(
+        Math.abs(
+          contribution.amountMinor,
+        ),
+        goal?.currency ?? 'EUR',
+      )} wird aus der Historie und vom Fortschritt abgezogen.`,
+
+      [
+        {
+          text:
+            'Abbrechen',
+
+          style:
+            'cancel',
+        },
+
+        {
+          text:
+            'Entfernen',
+
+          style:
+            'destructive',
+
+          onPress: () => {
+            void removeContribution(
+              contribution,
+            );
+          },
+        },
+      ],
+    );
+  }
+
+  async function removeContribution(
+    contribution:
+      GoalContribution,
+  ) {
+    if (
+      isBusy ||
+      !goal
+    ) {
+      return;
+    }
+
+    setIsBusy(true);
+
+    try {
+      await deleteContribution(
+        contribution.id,
+      );
+
+      await refreshFinanceData();
+
+      await reload();
+
+      await performFinanceHaptic(
+        'warning',
+      );
+    } catch (error) {
+      debugLog.error(
+        'PLANNING',
+
+        `${APP_ERROR_CODES.CONTRIBUTION_DELETE_FAILED}: Beitrag ${contribution.id} konnte nicht entfernt werden`,
+
+        error,
+      );
+
+      Alert.alert(
+        'Beitrag konnte nicht entfernt werden',
+
+        'Bitte versuche es erneut.',
+      );
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   function requestDeleteGoal() {
@@ -896,6 +983,25 @@ export default function GoalDetailScreen() {
             : ''}
         </Text>
 
+        {contributions.length >
+          0 && (
+          <Text
+            style={[
+              typography.caption,
+
+              {
+                color:
+                  colors.textMuted,
+
+                marginBottom:
+                  spacing.sm,
+              },
+            ]}
+          >
+            Zeile gedrückt halten, um einen Beitrag zu entfernen.
+          </Text>
+        )}
+
         <FinanceCard
           padded={
             false
@@ -924,19 +1030,34 @@ export default function GoalDetailScreen() {
                     contribution.id
                   }
                 >
-                  <View
-                    style={[
-                      styles.contributionRow,
+                  <Pressable
+                    accessibilityRole="button"
 
-                      {
-                        paddingHorizontal:
-                          spacing.lg,
+                    accessibilityLabel={`Beitrag entfernen: ${contribution.note ?? 'Buchung'}`}
 
-                        paddingVertical:
-                          spacing.md,
-                      },
-                    ]}
+                    onLongPress={() => {
+                      requestRemoveContribution(
+                        contribution,
+                      );
+                    }}
+
+                    delayLongPress={
+                      400
+                    }
                   >
+                    <View
+                      style={[
+                        styles.contributionRow,
+
+                        {
+                          paddingHorizontal:
+                            spacing.lg,
+
+                          paddingVertical:
+                            spacing.md,
+                        },
+                      ]}
+                    >
                     <View
                       style={
                         styles.contributionText
@@ -999,7 +1120,8 @@ export default function GoalDetailScreen() {
                           : 'positive'
                       }
                     />
-                  </View>
+                    </View>
+                  </Pressable>
 
                   {index <
                     contributions.length -
@@ -1020,6 +1142,30 @@ export default function GoalDetailScreen() {
             )
           )}
         </FinanceCard>
+
+        <FinanceButton
+          label="Bearbeiten"
+
+          variant="secondary"
+
+          disabled={
+            isBusy
+          }
+
+          onPress={() => {
+            router.push(
+              `/goal/${goal.id}/edit` as Href,
+            );
+          }}
+
+          style={{
+            width:
+              '100%',
+
+            marginTop:
+              spacing.xxl,
+          }}
+        />
 
         <FinanceButton
           label="Sparziel löschen"

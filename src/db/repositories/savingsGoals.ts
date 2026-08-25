@@ -577,6 +577,31 @@ export async function updateGoal(
 }
 
 /**
+ * Archivieren statt löschen:
+ * Ziel verschwindet aus der aktiven
+ * Planung, Historie bleibt erhalten
+ * und synchronisiert weiter.
+ */
+export async function archiveGoal(
+  id:
+    string
+): Promise<void> {
+  const db =
+    await getDatabase();
+
+  await db.runAsync(
+    `
+      UPDATE savings_goals
+      SET status = 'archived'
+      WHERE id = ?
+        AND deleted_at IS NULL;
+    `,
+
+    id,
+  );
+}
+
+/**
  * Tombstone-Delete: Zeile bleibt lokal +
  * remote bestehen, deleted_at propagiert.
  */
@@ -691,6 +716,36 @@ export async function addContribution(
 
   return mapContributionRow(
     row,
+  );
+}
+
+/**
+ * Beitrag korrigieren/entfernen:
+ * Tombstone statt Hard-Delete - der
+ * Fortschritt wird danach neu abgeleitet,
+ * die Historie bleibt remote nachvollziehbar.
+ */
+export async function deleteContribution(
+  id:
+    string
+): Promise<void> {
+  const db =
+    await getDatabase();
+
+  await db.runAsync(
+    `
+      UPDATE goal_contributions
+      SET deleted_at = ?
+      WHERE id = ?;
+    `,
+
+    new Date().toISOString(),
+
+    id,
+  );
+
+  await recomputeGoalProgress(
+    db,
   );
 }
 

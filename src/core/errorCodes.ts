@@ -95,6 +95,9 @@ export const APP_ERROR_CODES = {
   CONTRIBUTION_FAILED:
     'PLN-CONTRIB-001',
 
+  CONTRIBUTION_DELETE_FAILED:
+    'PLN-CONTRIB-002',
+
   GOALS_LOAD_FAILED:
     'PLN-LOAD-001',
 } as const;
@@ -181,6 +184,9 @@ export const APP_ERROR_MESSAGES: Record<
 
   'PLN-CONTRIB-001':
     'Beitrag konnte nicht gespeichert werden.',
+
+  'PLN-CONTRIB-002':
+    'Beitrag konnte nicht entfernt werden.',
 
   'PLN-LOAD-001':
     'Sparziele konnten nicht geladen werden.',
