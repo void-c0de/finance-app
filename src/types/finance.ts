@@ -132,11 +132,24 @@ export interface Budget {
     BudgetPeriod;
 }
 
+export type SavingsGoalTrackingMode =
+  | 'manual'
+  | 'transaction_rule'
+  | 'account_balance'
+  | 'hybrid';
+
+export type SavingsGoalStatus =
+  | 'active'
+  | 'archived';
+
 export interface SavingsGoal {
   id:
     string;
 
   name:
+    string;
+
+  description?:
     string;
 
   targetAmountMinor:
@@ -145,9 +158,71 @@ export interface SavingsGoal {
   currentAmountMinor:
     number;
 
+  startingAmountMinor:
+    number;
+
+  currency:
+    string;
+
   targetDate?:
     string;
+
+  linkedAccountId?:
+    string;
+
+  trackingMode:
+    SavingsGoalTrackingMode;
+
+  status:
+    SavingsGoalStatus;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+
+  deletedAt?:
+    string;
 }
+
+export type GoalContributionSource =
+  | 'manual'
+  | 'transaction'
+  | 'adjustment';
+
+export interface GoalContribution {
+  id:
+    string;
+
+  goalId:
+    string;
+
+  amountMinor:
+    number;
+
+  source:
+    GoalContributionSource;
+
+  sourceTransactionId?:
+    string;
+
+  note?:
+    string;
+
+  occurredAt:
+    string;
+
+  createdAt:
+    string;
+
+  updatedAt:
+    string;
+
+  deletedAt?:
+    string;
+}
+
 export type CategorySource =
   | 'manual'
   | 'rule'

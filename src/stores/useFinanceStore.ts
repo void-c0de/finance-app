@@ -11,6 +11,7 @@ import type {
   BankAccount,
   Budget,
   Category,
+  SavingsGoal,
   Transaction,
 } from '@/types/finance';
 
@@ -26,6 +27,9 @@ type FinanceState = {
 
   budgets:
     Budget[];
+
+  goals:
+    SavingsGoal[];
 
   isLoading:
     boolean;
@@ -59,6 +63,11 @@ type FinanceState = {
       Budget[]
   ) => void;
 
+  setGoals: (
+    goals:
+      SavingsGoal[]
+  ) => void;
+
   refreshFinanceData: (
     options?:
       FinanceRefreshOptions
@@ -83,6 +92,9 @@ export const useFinanceStore =
         [],
 
       budgets:
+        [],
+
+      goals:
         [],
 
       isLoading:
@@ -126,6 +138,14 @@ export const useFinanceStore =
       ) => {
         set({
           budgets,
+        });
+      },
+
+      setGoals: (
+        goals
+      ) => {
+        set({
+          goals,
         });
       },
 
@@ -179,6 +199,9 @@ export const useFinanceStore =
               budgets:
                 snapshot.budgets,
 
+              goals:
+                snapshot.goals,
+
               isLoading:
                 false,
 
@@ -227,6 +250,9 @@ export const useFinanceStore =
             [],
 
           budgets:
+            [],
+
+          goals:
             [],
 
           isLoading:

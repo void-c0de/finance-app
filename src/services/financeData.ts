@@ -20,6 +20,10 @@ import {
 } from '@/db/repositories/transactions';
 
 import {
+    getActiveGoals,
+} from '@/db/repositories/savingsGoals';
+
+import {
     autoCategorizeTransactions,
 } from '@/services/autoCategorization';
 
@@ -31,10 +35,19 @@ import {
     withDbLock,
 } from '@/core/dbWriteLock';
 
+import {
+    APP_ERROR_CODES,
+} from '@/core/errorCodes';
+
+import {
+    debugLog,
+} from '@/core/debugLog';
+
 import type {
     BankAccount,
     Budget,
     Category,
+    SavingsGoal,
     Transaction,
 } from '@/types/finance';
 
@@ -46,6 +59,8 @@ export type FinanceSnapshot = {
   categories: Category[];
 
   budgets: Budget[];
+
+  goals: SavingsGoal[];
 
   syncFailureCount: number;
 };
@@ -142,6 +157,29 @@ export async function refreshFinanceSnapshot(
       getBudgets(),
     ]);
 
+  /*
+   * Sparziele laden - bewusst
+   * fehlertolerant: Ein Ziel-Ladefehler
+   * darf den kompletten Refresh nicht
+   * scheitern lassen.
+   */
+  let goals:
+    SavingsGoal[] =
+    [];
+
+  try {
+    goals =
+      await getActiveGoals();
+  } catch (goalsError) {
+    debugLog.error(
+      'PLANNING',
+
+      `${APP_ERROR_CODES.GOALS_LOAD_FAILED}: Sparziele konnten nicht geladen werden`,
+
+      goalsError,
+    );
+  }
+
   return {
     accounts,
 
@@ -150,6 +188,8 @@ export async function refreshFinanceSnapshot(
     categories,
 
     budgets,
+
+    goals,
 
     syncFailureCount:
       syncResult.failed.length,

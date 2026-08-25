@@ -347,6 +347,98 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
 
     {
       localTable:
+        'savings_goals',
+
+      remoteTable:
+        'finance_savings_goals',
+
+      booleanColumns: [],
+
+      pushColumns: [
+        'id',
+        'name',
+        'description',
+        'target_amount_minor',
+        'current_amount_minor',
+        'starting_amount_minor',
+        'currency',
+        'target_date',
+        'linked_account_id',
+        'tracking_mode',
+        'status',
+        'deleted_at',
+      ],
+
+      pullColumns: [
+        'id',
+        'name',
+        'description',
+        'target_amount_minor',
+        'current_amount_minor',
+        'starting_amount_minor',
+        'currency',
+        'target_date',
+        'linked_account_id',
+        'tracking_mode',
+        'status',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+      ],
+
+      deriveLocal: (remoteRow) => ({
+        target_amount: minorUnitsToMajorNumber(
+          typeof remoteRow.target_amount_minor === 'number'
+            ? remoteRow.target_amount_minor
+            : 0,
+          typeof remoteRow.currency === 'string' ? remoteRow.currency : 'EUR',
+        ),
+
+        current_amount: minorUnitsToMajorNumber(
+          typeof remoteRow.current_amount_minor === 'number'
+            ? remoteRow.current_amount_minor
+            : 0,
+          typeof remoteRow.currency === 'string' ? remoteRow.currency : 'EUR',
+        ),
+      }),
+    },
+
+    {
+      localTable:
+        'goal_contributions',
+
+      remoteTable:
+        'finance_goal_contributions',
+
+      booleanColumns: [],
+
+      pushColumns: [
+        'id',
+        'goal_id',
+        'amount_minor',
+        'source',
+        'source_transaction_id',
+        'note',
+        'occurred_at',
+        'deleted_at',
+      ],
+
+      pullColumns: [
+        'id',
+        'goal_id',
+        'amount_minor',
+        'source',
+        'source_transaction_id',
+        'note',
+        'occurred_at',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+      ],
+    },
+
+    {
+      localTable:
         'transactions',
 
       remoteTable:

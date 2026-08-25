@@ -1,0 +1,1216 @@
+import {
+  type Href,
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
+
+import {
+  useCallback,
+  useState,
+} from 'react';
+
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
+import {
+  debugLog,
+} from '@/core/debugLog';
+
+import {
+  APP_ERROR_CODES,
+} from '@/core/errorCodes';
+
+import {
+  decimalToMinorUnits,
+
+  formatMinorUnits,
+} from '@/core/money';
+
+import {
+  addContribution,
+
+  deleteGoal,
+
+  getGoalById,
+
+  listContributions,
+} from '@/db/repositories/savingsGoals';
+
+import {
+  FinanceCard,
+} from '@/components/finance/FinanceCard';
+
+import {
+  MoneyText,
+} from '@/components/finance/MoneyText';
+
+import {
+  FinanceTextField,
+} from '@/components/forms/FinanceTextField';
+
+import {
+  FinanceKeyboardScreen,
+} from '@/components/layout/FinanceKeyboardScreen';
+
+import {
+  FinanceButton,
+} from '@/components/interaction/FinanceButton';
+
+import {
+  FinancePressable,
+} from '@/components/interaction/FinancePressable';
+
+import {
+  FinanceEmptyState,
+} from '@/components/states/FinanceEmptyState';
+
+import {
+  useFinanceTheme,
+} from '@/hooks/use-finance-theme';
+
+import {
+  performFinanceHaptic,
+} from '@/services/haptics';
+
+import {
+  useFinanceStore,
+} from '@/stores/useFinanceStore';
+
+import type {
+  GoalContribution,
+
+  SavingsGoal,
+} from '@/types/finance';
+
+const QUICK_ADD_EUR =
+  [10, 25, 50];
+
+export default function GoalDetailScreen() {
+  const {
+    colors,
+    spacing,
+    typography,
+  } =
+    useFinanceTheme();
+
+  const {
+    id,
+  } =
+    useLocalSearchParams<{
+      id:
+        string;
+    }>();
+
+  const goalId =
+    typeof id ===
+      'string'
+      ? id
+      : '';
+
+  const refreshFinanceData =
+    useFinanceStore(
+      (
+        state
+      ) =>
+        state.refreshFinanceData,
+    );
+
+  const [
+    goal,
+    setGoal,
+  ] =
+    useState<SavingsGoal | null>(
+      null,
+    );
+
+  const [
+    contributions,
+    setContributions,
+  ] =
+    useState<GoalContribution[]>(
+      [],
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(true);
+
+  const [
+    depositAmount,
+    setDepositAmount,
+  ] =
+    useState('');
+
+  const [
+    isBusy,
+    setIsBusy,
+  ] =
+    useState(false);
+
+  const reload =
+    useCallback(
+      async () => {
+        if (
+          !goalId
+        ) {
+          setIsLoading(false);
+
+          return;
+        }
+
+        try {
+          const loadedGoal =
+            await getGoalById(
+              goalId,
+            );
+
+          setGoal(
+            loadedGoal,
+          );
+
+          if (
+            loadedGoal
+          ) {
+            const rows =
+              await listContributions(
+                goalId,
+              );
+
+            setContributions(
+              rows,
+            );
+          } else {
+            setContributions(
+              [],
+            );
+          }
+        } catch (error) {
+          debugLog.error(
+            'PLANNING',
+
+            `${APP_ERROR_CODES.GOALS_LOAD_FAILED}: Sparziel ${goalId} konnte nicht geladen werden`,
+
+            error,
+          );
+
+          setGoal(null);
+        } finally {
+          setIsLoading(false);
+        }
+      },
+
+      [
+        goalId,
+      ],
+    );
+
+  useFocusEffect(
+    useCallback(
+      () => {
+        void reload();
+
+        return undefined;
+      },
+
+      [
+        reload,
+      ],
+    ),
+  );
+
+  async function persistContribution(
+    amountMinor:
+      number,
+
+    note?:
+      string,
+  ) {
+    if (
+      isBusy ||
+      !goal ||
+      amountMinor ===
+        0
+    ) {
+      return;
+    }
+
+    setIsBusy(true);
+
+    try {
+      await addContribution({
+        goalId:
+          goal.id,
+
+        amountMinor,
+
+        note,
+      });
+
+      await refreshFinanceData();
+
+      await reload();
+
+      await performFinanceHaptic(
+        'success',
+      );
+    } catch (error) {
+      debugLog.error(
+        'PLANNING',
+
+        `${APP_ERROR_CODES.CONTRIBUTION_FAILED}: Beitrag für ${goal.id} fehlgeschlagen`,
+
+        error,
+      );
+
+      Alert.alert(
+        'Beitrag konnte nicht gespeichert werden',
+
+        'Bitte versuche es erneut.',
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function saveManualDeposit() {
+    const normalized =
+      depositAmount.trim().replace(
+        ',',
+        '.',
+      );
+
+    if (
+      !normalized
+    ) {
+      return;
+    }
+
+    let amountMinor =
+      0;
+
+    try {
+      amountMinor =
+        decimalToMinorUnits(
+          normalized,
+        );
+    } catch {
+      amountMinor =
+        0;
+    }
+
+    if (
+      amountMinor ===
+      0
+    ) {
+      Alert.alert(
+        'Betrag prüfen',
+
+        'Bitte einen Betrag ungleich Null eingeben. Negative Beträge sind Entnahmen.',
+      );
+
+      return;
+    }
+
+    await persistContribution(
+      amountMinor,
+
+      'Manuelle Einzahlung',
+    );
+
+    setDepositAmount('');
+  }
+
+  async function quickAdd(
+    euros:
+      number,
+  ) {
+    await persistContribution(
+      euros *
+        100,
+
+      `Schnell-Buchung +${euros} €`,
+    );
+  }
+
+  function requestDeleteGoal() {
+    if (
+      !goal
+    ) {
+      return;
+    }
+
+    Alert.alert(
+      'Sparziel löschen?',
+
+      `${goal.name} wird entfernt und auf deinen anderen Geräten ausgeblendet.`,
+
+      [
+        {
+          text:
+            'Abbrechen',
+
+          style:
+            'cancel',
+        },
+
+        {
+          text:
+            'Löschen',
+
+          style:
+            'destructive',
+
+          onPress: () => {
+            void removeGoal();
+          },
+        },
+      ],
+    );
+  }
+
+  async function removeGoal() {
+    if (
+      !goal ||
+      isBusy
+    ) {
+      return;
+    }
+
+    setIsBusy(true);
+
+    try {
+      await deleteGoal(
+        goal.id,
+      );
+
+      await refreshFinanceData();
+
+      await performFinanceHaptic(
+        'warning',
+      );
+
+      router.back();
+    } catch (error) {
+      debugLog.error(
+        'PLANNING',
+
+        `${APP_ERROR_CODES.GOAL_DELETE_FAILED}: Sparziel ${goal.id} konnte nicht gelöscht werden`,
+
+        error,
+      );
+
+      Alert.alert(
+        'Sparziel konnte nicht gelöscht werden',
+
+        'Bitte versuche es erneut.',
+      );
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  if (
+    isLoading
+  ) {
+    return (
+      <SafeAreaView
+        edges={[
+          'top',
+        ]}
+
+        style={[
+          styles.flex,
+
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
+        <HeaderBar />
+
+        <FinanceEmptyState
+          title="Sparziel wird geladen…"
+
+          style={{
+            margin:
+              spacing.xl,
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (
+    !goal
+  ) {
+    return (
+      <SafeAreaView
+        edges={[
+          'top',
+        ]}
+
+        style={[
+          styles.flex,
+
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
+        <HeaderBar />
+
+        <FinanceEmptyState
+          title="Sparziel nicht gefunden"
+
+          description="Möglicherweise wurde es bereits gelöscht."
+
+          style={{
+            margin:
+              spacing.xl,
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const remainingMinor =
+    Math.max(
+      0,
+
+      goal.targetAmountMinor -
+        goal.currentAmountMinor,
+    );
+
+  const progress =
+    goal.targetAmountMinor >
+    0
+      ? Math.min(
+          1,
+
+          Math.max(
+            0,
+
+            goal.currentAmountMinor /
+              goal.targetAmountMinor,
+          ),
+        )
+      : 0;
+
+  const progressPercent =
+    Math.round(
+      progress *
+        100
+    );
+
+  const progressWidth =
+    `${Math.max(
+      2,
+      progressPercent
+    )}%` as `${number}%`;
+
+  function HeaderBar() {
+    return (
+      <View
+        style={[
+          styles.header,
+
+          {
+            paddingHorizontal:
+              spacing.md,
+
+            paddingVertical:
+              spacing.md,
+          },
+        ]}
+      >
+        <FinancePressable
+          accessibilityRole="button"
+
+          accessibilityLabel="Zurück"
+
+          onPress={() =>
+            router.back()
+          }
+
+          intent="navigation"
+
+          style={[
+            styles.backButton,
+
+            {
+              backgroundColor:
+                colors.surface,
+
+              borderRadius:
+                23,
+            },
+          ]}
+
+          contentStyle={
+            styles.backContent
+          }
+        >
+          <Text
+            style={[
+              styles.backIcon,
+
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            ‹
+          </Text>
+        </FinancePressable>
+
+        <Text
+          numberOfLines={
+            1
+          }
+
+          style={[
+            typography.bodyMedium,
+
+            styles.headerTitle,
+
+            {
+              color:
+                colors.text,
+            },
+          ]}
+        >
+          Sparziel
+        </Text>
+
+        <View
+          style={
+            styles.headerSpacer
+          }
+        />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView
+      edges={[
+        'top',
+      ]}
+
+      style={[
+        styles.flex,
+
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
+      <HeaderBar />
+
+      <ScrollView
+        showsVerticalScrollIndicator={
+          false
+        }
+
+        contentContainerStyle={{
+          paddingHorizontal:
+            spacing.lg,
+
+          paddingBottom:
+            spacing.huge,
+        }}
+      >
+        <FinanceCard>
+          <Text
+            style={[
+              typography.screenTitle,
+
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            {goal.name}
+          </Text>
+
+          <View
+            style={[
+              styles.progressTrack,
+
+              {
+                backgroundColor:
+                  colors.surfaceSecondary,
+
+                marginTop:
+                  spacing.lg,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.progressFill,
+
+                {
+                  width:
+                    progressWidth,
+
+                  backgroundColor:
+                    progress >=
+                    1
+                      ? colors.positive
+
+                      : colors.primary,
+                },
+              ]}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.goalStats,
+
+              {
+                marginTop:
+                  spacing.lg,
+              },
+            ]}
+          >
+            <MoneyText
+              amountMinor={
+                goal.currentAmountMinor
+              }
+
+              currency={
+                goal.currency
+              }
+
+              size="m"
+
+              forceSign={null}
+            />
+
+            <Text
+              style={[
+                typography.caption,
+
+                {
+                  color:
+                    colors.textSecondary,
+                },
+              ]}
+            >
+              {progressPercent} % von{' '}
+
+              {formatMinorUnits(
+                goal.targetAmountMinor,
+                goal.currency,
+              )}
+            </Text>
+
+            <Text
+              style={[
+                typography.caption,
+
+                {
+                  color:
+                    colors.textSecondary,
+                },
+              ]}
+            >
+              {remainingMinor ===
+              0
+                ? 'Ziel erreicht'
+                : `Noch ${formatMinorUnits(
+                    remainingMinor,
+                    goal.currency,
+                  )} offen`}
+            </Text>
+
+            {goal.targetDate ? (
+              <Text
+                style={[
+                  typography.caption,
+
+                  {
+                    color:
+                      colors.textMuted,
+                  },
+                ]}
+              >
+                Zieldatum: {goal.targetDate}
+              </Text>
+            ) : null}
+          </View>
+        </FinanceCard>
+
+        <Text
+          style={[
+            typography.sectionTitle,
+
+            {
+              color:
+                colors.text,
+
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.md,
+            },
+          ]}
+        >
+          Einzahlung
+        </Text>
+
+        <FinanceCard>
+          <View
+            style={
+              styles.quickRow
+            }
+          >
+            {QUICK_ADD_EUR.map(
+              (
+                euros,
+              ) => (
+                <FinanceButton
+                  key={
+                    euros
+                  }
+
+                  label={`+${euros} €`}
+
+                  size="small"
+
+                  variant="secondary"
+
+                  disabled={
+                    isBusy
+                  }
+
+                  onPress={() => {
+                    void quickAdd(
+                      euros,
+                    );
+                  }}
+
+                  style={
+                    styles.quickButton
+                  }
+                />
+              ),
+            )}
+          </View>
+
+          <FinanceTextField
+            containerStyle={{
+              marginTop:
+                spacing.md,
+            }}
+
+            label="BETRAG (EUR)"
+
+            value={
+              depositAmount
+            }
+
+            onChangeText={
+              setDepositAmount
+            }
+
+            placeholder="0,00 · negativ = Entnahme"
+
+            keyboardType="decimal-pad"
+
+            returnKeyType="done"
+
+            onSubmitEditing={() => {
+              void saveManualDeposit();
+            }}
+          />
+
+          <FinanceButton
+            label="Einzahlen"
+
+            loading={
+              isBusy &&
+              depositAmount !==
+                ''
+            }
+
+            disabled={
+              isBusy
+            }
+
+            onPress={() => {
+              void saveManualDeposit();
+            }}
+
+            style={{
+              width:
+                '100%',
+
+              marginTop:
+                spacing.md,
+            }}
+          />
+        </FinanceCard>
+
+        <Text
+          style={[
+            typography.sectionTitle,
+
+            {
+              color:
+                colors.text,
+
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.md,
+            },
+          ]}
+        >
+          Beitrags-Historie
+
+          {contributions.length >
+          0
+            ? ` (${contributions.length})`
+            : ''}
+        </Text>
+
+        <FinanceCard
+          padded={
+            false
+          }
+        >
+          {contributions.length ===
+          0 ? (
+            <FinanceEmptyState
+              title="Noch keine Beiträge"
+
+              description="Jede Einzahlung und Entnahme erscheint hier als eigener Eintrag."
+
+              style={{
+                margin:
+                  spacing.lg,
+              }}
+            />
+          ) : (
+            contributions.map(
+              (
+                contribution,
+                index,
+              ) => (
+                <View
+                  key={
+                    contribution.id
+                  }
+                >
+                  <View
+                    style={[
+                      styles.contributionRow,
+
+                      {
+                        paddingHorizontal:
+                          spacing.lg,
+
+                        paddingVertical:
+                          spacing.md,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={
+                        styles.contributionText
+                      }
+                    >
+                      <Text
+                        style={[
+                          typography.smallMedium,
+
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        {contribution.note ??
+                          (contribution.amountMinor >=
+                          0
+                            ? 'Einzahlung'
+                            : 'Entnahme')}
+                      </Text>
+
+                      <Text
+                        style={[
+                          typography.caption,
+
+                          {
+                            color:
+                              colors.textSecondary,
+
+                            marginTop:
+                              spacing.xxs,
+                          },
+                        ]}
+                      >
+                        {formatTimestamp(
+                          contribution.occurredAt,
+                        )}
+                      </Text>
+                    </View>
+
+                    <MoneyText
+                      amountMinor={
+                        contribution.amountMinor
+                      }
+
+                      currency={
+                        goal.currency
+                      }
+
+                      size="s"
+
+                      tone="auto"
+
+                      forceSign={
+                        contribution.amountMinor <
+                        0
+                          ? 'negative'
+
+                          : 'positive'
+                      }
+                    />
+                  </View>
+
+                  {index <
+                    contributions.length -
+                      1 && (
+                    <View
+                      style={[
+                        styles.divider,
+
+                        {
+                          backgroundColor:
+                            colors.border,
+                        },
+                      ]}
+                    />
+                  )}
+                </View>
+              ),
+            )
+          )}
+        </FinanceCard>
+
+        <FinanceButton
+          label="Sparziel löschen"
+
+          variant="danger"
+
+          disabled={
+            isBusy
+          }
+
+          onPress={
+            requestDeleteGoal
+          }
+
+          style={{
+            width:
+              '100%',
+
+            marginTop:
+              spacing.xxl,
+          }}
+        />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function formatTimestamp(
+  value:
+    string,
+): string {
+  const date =
+    new Date(
+      value,
+    );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return value;
+  }
+
+  return date.toLocaleDateString(
+    'de-DE',
+
+    {
+      day:
+        '2-digit',
+
+      month:
+        '2-digit',
+
+      year:
+        'numeric',
+    },
+  );
+}
+
+const styles =
+  StyleSheet.create({
+    flex: {
+      flex:
+        1,
+    },
+
+    header: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    headerTitle: {
+      flex:
+        1,
+
+      textAlign:
+        'center',
+    },
+
+    backButton: {
+      width:
+        46,
+
+      height:
+        46,
+    },
+
+    backContent: {
+      width:
+        46,
+
+      height:
+        46,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    backIcon: {
+      fontSize:
+        28,
+
+      fontWeight:
+        '600',
+
+      marginTop:
+        -2,
+    },
+
+    headerSpacer: {
+      width:
+        46,
+    },
+
+    progressTrack: {
+      height:
+        7,
+
+      borderRadius:
+        4,
+
+      overflow:
+        'hidden',
+    },
+
+    progressFill: {
+      height:
+        '100%',
+
+      borderRadius:
+        4,
+    },
+
+    goalStats: {
+      alignItems:
+        'flex-start',
+
+      gap:
+        6,
+    },
+
+    quickRow: {
+      flexDirection:
+        'row',
+
+      flexWrap:
+        'wrap',
+
+      gap:
+        8,
+    },
+
+    quickButton: {
+      minWidth:
+        72,
+    },
+
+    contributionRow: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+    },
+
+    contributionText: {
+      flex:
+        1,
+
+      marginRight:
+        12,
+    },
+
+    divider: {
+      height:
+        StyleSheet.hairlineWidth,
+
+      width:
+        '100%',
+    },
+  });

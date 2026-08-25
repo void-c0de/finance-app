@@ -171,6 +171,14 @@ export default function PlanningScreen() {
         state.budgets
     );
 
+  const goals =
+    useFinanceStore(
+      (
+        state
+      ) =>
+        state.goals
+    );
+
   const isLoading =
     useFinanceStore(
       (
@@ -1567,6 +1575,270 @@ export default function PlanningScreen() {
             )
           )}
         </FinanceCard>
+
+        <View
+          style={[
+            styles.sectionHeader,
+
+            {
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.md,
+            },
+          ]}
+        >
+          <View>
+            <Text
+              style={[
+                typography.sectionTitle,
+
+                {
+                  color:
+                    colors.text,
+                },
+              ]}
+            >
+              Sparziele
+            </Text>
+
+            <Text
+              style={[
+                typography.caption,
+
+                {
+                  color:
+                    colors.textSecondary,
+
+                  marginTop:
+                    spacing.xs,
+                },
+              ]}
+            >
+              Fortschritt aus echten Beiträgen
+            </Text>
+          </View>
+
+          <Text
+            style={[
+              typography.caption,
+
+              {
+                color:
+                  colors.textMuted,
+              },
+            ]}
+          >
+            {goals.length}
+          </Text>
+        </View>
+
+        {goals.map(
+          (
+            goal,
+          ) => {
+            const progress =
+              goal.targetAmountMinor >
+              0
+                ? Math.min(
+                    1,
+
+                    Math.max(
+                      0,
+
+                      goal.currentAmountMinor /
+                        goal.targetAmountMinor,
+                    ),
+                  )
+                : 0;
+
+            const progressPercent =
+              Math.round(
+                progress *
+                  100
+              );
+
+            const progressWidth =
+              `${Math.max(
+                2,
+                progressPercent
+              )}%` as `${number}%`;
+
+            return (
+              <FinancePressable
+                key={
+                  goal.id
+                }
+
+                accessibilityRole="button"
+
+                accessibilityLabel={`Sparziel ${goal.name} öffnen`}
+
+                onPress={() => {
+                  router.push(
+                    `/goal/${goal.id}` as Href,
+                  );
+                }}
+
+                intent="navigation"
+              >
+                <FinanceCard
+                  style={{
+                    marginBottom:
+                      spacing.sm,
+                  }}
+                >
+                  <View
+                    style={
+                      styles.budgetHeader
+                    }
+                  >
+                    <View
+                      style={
+                        styles.budgetText
+                      }
+                    >
+                      <Text
+                        numberOfLines={
+                          1
+                        }
+
+                        style={[
+                          typography.bodyMedium,
+
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        {goal.name}
+                      </Text>
+
+                      <Text
+                        style={[
+                          typography.caption,
+
+                          {
+                            color:
+                              colors.textSecondary,
+
+                            marginTop:
+                              spacing.xs,
+                          },
+                        ]}
+                      >
+                        {formatMinorUnits(
+                          goal.currentAmountMinor,
+                          'EUR'
+                        )}
+                        {' von '}
+                        {formatMinorUnits(
+                          goal.targetAmountMinor,
+                          'EUR'
+                        )}
+
+                        {goal.targetDate
+                          ? ` · bis ${goal.targetDate}`
+                          : ''}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[
+                        typography.smallMedium,
+
+                        {
+                          color:
+                            colors.text,
+                        },
+                      ]}
+                    >
+                      {progressPercent} %
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.progressTrack,
+
+                      {
+                        backgroundColor:
+                          colors.surfaceSecondary,
+
+                        marginTop:
+                          spacing.lg,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.progressFill,
+
+                        {
+                          width:
+                            progressWidth,
+
+                          backgroundColor:
+                            progress >=
+                            1
+                              ? colors.positive
+
+                              : colors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                </FinanceCard>
+              </FinancePressable>
+            );
+          }
+        )}
+
+        <FinanceButton
+          label="Neues Sparziel"
+
+          variant={
+            goals.length ===
+            0
+              ? 'primary'
+
+              : 'secondary'
+          }
+
+          onPress={() => {
+            router.push(
+              '/goal-new' as Href,
+            );
+          }}
+
+          style={{
+            marginTop:
+              spacing.xs,
+
+            marginBottom:
+              spacing.sm,
+          }}
+        />
+
+        {goals.length ===
+          0 && (
+          <FinanceCard>
+            <Text
+              style={[
+                typography.small,
+
+                {
+                  color:
+                    colors.textSecondary,
+                },
+              ]}
+            >
+              Lege dein erstes Sparziel an - zum Beispiel für einen Notgroschen oder einen Urlaub.
+            </Text>
+          </FinanceCard>
+        )}
 
         <View
           style={[

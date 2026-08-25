@@ -111,6 +111,18 @@ export default function HomeScreen() {
         state.transactions
     );
 
+  const budgets =
+    useFinanceStore(
+      (state) =>
+        state.budgets
+    );
+
+  const goals =
+    useFinanceStore(
+      (state) =>
+        state.goals
+    );
+
   const isLoading =
     useFinanceStore(
       (state) =>
@@ -1335,7 +1347,7 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              0
+              {budgets.length}
             </Text>
           </FinanceCard>
 
@@ -1370,7 +1382,7 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              0
+              {goals.length}
             </Text>
           </FinanceCard>
 

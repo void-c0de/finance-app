@@ -79,6 +79,24 @@ export const APP_ERROR_CODES = {
    */
   TXN_NOT_FOUND:
     'TXN-LOAD-001',
+
+  /*
+   * Planung - Sparziele (PLN)
+   */
+  GOAL_CREATE_FAILED:
+    'PLN-GOAL-001',
+
+  GOAL_UPDATE_FAILED:
+    'PLN-GOAL-002',
+
+  GOAL_DELETE_FAILED:
+    'PLN-GOAL-003',
+
+  CONTRIBUTION_FAILED:
+    'PLN-CONTRIB-001',
+
+  GOALS_LOAD_FAILED:
+    'PLN-LOAD-001',
 } as const;
 
 export type AppErrorCode =
@@ -151,4 +169,19 @@ export const APP_ERROR_MESSAGES: Record<
 
   'TXN-LOAD-001':
     'Umsatz nicht gefunden.',
+
+  'PLN-GOAL-001':
+    'Sparziel konnte nicht angelegt werden.',
+
+  'PLN-GOAL-002':
+    'Sparziel konnte nicht aktualisiert werden.',
+
+  'PLN-GOAL-003':
+    'Sparziel konnte nicht gelöscht werden.',
+
+  'PLN-CONTRIB-001':
+    'Beitrag konnte nicht gespeichert werden.',
+
+  'PLN-LOAD-001':
+    'Sparziele konnten nicht geladen werden.',
 };

@@ -584,6 +584,38 @@ const migrations:
         END;
       `,
     },
+
+    {
+      /**
+       * M3 — Sparziele sync-faehig machen.
+       *
+       * v6 hatte savings_goals uebersprungen:
+       * created_at / updated_at / deleted_at
+       * fehlen lokal. Ohne diese Spalten
+       * laeuft weder der Tombstone-Delete
+       * noch die LWW-Synchronisierung.
+       */
+      version: 10,
+
+      sql: `
+        ALTER TABLE savings_goals ADD COLUMN created_at TEXT;
+        ALTER TABLE savings_goals ADD COLUMN updated_at TEXT;
+        ALTER TABLE savings_goals ADD COLUMN deleted_at TEXT;
+
+        UPDATE savings_goals SET
+          created_at = COALESCE(created_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          updated_at = COALESCE(updated_at, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+        CREATE TRIGGER IF NOT EXISTS trg_savings_goals_insert
+        AFTER INSERT ON savings_goals
+        BEGIN
+          UPDATE savings_goals SET
+            created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+      `,
+    },
   ];
 
 async function configureDatabase(
