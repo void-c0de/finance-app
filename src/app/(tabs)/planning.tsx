@@ -12,7 +12,6 @@ import {
 
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,6 +45,12 @@ import {
 import {
   FinanceEmptyState,
 } from '@/components/states/FinanceEmptyState';
+
+import {
+  type FinanceDialogConfig,
+
+  FinanceDialog,
+} from '@/components/feedback/FinanceDialog';
 
 import {
   FinanceLoadingState,
@@ -218,6 +223,14 @@ export default function PlanningScreen() {
     useState<
       string | null
     >(null);
+
+  const [
+    dialog,
+    setDialog,
+  ] =
+    useState<FinanceDialogConfig | null>(
+      null,
+    );
 
   useFocusEffect(
     useCallback(
@@ -399,11 +412,13 @@ export default function PlanningScreen() {
         error
       );
 
-      Alert.alert(
-        'Budget konnte nicht gespeichert werden',
+      setDialog({
+        title: 'Budget konnte nicht gespeichert werden',
 
-        'Bitte versuche es erneut.'
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setSavingCategoryId(
         null
@@ -418,35 +433,23 @@ export default function PlanningScreen() {
     budgetName:
       string
   ) {
-    Alert.alert(
-      'Budget entfernen?',
+    setDialog({
+      title: 'Budget entfernen?',
 
-      `${budgetName} wird aus deiner Planung entfernt.`,
+      message: `${budgetName} wird aus deiner Planung entfernt.`,
 
-      [
-        {
-          text:
-            'Abbrechen',
+      tone: 'danger',
 
-          style:
-            'cancel',
-        },
+      confirmLabel: 'Entfernen',
 
-        {
-          text:
-            'Entfernen',
+      cancelLabel: 'Abbrechen',
 
-          style:
-            'destructive',
-
-          onPress: () => {
-            void removeBudget(
-              budgetId
-            );
-          },
-        },
-      ]
-    );
+      onConfirm: () => {
+        void removeBudget(
+          budgetId,
+        );
+      },
+    });
   }
 
   async function removeBudget(
@@ -479,11 +482,13 @@ export default function PlanningScreen() {
         error
       );
 
-      Alert.alert(
-        'Budget konnte nicht entfernt werden',
+      setDialog({
+        title: 'Budget konnte nicht entfernt werden',
 
-        'Bitte versuche es erneut.'
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setDeletingBudgetId(
         null
@@ -732,7 +737,6 @@ export default function PlanningScreen() {
             )}
           </FinancePressable>
         </View>
-
         <FinanceCard
           style={{
             marginTop:
@@ -1988,6 +1992,21 @@ export default function PlanningScreen() {
           </FinanceCard>
         </View>
       </ScrollView>
+
+      <FinanceDialog
+        visible={
+          dialog !==
+          null
+        }
+
+        config={
+          dialog
+        }
+
+        onClose={() =>
+          setDialog(null)
+        }
+      />
     </SafeAreaView>
   );
 }

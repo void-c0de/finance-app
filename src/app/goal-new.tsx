@@ -8,7 +8,6 @@ import {
 } from 'react';
 
 import {
-  Alert,
   StyleSheet,
   Text,
   View,
@@ -34,6 +33,12 @@ import {
 import {
   FinancePressable,
 } from '@/components/interaction/FinancePressable';
+
+import {
+  type FinanceDialogConfig,
+
+  FinanceDialog,
+} from '@/components/feedback/FinanceDialog';
 
 import {
   APP_ERROR_CODES,
@@ -109,6 +114,14 @@ export default function GoalNewScreen() {
   ] =
     useState(false);
 
+  const [
+    dialog,
+    setDialog,
+  ] =
+    useState<FinanceDialogConfig | null>(
+      null,
+    );
+
   const targetInputRef =
     useRef<TextInput | null>(
       null,
@@ -137,11 +150,13 @@ export default function GoalNewScreen() {
     if (
       !trimmedName
     ) {
-      Alert.alert(
-        'Name fehlt',
+      setDialog({
+        title: 'Name fehlt',
 
-        'Bitte gib deinem Sparziel einen Namen.',
-      );
+        message: 'Bitte gib deinem Sparziel einen Namen.',
+
+        confirmLabel: 'Verstanden',
+      });
 
       return;
     }
@@ -161,11 +176,13 @@ export default function GoalNewScreen() {
       targetMinor <=
       0
     ) {
-      Alert.alert(
-        'Zielbetrag fehlt',
+      setDialog({
+        title: 'Zielbetrag fehlt',
 
-        'Bitte gib an, wie viel du sparen möchtest.',
-      );
+        message: 'Bitte gib an, wie viel du sparen möchtest.',
+
+        confirmLabel: 'Verstanden',
+      });
 
       return;
     }
@@ -201,11 +218,13 @@ export default function GoalNewScreen() {
         normalizedDate,
       )
     ) {
-      Alert.alert(
-        'Zieldatum prüfen',
+      setDialog({
+        title: 'Zieldatum prüfen',
 
-        'Bitte das Datum im Format JJJJ-MM-TT eingeben oder leer lassen.',
-      );
+        message: 'Bitte das Datum im Format JJJJ-MM-TT eingeben oder leer lassen.',
+
+        confirmLabel: 'Verstanden',
+      });
 
       return;
     }
@@ -244,11 +263,13 @@ export default function GoalNewScreen() {
         error,
       );
 
-      Alert.alert(
-        'Sparziel konnte nicht angelegt werden',
+      setDialog({
+        title: 'Sparziel konnte nicht angelegt werden',
 
-        'Bitte versuche es erneut.',
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -357,8 +378,7 @@ export default function GoalNewScreen() {
             />
           </View>
         }
-      >
-        <FinanceTextField
+      >        <FinanceTextField
           label="NAME"
 
           value={
@@ -497,6 +517,21 @@ export default function GoalNewScreen() {
           }}
         />
       </FinanceKeyboardScreen>
+
+      <FinanceDialog
+        visible={
+          dialog !==
+          null
+        }
+
+        config={
+          dialog
+        }
+
+        onClose={() =>
+          setDialog(null)
+        }
+      />
     </SafeAreaView>
   );
 }

@@ -661,6 +661,16 @@ export async function addContribution(
     input.occurredAt ??
     new Date().toISOString();
 
+  const now =
+    new Date().toISOString();
+
+  /*
+   * created_at/updated_at sind lokal
+   * NOT NULL ohne Default - der
+   * AFTER-INSERT-Trigger kann eine
+   * Constraint-Verletzung nicht mehr
+   * retten. Deshalb explizit setzen.
+   */
   await db.runAsync(
     `
       INSERT INTO goal_contributions (
@@ -670,9 +680,11 @@ export async function addContribution(
         source,
         source_transaction_id,
         note,
-        occurred_at
+        occurred_at,
+        created_at,
+        updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
 
     id,
@@ -691,6 +703,10 @@ export async function addContribution(
       null,
 
     occurredAt,
+
+    now,
+
+    now,
   );
 
   await recomputeGoalProgress(

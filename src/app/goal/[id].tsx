@@ -11,7 +11,6 @@ import {
 } from 'react';
 
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,6 +75,12 @@ import {
 import {
   FinanceEmptyState,
 } from '@/components/states/FinanceEmptyState';
+
+import {
+  type FinanceDialogConfig,
+
+  FinanceDialog,
+} from '@/components/feedback/FinanceDialog';
 
 import {
   useFinanceTheme,
@@ -161,6 +166,14 @@ export default function GoalDetailScreen() {
     setIsBusy,
   ] =
     useState(false);
+
+  const [
+    dialog,
+    setDialog,
+  ] =
+    useState<FinanceDialogConfig | null>(
+      null,
+    );
 
   const reload =
     useCallback(
@@ -277,11 +290,13 @@ export default function GoalDetailScreen() {
         error,
       );
 
-      Alert.alert(
-        'Beitrag konnte nicht gespeichert werden',
+      setDialog({
+        title: 'Beitrag konnte nicht gespeichert werden',
 
-        'Bitte versuche es erneut.',
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setIsBusy(false);
     }
@@ -317,11 +332,13 @@ export default function GoalDetailScreen() {
       amountMinor ===
       0
     ) {
-      Alert.alert(
-        'Betrag prüfen',
+      setDialog({
+        title: 'Betrag prüfen',
 
-        'Bitte einen Betrag ungleich Null eingeben. Negative Beträge sind Entnahmen.',
-      );
+        message: 'Bitte einen Betrag ungleich Null eingeben. Negative Beträge sind Entnahmen.',
+
+        confirmLabel: 'Verstanden',
+      });
 
       return;
     }
@@ -351,40 +368,28 @@ export default function GoalDetailScreen() {
     contribution:
       GoalContribution,
   ) {
-    Alert.alert(
-      'Beitrag entfernen?',
+    setDialog({
+      title: 'Beitrag entfernen?',
 
-      `${formatMinorUnits(
+      message: `${formatMinorUnits(
         Math.abs(
           contribution.amountMinor,
         ),
         goal?.currency ?? 'EUR',
       )} wird aus der Historie und vom Fortschritt abgezogen.`,
 
-      [
-        {
-          text:
-            'Abbrechen',
+      tone: 'danger',
 
-          style:
-            'cancel',
-        },
+      confirmLabel: 'Entfernen',
 
-        {
-          text:
-            'Entfernen',
+      cancelLabel: 'Abbrechen',
 
-          style:
-            'destructive',
-
-          onPress: () => {
-            void removeContribution(
-              contribution,
-            );
-          },
-        },
-      ],
-    );
+      onConfirm: () => {
+        void removeContribution(
+          contribution,
+        );
+      },
+    });
   }
 
   async function removeContribution(
@@ -421,11 +426,13 @@ export default function GoalDetailScreen() {
         error,
       );
 
-      Alert.alert(
-        'Beitrag konnte nicht entfernt werden',
+      setDialog({
+        title: 'Beitrag konnte nicht entfernt werden',
 
-        'Bitte versuche es erneut.',
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setIsBusy(false);
     }
@@ -438,33 +445,21 @@ export default function GoalDetailScreen() {
       return;
     }
 
-    Alert.alert(
-      'Sparziel löschen?',
+    setDialog({
+      title: 'Sparziel löschen?',
 
-      `${goal.name} wird entfernt und auf deinen anderen Geräten ausgeblendet.`,
+      message: `${goal.name} wird entfernt und auf deinen anderen Geräten ausgeblendet.`,
 
-      [
-        {
-          text:
-            'Abbrechen',
+      tone: 'danger',
 
-          style:
-            'cancel',
-        },
+      confirmLabel: 'Löschen',
 
-        {
-          text:
-            'Löschen',
+      cancelLabel: 'Abbrechen',
 
-          style:
-            'destructive',
-
-          onPress: () => {
-            void removeGoal();
-          },
-        },
-      ],
-    );
+      onConfirm: () => {
+        void removeGoal();
+      },
+    });
   }
 
   async function removeGoal() {
@@ -498,11 +493,13 @@ export default function GoalDetailScreen() {
         error,
       );
 
-      Alert.alert(
-        'Sparziel konnte nicht gelöscht werden',
+      setDialog({
+        title: 'Sparziel konnte nicht gelöscht werden',
 
-        'Bitte versuche es erneut.',
-      );
+        message: 'Bitte versuche es erneut.',
+
+        confirmLabel: 'Verstanden',
+      });
     } finally {
       setIsBusy(false);
     }
@@ -1189,6 +1186,21 @@ export default function GoalDetailScreen() {
           }}
         />
       </ScrollView>
+
+      <FinanceDialog
+        visible={
+          dialog !==
+          null
+        }
+
+        config={
+          dialog
+        }
+
+        onClose={() =>
+          setDialog(null)
+        }
+      />
     </SafeAreaView>
   );
 }
