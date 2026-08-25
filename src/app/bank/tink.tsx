@@ -242,45 +242,94 @@ function extractBalanceMinor(
   currency:
     string;
 } {
-  const balanceEntry =
-    account.balances?.[0] ??
-    readAmount(
-      (
-        account.balance as
+  /*
+   * Bekannte Shapes der Reihe nach
+   * probieren:
+   * 1) balances[]: TinkAmount direkt
+   * 2) balances[]: { amount: TinkAmount }
+   * 3) balance[]: { amount: TinkAmount }
+   */
+  const firstBalance =
+    account.balances?.[0];
 
-          | unknown[]
-          | undefined
-      )?.[0],
-    );
+  const candidates:
+    unknown[] =
+    [];
 
   if (
-    !balanceEntry
+    firstBalance
   ) {
-    return {
-      amountMinor:
-        0,
+    candidates.push(
+      firstBalance,
+    );
 
-      currency: 'EUR',
-    };
+    candidates.push(
+      (
+        firstBalance as Record<
+          string,
+          unknown
+        >
+      ).amount,
+    );
   }
 
-  const amount =
-    'unscaledValue' in balanceEntry
-      ? balanceEntry
-      : readAmount(balanceEntry);
+  const legacyBalance = (
+    account.balance as
+
+      | unknown[]
+      | undefined
+  )?.[0];
+
+  if (
+    legacyBalance
+  ) {
+    candidates.push(
+      legacyBalance,
+    );
+
+    candidates.push(
+      (
+        legacyBalance as Record<
+          string,
+          unknown
+        >
+      ).amount,
+    );
+  }
+
+  for (
+    const candidate of
+    candidates
+  ) {
+    const amount =
+      readAmount(
+        candidate,
+      );
+
+    if (
+      amount?.unscaledValue
+    ) {
+      return {
+        amountMinor:
+          tinkUnscaledToMinorUnits(
+            amount.unscaledValue,
+
+            amount.scale,
+          ),
+
+        currency:
+
+          amount.currencyCode ??
+          'EUR',
+      };
+    }
+  }
 
   return {
     amountMinor:
-      tinkUnscaledToMinorUnits(
-        amount?.unscaledValue,
+      0,
 
-        amount?.scale,
-      ),
-
-    currency:
-
-      amount?.currencyCode ??
-      'EUR',
+    currency: 'EUR',
   };
 }
 

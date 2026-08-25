@@ -1,5 +1,7 @@
 import {
     getBankProvider,
+
+    isExternalManagedProvider,
 } from '@/banking/providerRegistry';
 
 import {
@@ -290,6 +292,25 @@ export async function syncAllBankConnections(
     if (
       connection.status ===
       'disconnected'
+    ) {
+      result.skippedConnectionIds.push(
+        connection.id
+      );
+
+      continue;
+    }
+
+    /*
+     * Extern verwaltete Provider (z.B.
+     * Tink) haben ihren eigenen
+     * Consent-/Token-Flow und gehoeren
+     * NICHT in den Mock-BankSync -
+     * ueberspringen statt Fehler.
+     */
+    if (
+      isExternalManagedProvider(
+        connection.providerId
+      )
     ) {
       result.skippedConnectionIds.push(
         connection.id
