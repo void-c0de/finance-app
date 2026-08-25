@@ -103,6 +103,15 @@ export const APP_ERROR_CODES = {
 
   GOALS_TRACK_FAILED:
     'PLN-TRACK-001',
+
+  /*
+   * Banken - Tink/Open Banking (BNK)
+   */
+  BNK_TINK_EXCHANGE_FAILED:
+    'BNK-TINK-001',
+
+  BNK_TINK_SYNC_FAILED:
+    'BNK-TINK-002',
 } as const;
 
 export type AppErrorCode =
@@ -196,4 +205,10 @@ export const APP_ERROR_MESSAGES: Record<
 
   'PLN-TRACK-001':
     'Automatisches Sparziel-Tracking fehlgeschlagen.',
+
+  'BNK-TINK-001':
+    'Bankverbindung über Tink fehlgeschlagen.',
+
+  'BNK-TINK-002':
+    'Umsätze konnten nicht geladen werden.',
 };

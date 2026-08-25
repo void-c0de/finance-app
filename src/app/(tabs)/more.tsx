@@ -688,6 +688,44 @@ export default function MoreScreen() {
           />
 
           <SettingsRow
+            title="Bank über Tink verbinden"
+
+            description="Open Banking (Beta) · nur Lesezugriff"
+
+            icon={
+              <Text
+                style={[
+                  styles.rowGlyph,
+
+                  {
+                    color:
+                      colors.primary,
+                  },
+                ]}
+              >
+                ⇄
+              </Text>
+            }
+
+            onPress={() => {
+              router.push(
+                '/bank/tink' as Href
+              );
+            }}
+          />
+
+          <View
+            style={[
+              styles.divider,
+
+              {
+                backgroundColor:
+                  colors.border,
+              },
+            ]}
+          />
+
+          <SettingsRow
             title="Kategorien & Regeln"
 
             description="Automatische Zuordnung wird im Demo-Build bereits verwendet"
