@@ -6,19 +6,13 @@ import {
 /**
  * Persönliche Konto-Verwaltung.
  *
- * Standard läuft der Cloud-Sync über den
- * dedizierten App-Account ("shared").
- *
- * Wer ein eigenes Supabase-Konto verbindet,
- * bekommt einen vollständig isolierten
- * Datenraum (RLS auf auth.uid()), und die
- * App wechselt beim ersten Sync automatisch
- * alle Daten in diesen Raum.
+ * Jede Installation verwendet ein eigenes
+ * Supabase-Konto und damit einen durch RLS
+ * vollständig isolierten Datenraum.
  */
 
 export type PersonalAccountMode =
   | 'unknown'
-  | 'shared'
   | 'personal';
 
 export type PersonalAccountInfo = {
@@ -34,9 +28,6 @@ export type PersonalAccountInfo = {
   isSuperuser?:
     boolean;
 };
-
-const SHARED_ACCOUNT_EMAIL =
-  process.env.EXPO_PUBLIC_SUPABASE_SYNC_EMAIL;
 
 export async function getPersonalAccountInfo(): Promise<PersonalAccountInfo> {
   const supabase =
@@ -86,15 +77,8 @@ export async function getPersonalAccountInfo(): Promise<PersonalAccountInfo> {
        */
     }
 
-    const isShared =
-      email ===
-      SHARED_ACCOUNT_EMAIL;
-
     return {
-      mode: isShared
-        ? 'shared'
-
-        : 'personal',
+      mode: 'personal',
 
       email,
 

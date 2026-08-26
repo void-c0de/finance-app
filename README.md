@@ -25,6 +25,18 @@ npx expo start --dev-client
 
 Android-first. See `app.json` for configuration.
 
+## Standalone Android builds
+
+Release builds embed the JavaScript bundle and do not require Metro, ADB, or a
+development computer at runtime. `expo-updates` is enabled for compatible
+JavaScript and asset updates; native changes always require a new binary. The
+runtime version follows the app version, so `expo.version` must be incremented
+whenever native compatibility changes.
+
+The currently used local APK is development-distribution only because it is
+debug-signed. Public distribution requires a private upload key and an Android
+App Bundle; never commit signing credentials or keystores.
+
 ## Banking security boundary
 
 The Android bundle contains only public client configuration. Confidential Tink

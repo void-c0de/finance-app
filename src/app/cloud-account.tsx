@@ -312,10 +312,7 @@ export default function CloudAccountScreen() {
       : account?.mode === 'personal'
         ? `Persönlich · ${account.email ?? ''}`
 
-        : account?.mode === 'shared'
-          ? 'App-Konto (Standard)'
-
-          : 'Unbekannt';
+        : 'Unbekannt';
 
   const showSuperuserBadge =
     !isLoadingAccount &&

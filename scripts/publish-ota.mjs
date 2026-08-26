@@ -74,7 +74,7 @@ const docsUpdatesDir = join(
 );
 
 const PUBLIC_BASE =
-  '/finance-app';
+  'https://void-c0de.github.io/finance-app';
 
 function log(
   message,
@@ -474,6 +474,32 @@ if (!launchAssetEntry) {
   fail(
     'Launch-Asset (Bundle) konnte nicht bestimmt werden.',
   );
+}
+
+// Refuse to publish if a legacy/privileged credential was accidentally
+// compiled into the mobile bundle. Values are compared in memory and never
+// printed.
+const launchAssetBytes =
+  readFileSync(
+    join(exportDir, launchAssetEntry.relPath),
+  );
+
+for (const variableName of [
+  'EXPO_PUBLIC_SUPABASE_SYNC_PASSWORD',
+  'TINK_CLIENT_SECRET',
+  'SUPABASE_SERVICE_ROLE_KEY',
+]) {
+  const value = process.env[variableName];
+
+  if (
+    value &&
+    value.length >= 8 &&
+    launchAssetBytes.includes(Buffer.from(value, 'utf8'))
+  ) {
+    fail(
+      `Sicherheitsabbruch: ${variableName} wurde im App-Bundle gefunden.`,
+    );
+  }
 }
 
 const assetEntries =
