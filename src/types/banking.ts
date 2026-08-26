@@ -9,8 +9,13 @@ export type BankAuthenticationMethod =
   | 'fints';
 
 export type BankConnectionStatus =
+  | 'connecting'
   | 'active'
+  | 'syncing'
   | 'requires_action'
+  | 'consent_expired'
+  | 'temporarily_unavailable'
+  | 'revoked'
   | 'error'
   | 'disconnected';
 

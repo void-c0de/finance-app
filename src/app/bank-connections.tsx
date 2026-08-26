@@ -60,6 +60,10 @@ import {
 } from '@/services/bankSync';
 
 import {
+  getBankConnectionHealth,
+} from '@/services/bankConnectionHealth';
+
+import {
   useCloudSyncStore,
 } from '@/stores/useCloudSyncStore';
 
@@ -377,13 +381,15 @@ export default function BankConnectionsScreen() {
     connection:
       BankConnection
   ) {
-    if (
-      connection.status ===
-      'error'
-    ) {
+    const health = getBankConnectionHealth(
+      syncingId === connection.id
+        ? { status: 'syncing' }
+        : connection,
+    );
+
+    if (health.tone === 'negative') {
       return {
-        label:
-          'Fehler',
+        label: health.label,
 
         color:
           colors.negative,
@@ -393,13 +399,9 @@ export default function BankConnectionsScreen() {
       };
     }
 
-    if (
-      connection.status ===
-      'requires_action'
-    ) {
+    if (health.tone === 'warning') {
       return {
-        label:
-          'Aktion nötig',
+        label: health.label,
 
         color:
           colors.warning,
@@ -409,15 +411,24 @@ export default function BankConnectionsScreen() {
       };
     }
 
+    if (health.tone === 'positive') {
+      return {
+        label: health.label,
+
+        color: colors.positive,
+
+        backgroundColor: colors.positiveSoft,
+      };
+    }
+
     return {
-      label:
-        'Aktiv',
+      label: health.label,
 
       color:
-        colors.positive,
+        colors.textSecondary,
 
       backgroundColor:
-        colors.positiveSoft,
+        colors.surfaceInteractive,
     };
   }
 
