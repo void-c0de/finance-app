@@ -32,6 +32,12 @@ const detected = detectRecurringTransactionIds([
   transaction('pending-2', '2026-07-02', 999, 'Pending Service', {
     bookingStatus: 'pending',
   }),
+  transaction('transfer-1', '2026-06-05', 50000, 'Eigenes Sparkonto', {
+    isInternalTransfer: true,
+  }),
+  transaction('transfer-2', '2026-07-05', 50000, 'Eigenes Sparkonto', {
+    isInternalTransfer: true,
+  }),
 ]);
 
 assert.deepEqual(

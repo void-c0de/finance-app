@@ -48,6 +48,60 @@ assert.equal(
 assert.equal(
   findReplacedPendingId(booked, [
     {
+      id: 'ambiguous-a',
+      amountMinor: 1299,
+      currency: 'EUR',
+      direction: 'expense',
+      bookingDate: '2026-08-03',
+      description: 'Netflix',
+      counterpartyName: 'Netflix',
+    },
+    {
+      id: 'ambiguous-b',
+      amountMinor: 1299,
+      currency: 'EUR',
+      direction: 'expense',
+      bookingDate: '2026-08-04',
+      description: 'Netflix',
+      counterpartyName: 'Netflix',
+    },
+  ]),
+  null,
+);
+
+assert.equal(
+  findReplacedPendingId(booked, [
+    {
+      id: 'late-booking',
+      amountMinor: 1299,
+      currency: 'EUR',
+      direction: 'expense',
+      bookingDate: '2026-07-20',
+      description: 'Netflix',
+      counterpartyName: 'Netflix',
+    },
+  ]),
+  null,
+);
+
+assert.equal(
+  findReplacedPendingId(booked, [
+    {
+      id: 'different-merchant',
+      amountMinor: 1299,
+      currency: 'EUR',
+      direction: 'expense',
+      bookingDate: '2026-08-03',
+      description: 'Spotify',
+      counterpartyName: 'Spotify',
+    },
+  ]),
+  null,
+);
+
+assert.equal(
+  findReplacedPendingId(booked, [
+    {
       id: 'same-provider-id',
       externalTransactionId: 'booked-2',
       amountMinor: 1299,

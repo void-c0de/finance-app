@@ -152,6 +152,32 @@ export async function refreshFinanceSnapshot(
       await getTransactions();
   }
 
+  const accounts =
+    await getAccounts();
+
+  const internalTransferIds =
+    detectInternalTransferIds(
+      transactions,
+      accounts,
+    );
+
+  const annotateInternalTransfers = (
+    rows: typeof transactions,
+  ) => rows.map((transaction) => ({
+    ...transaction,
+    isInternalTransfer:
+      internalTransferIds.has(transaction.id),
+  }));
+
+  if (internalTransferIds.size > 0) {
+    transactions = annotateInternalTransfers(transactions);
+
+    debugLog.info(
+      'FINANCE',
+      `${internalTransferIds.size / 2} Eigentransfer-Paare erkannt`,
+    );
+  }
+
   const recurringCount =
     await detectAndPersistRecurringTransactions(
       transactions,
@@ -165,28 +191,10 @@ export async function refreshFinanceSnapshot(
 
     transactions =
       await getTransactions();
-  }
 
-  const accounts =
-    await getAccounts();
-
-  const internalTransferIds =
-    detectInternalTransferIds(
-      transactions,
-      accounts,
-    );
-
-  if (internalTransferIds.size > 0) {
-    transactions = transactions.map((transaction) => ({
-      ...transaction,
-      isInternalTransfer:
-        internalTransferIds.has(transaction.id),
-    }));
-
-    debugLog.info(
-      'FINANCE',
-      `${internalTransferIds.size / 2} Eigentransfer-Paare erkannt`,
-    );
+    if (internalTransferIds.size > 0) {
+      transactions = annotateInternalTransfers(transactions);
+    }
   }
 
   /*

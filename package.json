@@ -1,7 +1,7 @@
 {
   "name": "finance-app",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dependencies": {
     "@expo/ui": "~57.0.13",
     "@supabase/supabase-js": "2.95.3",
@@ -53,7 +53,8 @@
     "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
     "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs",
     "test:pending": "node --experimental-strip-types scripts/test-pending-reconciliation.mjs",
-    "test:transfers": "node --experimental-strip-types scripts/test-internal-transfers.mjs"
+    "test:transfers": "node --experimental-strip-types scripts/test-internal-transfers.mjs",
+    "test:release-config": "node scripts/test-release-config.mjs"
   },
   "private": true
 }

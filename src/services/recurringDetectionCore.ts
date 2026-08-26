@@ -68,6 +68,7 @@ export function detectRecurringTransactionIds(
     if (
       transaction.direction !== 'expense' ||
       transaction.bookingStatus === 'pending' ||
+      transaction.isInternalTransfer ||
       transaction.amountMinor <= 0
     ) {
       continue;

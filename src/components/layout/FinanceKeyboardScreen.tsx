@@ -1,6 +1,7 @@
 import {
     createContext,
     useContext,
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -92,8 +93,6 @@ export function useAutoScrollOnFocus(
       | null
     >,
 
-  deps:
-    readonly unknown[] = [],
 ): {
   onFocus:
     () => void;
@@ -131,11 +130,10 @@ export function useAutoScrollOnFocus(
     }
 
     return undefined;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     focused,
     context,
-    ...deps,
+    fieldWrapperRef,
   ]);
 
   return {
@@ -276,9 +274,8 @@ export function FinanceKeyboardScreen({
     };
   }, []);
 
-  const scrollFieldIntoView:
-    ScrollIntoViewFn =
-    (fieldRef) => {
+  const scrollFieldIntoView =
+    useCallback<ScrollIntoViewFn>((fieldRef) => {
       const scroller =
         scrollerRef.current;
 
@@ -320,7 +317,7 @@ export function FinanceKeyboardScreen({
 
         () => undefined,
       );
-    };
+    }, [keyboardHeight]);
 
   const contextValue =
     useMemo<KeyboardScrollContextValue>(() => ({
