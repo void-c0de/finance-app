@@ -536,6 +536,13 @@ const manifest = {
         file.ext,
       ),
 
+      // SDK 57's Android parser requires this key for every regular asset,
+      // including extensionless binary assets.
+      fileExtension:
+        file.ext
+          ? `.${String(file.ext).replace(/^\./, '')}`
+          : '',
+
       url: urlFor(
         file.relPath,
       ),
