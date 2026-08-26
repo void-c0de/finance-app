@@ -49,7 +49,7 @@
     },
     "updates": {
       "enabled": true,
-      "url": "https://void-c0de.github.io/finance-app/api/manifest.json",
+      "url": "https://cqemndaghehbehtjnkwy.supabase.co/functions/v1/expo-updates",
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
     }
