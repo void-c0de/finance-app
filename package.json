@@ -56,7 +56,9 @@
     "test:pending": "node --experimental-strip-types scripts/test-pending-reconciliation.mjs",
     "test:transfers": "node --experimental-strip-types scripts/test-internal-transfers.mjs",
     "test:release-config": "node scripts/test-release-config.mjs",
-    "test:bank-health": "node --experimental-strip-types scripts/test-bank-connection-health.mjs"
+    "test:bank-health": "node --experimental-strip-types scripts/test-bank-connection-health.mjs",
+    "test:entitlements": "node --experimental-strip-types scripts/test-entitlements.mjs",
+    "test:release-policy": "node --experimental-strip-types scripts/test-release-core.mjs"
   },
   "private": true
 }
