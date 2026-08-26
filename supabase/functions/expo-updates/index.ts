@@ -4,6 +4,9 @@ const MANIFEST_URL =
 const PUBLIC_BASE =
   'https://void-c0de.github.io/finance-app';
 
+const RAW_RELEASE_BASE =
+  'https://raw.githubusercontent.com/void-c0de/finance-app/master/docs';
+
 const responseHeaders = {
   'Content-Type': 'application/expo+json',
   'expo-protocol-version': '1',
@@ -28,6 +31,19 @@ function absoluteAssetUrl(value: unknown): unknown {
   return `${PUBLIC_BASE}${value.startsWith('/finance-app/')
     ? value.slice('/finance-app'.length)
     : value}`;
+}
+
+function rawReleaseUrl(value: unknown): unknown {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const parsed = new URL(value, PUBLIC_BASE);
+  const releasePath = parsed.pathname.startsWith('/finance-app/')
+    ? parsed.pathname.slice('/finance-app'.length)
+    : parsed.pathname;
+
+  return `${RAW_RELEASE_BASE}${releasePath}`;
 }
 
 Deno.serve(async (request) => {
@@ -66,7 +82,7 @@ Deno.serve(async (request) => {
     }
 
     if (manifest.launchAsset) {
-      manifest.launchAsset.url = absoluteAssetUrl(manifest.launchAsset.url);
+      manifest.launchAsset.url = rawReleaseUrl(manifest.launchAsset.url);
     }
 
     if (Array.isArray(manifest.assets)) {
