@@ -50,7 +50,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:tink-import": "node --experimental-strip-types scripts/test-tink-import.mjs",
-    "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs"
+    "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
+    "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs"
   },
   "private": true
 }

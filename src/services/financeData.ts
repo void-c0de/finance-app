@@ -36,6 +36,10 @@ import {
 } from '@/services/goalTracking';
 
 import {
+    detectAndPersistRecurringTransactions,
+} from '@/services/recurringDetection';
+
+import {
     withDbLock,
 } from '@/core/dbWriteLock';
 
@@ -140,6 +144,21 @@ export async function refreshFinanceSnapshot(
   if (
     categorizedCount > 0
   ) {
+    transactions =
+      await getTransactions();
+  }
+
+  const recurringCount =
+    await detectAndPersistRecurringTransactions(
+      transactions,
+    );
+
+  if (recurringCount > 0) {
+    debugLog.info(
+      'FINANCE',
+      `${recurringCount} wiederkehrende Transaktionen erkannt`,
+    );
+
     transactions =
       await getTransactions();
   }
