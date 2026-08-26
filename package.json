@@ -46,6 +46,7 @@
     "reset-project": "node ./scripts/reset-project.js",
     "publish:ota": "node ./scripts/publish-ota.mjs",
     "android": "expo run:android",
+    "release:android": "cd android && gradlew.bat assembleRelease --rerun-tasks",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",

@@ -14,6 +14,7 @@ assert.equal(config.updates?.fallbackToCacheTimeout, 0);
 assert.match(config.updates?.url ?? '', /^https:\/\//);
 assert.ok(Number.isInteger(config.android?.versionCode));
 assert.ok(config.android.versionCode > 0);
+assert.match(packageJson.scripts?.['release:android'] ?? '', /--rerun-tasks/);
 
 const serializedPublicConfig = JSON.stringify(config);
 for (const forbidden of [

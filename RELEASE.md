@@ -22,15 +22,17 @@ Internal universal APK:
 
 ```powershell
 cd android
-.\gradlew.bat assembleRelease
+.\gradlew.bat assembleRelease --rerun-tasks
 ```
 
 Play-distribution candidate:
 
 ```powershell
 cd android
-.\gradlew.bat bundleRelease
+.\gradlew.bat bundleRelease --rerun-tasks
 ```
+
+`--rerun-tasks` is intentional: it forces regeneration of the embedded `expo-updates` manifest and prevents a stale update ID/commit time from being packaged beside a newly generated JavaScript bundle. A combined Gradle `clean assembleRelease` is avoided because React Native's native clean task can run after generated codegen JNI directories have disappeared.
 
 The current local `release` build type is signed with the debug keystore and is suitable only for internal testing. A dedicated protected upload key or EAS-managed production credential is required before external distribution. Never commit keystores or passwords.
 
