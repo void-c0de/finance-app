@@ -9,6 +9,10 @@ import {
     sumMinorUnits,
 } from '@/core/money';
 
+import {
+    normalizeMerchantName,
+} from '@/services/merchantNormalization';
+
 import type {
     Budget,
     Category,
@@ -69,6 +73,15 @@ export type BudgetInsight = {
     number;
 };
 
+export type UpcomingRecurringInsight = {
+  key: string;
+  title: string;
+  amountMinor: number;
+  currency: string;
+  nextDate: string;
+  driftPercent?: number;
+};
+
 export type FinanceInsights = {
   monthTransactions:
     Transaction[];
@@ -84,6 +97,12 @@ export type FinanceInsights = {
 
   recurringExpenseMinor:
     number;
+
+  projectedRecurringMinor:
+    number;
+
+  upcomingRecurring:
+    UpcomingRecurringInsight[];
 
   categorySpending:
     CategorySpendingInsight[];
@@ -356,6 +375,85 @@ export function buildFinanceInsights(
       )
     );
 
+  const recurringGroups =
+    new Map<string, Transaction[]>();
+
+  for (const transaction of input.transactions) {
+    if (
+      !transaction.isRecurring ||
+      transaction.direction !== 'expense' ||
+      transaction.bookingStatus === 'pending'
+    ) {
+      continue;
+    }
+
+    const title = normalizeMerchantName(
+      transaction.counterpartyName ?? transaction.description,
+    );
+
+    const key = `${transaction.accountId}|${transaction.currency}|${title}`;
+    const group = recurringGroups.get(key) ?? [];
+    group.push(transaction);
+    recurringGroups.set(key, group);
+  }
+
+  let projectedRecurringMinor = 0;
+  const upcomingRecurring: UpcomingRecurringInsight[] = [];
+  const now = input.referenceDate ?? new Date();
+
+  for (const [key, group] of recurringGroups) {
+    group.sort(
+      (left, right) => Date.parse(left.bookingDate) - Date.parse(right.bookingDate),
+    );
+
+    const latest = group[group.length - 1];
+    const previous = group[group.length - 2];
+
+    if (!latest || !previous) {
+      continue;
+    }
+
+    const intervalDays = Math.max(
+      1,
+      (Date.parse(latest.bookingDate) - Date.parse(previous.bookingDate)) /
+        (24 * 60 * 60 * 1000),
+    );
+
+    const monthlyMultiplier = Math.min(5, Math.max(1 / 12, 30 / intervalDays));
+    projectedRecurringMinor += Math.round(latest.amountMinor * monthlyMultiplier);
+
+    let nextTimestamp = Date.parse(latest.bookingDate) + intervalDays * 24 * 60 * 60 * 1000;
+
+    while (nextTimestamp < now.getTime()) {
+      nextTimestamp += intervalDays * 24 * 60 * 60 * 1000;
+    }
+
+    if (nextTimestamp <= now.getTime() + 45 * 24 * 60 * 60 * 1000) {
+      const difference = latest.amountMinor - previous.amountMinor;
+      const driftPercent = previous.amountMinor > 0
+        ? difference / previous.amountMinor
+        : 0;
+
+      upcomingRecurring.push({
+        key,
+        title: normalizeMerchantName(
+          latest.counterpartyName ?? latest.description,
+        ),
+        amountMinor: latest.amountMinor,
+        currency: latest.currency,
+        nextDate: new Date(nextTimestamp).toISOString().slice(0, 10),
+        driftPercent:
+          Math.abs(difference) >= 100 && Math.abs(driftPercent) >= 0.1
+            ? driftPercent
+            : undefined,
+      });
+    }
+  }
+
+  upcomingRecurring.sort(
+    (left, right) => left.nextDate.localeCompare(right.nextDate),
+  );
+
   const spendingByCategory =
     new Map(
       categorySpending.map(
@@ -445,6 +543,10 @@ export function buildFinanceInsights(
     cashflowMinor,
 
     recurringExpenseMinor,
+
+    projectedRecurringMinor,
+
+    upcomingRecurring,
 
     categorySpending,
 

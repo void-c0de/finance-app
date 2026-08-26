@@ -1515,6 +1515,88 @@ export default function PlanningScreen() {
         </View>
 
         <FinanceCard
+          style={{
+            marginBottom:
+              spacing.md,
+          }}
+        >
+          <View
+            style={
+              styles.budgetHeader
+            }
+          >
+            <View
+              style={
+                styles.budgetText
+              }
+            >
+              <Text
+                style={[
+                  typography.bodyMedium,
+                  { color: colors.text },
+                ]}
+              >
+                Erwartete Monatsbelastung
+              </Text>
+
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.textSecondary,
+                    marginTop: spacing.xs,
+                  },
+                ]}
+              >
+                Aus erkannten Zahlungsrhythmen hochgerechnet
+              </Text>
+            </View>
+
+            <MoneyText
+              amountMinor={
+                insights.projectedRecurringMinor
+              }
+              size="m"
+            />
+          </View>
+
+          {insights.upcomingRecurring
+            .slice(0, 3)
+            .map((item) => (
+              <View
+                key={item.key}
+                style={{ marginTop: spacing.lg }}
+              >
+                <Text
+                  style={[
+                    typography.smallMedium,
+                    { color: colors.text },
+                  ]}
+                >
+                  {item.title} · {item.nextDate}
+                </Text>
+
+                <Text
+                  style={[
+                    typography.caption,
+                    {
+                      color: item.driftPercent
+                        ? colors.warning
+                        : colors.textSecondary,
+                      marginTop: spacing.xs,
+                    },
+                  ]}
+                >
+                  {formatMinorUnits(item.amountMinor, item.currency)}
+                  {item.driftPercent
+                    ? ` · Preis ${item.driftPercent > 0 ? '+' : ''}${Math.round(item.driftPercent * 100)} %`
+                    : ''}
+                </Text>
+              </View>
+            ))}
+        </FinanceCard>
+
+        <FinanceCard
           padded={
             false
           }
