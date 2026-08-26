@@ -329,6 +329,18 @@ export default function BankConnectionsScreen() {
     connection:
       BankConnection
   ) {
+    if (
+      isExternalManagedProvider(
+        connection.providerId,
+      )
+    ) {
+      router.push(
+        '/bank/tink' as Href,
+      );
+
+      return;
+    }
+
     setSyncingId(
       connection.id
     );
@@ -956,7 +968,13 @@ export default function BankConnectionsScreen() {
                     ]}
                   >
                     <FinanceButton
-                      label="Aktualisieren"
+                      label={
+                        isExternalManagedProvider(
+                          connection.providerId,
+                        )
+                          ? 'Neu autorisieren'
+                          : 'Aktualisieren'
+                      }
 
                       loading={
                         syncingId ===

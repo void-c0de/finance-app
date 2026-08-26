@@ -58,6 +58,8 @@ import {
 
   fetchTinkImport,
 
+  isTinkProduction,
+
   type TinkAccount,
 
   type TinkTransaction,
@@ -481,11 +483,14 @@ export default function TinkCallbackScreen() {
           'tink-link',
 
         institutionName:
-          'Tink Open Banking',
+          isTinkProduction()
+            ? 'Tink Open Banking'
+            : 'Tink Open Banking Test',
 
         status: 'active',
 
-        isDemo: false,
+        isDemo:
+          !isTinkProduction(),
       });
 
     return created.id;
@@ -584,7 +589,9 @@ export default function TinkCallbackScreen() {
                 ),
 
               institutionName:
-                'Tink Open Banking',
+                isTinkProduction()
+                  ? 'Tink Open Banking'
+                  : 'Tink Open Banking Test',
             },
 
             syncedAt,

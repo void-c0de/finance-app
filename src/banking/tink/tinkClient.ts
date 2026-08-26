@@ -36,6 +36,15 @@ const CLIENT_ID =
   process.env.EXPO_PUBLIC_TINK_CLIENT_ID ??
   '';
 
+export const TINK_ENVIRONMENT =
+  process.env.EXPO_PUBLIC_TINK_ENVIRONMENT === 'production'
+    ? 'production'
+    : 'sandbox';
+
+export function isTinkProduction(): boolean {
+  return TINK_ENVIRONMENT === 'production';
+}
+
 export type TinkAmount =
   {
     currencyCode?:

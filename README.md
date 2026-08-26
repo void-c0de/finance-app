@@ -50,6 +50,10 @@ operations run in `supabase/functions/tink-banking` and require a valid Supabase
 Auth JWT. Provider secrets and provider access tokens must never be returned to
 or embedded in the mobile application.
 
+`EXPO_PUBLIC_TINK_ENVIRONMENT` defaults to `sandbox`. Set it to `production`
+only after Tink has activated production Account Aggregation for the matching
+client ID and the Edge Function uses the corresponding server-side secrets.
+
 ## License
 
 MIT
