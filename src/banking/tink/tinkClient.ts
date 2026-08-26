@@ -107,13 +107,21 @@ export type TinkTransaction =
     bookedDate?:
       string;
 
-    amount?: {
-      currencyCode?: string;
+    /**
+     * Data v2 liefert den Wert ueblicherweise
+     * als { currencyCode, value: { unscaledValue,
+     * scale } }. Sandbox-/Legacy-Antworten koennen
+     * weiterhin die flache Form enthalten.
+     */
+    amount?: unknown;
 
-      scale?: string;
+    bookedDateTime?: string;
 
-      unscaledValue?: string;
-    };
+    status?:
+      | 'PENDING'
+      | 'BOOKED'
+      | 'UNDEFINED'
+      | string;
   };
 
 /**
@@ -214,8 +222,53 @@ export async function fetchTinkImport(
   );
 
   if (error) {
+    let serverCode:
+      | string
+      | undefined;
+
+    const response = (
+      error as unknown as {
+        context?: Response;
+      }
+    ).context;
+
+    if (response) {
+      try {
+        const body =
+          await response.clone().json() as {
+            error?: unknown;
+          };
+
+        serverCode =
+          typeof body.error === 'string'
+            ? body.error
+            : undefined;
+      } catch {
+        // Keine verwertbare JSON-Fehlerantwort.
+      }
+    }
+
+    const messageByCode:
+      Record<string, string> = {
+        authentication_required:
+          'Cloud-Anmeldung für die Bankverbindung erforderlich.',
+        invalid_session:
+          'Cloud-Sitzung abgelaufen. Bitte erneut anmelden.',
+        provider_not_configured:
+          'Der sichere Tink-Dienst ist noch nicht vollständig konfiguriert.',
+        invalid_request:
+          'Die Tink-Autorisierung ist ungültig oder bereits verbraucht.',
+        provider_authorization_failed:
+          'Tink hat die Autorisierung abgelehnt oder sie ist abgelaufen.',
+        provider_data_failed:
+          'Tink konnte die Bankdaten nach der Autorisierung nicht bereitstellen.',
+      };
+
     throw new Error(
-      `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`,
+      serverCode
+        ? messageByCode[serverCode] ??
+          `Sicherer Tink-Abruf fehlgeschlagen (${serverCode}).`
+        : `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`,
     );
   }
 

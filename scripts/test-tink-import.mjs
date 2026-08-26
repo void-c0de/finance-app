@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   groupTinkTransactionsByLocalAccount,
+  readTinkAmount,
 } from '../src/banking/tink/tinkImport.ts';
 
 const accountMap = new Map([
@@ -25,5 +26,33 @@ assert.deepEqual(result.grouped.get('local-b'), ['transaction-b']);
 assert.equal(result.assignedCount, 2);
 assert.equal(result.unmatchedCount, 2);
 assert.equal(result.grouped.size, 2);
+
+assert.deepEqual(
+  readTinkAmount({
+    currencyCode: 'EUR',
+    value: {
+      unscaledValue: '-1234',
+      scale: '-2',
+    },
+  }),
+  {
+    currencyCode: 'EUR',
+    unscaledValue: '-1234',
+    scale: '-2',
+  },
+);
+
+assert.deepEqual(
+  readTinkAmount({
+    currencyCode: 'SEK',
+    unscaledValue: '500',
+    scale: '-2',
+  }),
+  {
+    currencyCode: 'SEK',
+    unscaledValue: '500',
+    scale: '-2',
+  },
+);
 
 console.log('Tink account grouping: OK');

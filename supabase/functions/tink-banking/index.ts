@@ -14,6 +14,16 @@ function json(status: number, body: Record<string, unknown>): Response {
   });
 }
 
+class TinkRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly requestId: string | null,
+    path: string,
+  ) {
+    super(`Tink ${path} returned ${status}`);
+  }
+}
+
 async function tinkRequest(
   path: string,
   init: RequestInit,
@@ -21,7 +31,11 @@ async function tinkRequest(
   const response = await fetch(`${TINK_API_BASE}${path}`, init);
 
   if (!response.ok) {
-    throw new Error(`Tink ${path} returned ${response.status}`);
+    throw new TinkRequestError(
+      response.status,
+      response.headers.get('X-Request-ID'),
+      path,
+    );
   }
 
   return response;
@@ -137,11 +151,36 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     // Deliberately omit authorization codes, tokens and provider payloads.
-    console.error(
-      'Tink banking request failed',
-      error instanceof Error ? error.message : 'unknown_error',
-    );
+    const providerStatus =
+      error instanceof TinkRequestError
+        ? error.status
+        : undefined;
 
-    return json(502, { error: 'provider_request_failed' });
+    const requestId =
+      error instanceof TinkRequestError
+        ? error.requestId
+        : null;
+
+    console.error('Tink banking request failed', {
+      message:
+        error instanceof Error
+          ? error.message
+          : 'unknown_error',
+      providerStatus,
+      requestId,
+      userId: userData.user.id,
+    });
+
+    const errorCode =
+      providerStatus === 400 ||
+      providerStatus === 401 ||
+      providerStatus === 403
+        ? 'provider_authorization_failed'
+        : 'provider_data_failed';
+
+    return json(502, {
+      error: errorCode,
+      requestId,
+    });
   }
 });

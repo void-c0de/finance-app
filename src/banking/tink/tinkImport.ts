@@ -1,6 +1,57 @@
 import type {
+  TinkAmount,
   TinkTransaction,
 } from './tinkClient';
+
+export type ParsedTinkAmount = {
+  unscaledValue?: string;
+
+  scale?: string;
+
+  currencyCode?: string;
+};
+
+/** Akzeptiert Data-v2- und Legacy-Betragsformen. */
+export function readTinkAmount(
+  value: unknown,
+): ParsedTinkAmount | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record =
+    value as Record<string, unknown>;
+
+  const direct =
+    typeof record.unscaledValue === 'string'
+      ? record as unknown as TinkAmount
+      : undefined;
+
+  const nestedRecord =
+    record.value && typeof record.value === 'object'
+      ? record.value as Record<string, unknown>
+      : undefined;
+
+  const nested =
+    typeof nestedRecord?.unscaledValue === 'string'
+      ? nestedRecord as unknown as TinkAmount
+      : undefined;
+
+  const resolved = direct ?? nested;
+
+  if (!resolved) {
+    return null;
+  }
+
+  return {
+    unscaledValue: resolved.unscaledValue,
+    scale: resolved.scale,
+    currencyCode:
+      typeof record.currencyCode === 'string'
+        ? record.currencyCode
+        : resolved.currencyCode,
+  };
+}
 
 export type GroupedTinkImport<T> = {
   grouped: Map<string, T[]>;

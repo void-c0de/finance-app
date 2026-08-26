@@ -67,6 +67,7 @@ import {
 
 import {
   groupTinkTransactionsByLocalAccount,
+  readTinkAmount,
 } from '@/banking/tink/tinkImport';
 
 import {
@@ -160,79 +161,6 @@ function mapTinkAccountType(
   return 'other';
 }
 
-function readAmount(
-  value:
-    unknown,
-): {
-  unscaledValue?:
-    string;
-
-  scale?:
-    string;
-
-  currencyCode?:
-    string;
-} | null {
-  if (
-    !value ||
-    typeof value !==
-      'object'
-  ) {
-    return null;
-  }
-
-  const record =
-    value as Record<
-      string,
-      unknown
-    >;
-
-  /*
-   * Shape A: { unscaledValue, scale, currencyCode }
-   * Shape B: { value: { unscaledValue, scale }, currencyCode }
-   */
-  const direct =
-    typeof record.unscaledValue ===
-      'string'
-      ? (record as unknown as TinkAmount)
-      : undefined;
-
-  const nested =
-    record.value &&
-    typeof record.value ===
-      'object' &&
-    typeof (record.value as Record<string, unknown>).unscaledValue ===
-      'string'
-      ? (record.value as unknown as TinkAmount)
-      : undefined;
-
-  const resolved =
-    direct ??
-    nested;
-
-  if (
-    !resolved
-  ) {
-    return null;
-  }
-
-  return {
-    unscaledValue:
-      resolved.unscaledValue,
-
-    scale:
-      resolved.scale,
-
-    currencyCode:
-
-      typeof record.currencyCode ===
-        'string'
-        ? record.currencyCode
-
-        : undefined,
-  };
-}
-
 function extractBalanceMinor(
   account:
     TinkAccount,
@@ -302,7 +230,7 @@ function extractBalanceMinor(
     candidates
   ) {
     const amount =
-      readAmount(
+      readTinkAmount(
         candidate,
       );
 
@@ -373,11 +301,12 @@ function mapTinkTransaction(
   }
 
   const amount =
-    transaction.amount;
+    readTinkAmount(
+      transaction.amount,
+    );
 
   if (
-    !amount?.unscaledValue &&
-    !amount?.scale
+    !amount?.unscaledValue
   ) {
     return null;
   }
@@ -401,7 +330,8 @@ function mapTinkTransaction(
 
   const bookedDate =
     transaction.dates?.booked ??
-    transaction.bookedDate;
+    transaction.bookedDate ??
+    transaction.bookedDateTime;
 
   const bookingDate =
     bookedDate
