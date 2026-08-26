@@ -224,6 +224,8 @@ export function buildFinanceInsights(
       transaction.bookingStatus ===
         'pending' ||
 
+      transaction.isInternalTransfer ||
+
       transaction.direction !==
       'expense'
     ) {
@@ -381,6 +383,7 @@ export function buildFinanceInsights(
   for (const transaction of input.transactions) {
     if (
       !transaction.isRecurring ||
+      transaction.isInternalTransfer ||
       transaction.direction !== 'expense' ||
       transaction.bookingStatus === 'pending'
     ) {

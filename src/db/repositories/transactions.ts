@@ -19,6 +19,11 @@ import type {
     TransactionDirection,
 } from '@/types/finance';
 
+import {
+  findReplacedPendingId,
+  type PendingCandidate,
+} from '@/services/pendingReconciliationCore';
+
 type TransactionRow = {
   id: string;
 
@@ -147,6 +152,73 @@ export async function upsertProviderTransactions(
             transaction.amountMinor,
             transaction.currency
           );
+
+        if (
+          transaction.bookingStatus === 'booked'
+        ) {
+          const pendingRows =
+            await db.getAllAsync<{
+              id: string;
+              external_transaction_id: string | null;
+              amount_minor: number;
+              currency: string;
+              direction: string;
+              booking_date: string;
+              description: string;
+              counterparty_name: string | null;
+            }>(
+              `SELECT id, external_transaction_id, amount_minor, currency,
+                      direction, booking_date, description, counterparty_name
+               FROM transactions
+               WHERE account_id = ?
+                 AND booking_status = 'pending'
+                 AND deleted_at IS NULL
+                 AND amount_minor = ?
+                 AND currency = ?
+                 AND direction = ?`,
+              accountId,
+              transaction.amountMinor,
+              transaction.currency,
+              transaction.direction,
+            );
+
+          const pendingCandidates: PendingCandidate[] =
+            pendingRows.map((row) => ({
+              id: row.id,
+              externalTransactionId: row.external_transaction_id ?? undefined,
+              amountMinor: row.amount_minor,
+              currency: row.currency,
+              direction: row.direction as 'income' | 'expense',
+              bookingDate: row.booking_date,
+              description: row.description,
+              counterpartyName: row.counterparty_name ?? undefined,
+            }));
+
+          const replacedPendingId =
+            findReplacedPendingId(
+              {
+                externalTransactionId: transaction.externalTransactionId,
+                amountMinor: transaction.amountMinor,
+                currency: transaction.currency,
+                direction: transaction.direction,
+                bookingDate: transaction.bookingDate,
+                description: transaction.description,
+                counterpartyName: transaction.counterpartyName,
+              },
+              pendingCandidates,
+            );
+
+          if (replacedPendingId) {
+            await db.runAsync(
+              `UPDATE transactions
+               SET deleted_at = ?, updated_at = ?
+               WHERE id = ? AND deleted_at IS NULL`,
+              now,
+              now,
+              replacedPendingId,
+            );
+          }
+        }
 
         await db.runAsync(
           `

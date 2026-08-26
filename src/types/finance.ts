@@ -105,6 +105,10 @@ export interface Transaction {
   isRecurring?:
     boolean;
 
+  /** Runtime-derived, high-confidence transfer between owned accounts. */
+  isInternalTransfer?:
+    boolean;
+
   createdAt:
     string;
 }

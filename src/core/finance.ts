@@ -17,6 +17,7 @@ export function calculateIncomeMinor(
         (transaction) =>
           transaction.bookingStatus !==
             'pending' &&
+          !transaction.isInternalTransfer &&
           transaction.direction ===
           'income'
       )
@@ -37,6 +38,7 @@ export function calculateExpensesMinor(
         (transaction) =>
           transaction.bookingStatus !==
             'pending' &&
+          !transaction.isInternalTransfer &&
           transaction.direction ===
           'expense'
       )

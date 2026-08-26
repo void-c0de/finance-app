@@ -58,6 +58,10 @@ function transactionMatchesRule(
     return false;
   }
 
+  if (transaction.isInternalTransfer) {
+    return false;
+  }
+
   if (
     goal.linked_account_id &&
     transaction.accountId !==

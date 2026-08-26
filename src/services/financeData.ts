@@ -40,6 +40,10 @@ import {
 } from '@/services/recurringDetection';
 
 import {
+    detectInternalTransferIds,
+} from '@/services/internalTransferDetection';
+
+import {
     withDbLock,
 } from '@/core/dbWriteLock';
 
@@ -163,6 +167,28 @@ export async function refreshFinanceSnapshot(
       await getTransactions();
   }
 
+  const accounts =
+    await getAccounts();
+
+  const internalTransferIds =
+    detectInternalTransferIds(
+      transactions,
+      accounts,
+    );
+
+  if (internalTransferIds.size > 0) {
+    transactions = transactions.map((transaction) => ({
+      ...transaction,
+      isInternalTransfer:
+        internalTransferIds.has(transaction.id),
+    }));
+
+    debugLog.info(
+      'FINANCE',
+      `${internalTransferIds.size / 2} Eigentransfer-Paare erkannt`,
+    );
+  }
+
   /*
    * Automatisches Sparziel-Tracking:
    * passende Eingaenge erzeugen
@@ -191,13 +217,10 @@ export async function refreshFinanceSnapshot(
    * laden.
    */
   const [
-    accounts,
     categories,
     budgets,
   ] =
     await Promise.all([
-      getAccounts(),
-
       getCategories(),
 
       getBudgets(),
