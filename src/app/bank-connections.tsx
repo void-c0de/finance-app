@@ -23,6 +23,7 @@ import {
 
 import {
   getBankProvider,
+  isExternalManagedProvider,
 } from '@/banking/providerRegistry';
 
 import {
@@ -258,14 +259,28 @@ export default function BankConnectionsScreen() {
     );
 
     try {
-      const provider =
-        getBankProvider(
+      /*
+       * Extern verwaltete Provider
+       * (z.B. Tink) haben keinen lokalen
+       * Provider-Adapter - deren Consent
+       * laeuft ueber den Hosted-Flow.
+       * Lokal reicht das Tombstone-
+       * Delete, die Cloud propagiert.
+       */
+      if (
+        !isExternalManagedProvider(
           connection.providerId
-        );
+        )
+      ) {
+        const provider =
+          getBankProvider(
+            connection.providerId
+          );
 
-      await provider.disconnect(
-        connection.externalConnectionId
-      );
+        await provider.disconnect(
+          connection.externalConnectionId
+        );
+      }
 
       await deleteBankConnection(
         connection.id

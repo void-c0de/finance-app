@@ -56,11 +56,7 @@ import {
 
   buildTinkLinkUrl,
 
-  exchangeAuthorizationCode,
-
-  listAccounts,
-
-  listTransactions,
+  fetchTinkImport,
 
   type TinkAccount,
 
@@ -68,6 +64,10 @@ import {
 
   type TinkTransaction,
 } from '@/banking/tink/tinkClient';
+
+import {
+  groupTinkTransactionsByLocalAccount,
+} from '@/banking/tink/tinkImport';
 
 import {
   createBankConnection,
@@ -559,8 +559,8 @@ export default function TinkCallbackScreen() {
         'Tink-Zugriff wird autorisiert…',
       );
 
-      const userToken =
-        await exchangeAuthorizationCode(
+      const importPayload =
+        await fetchTinkImport(
           code,
         );
 
@@ -569,9 +569,7 @@ export default function TinkCallbackScreen() {
       );
 
       const accounts =
-        await listAccounts(
-          userToken.access_token,
-        );
+        importPayload.accounts;
 
       if (
         accounts.length ===
@@ -587,6 +585,9 @@ export default function TinkCallbackScreen() {
 
       const syncedAt =
         new Date().toISOString();
+
+      const accountIdMap =
+        new Map<string, string>();
 
       for (
         const account of
@@ -646,63 +647,46 @@ export default function TinkCallbackScreen() {
             syncedAt,
           });
 
-        try {
-          setStatusText(
-            `Lade Umsätze für ${account.name ?? 'Konto'}…`,
-          );
+        accountIdMap.set(
+          externalAccountId,
+          localAccount.id,
+        );
+      }
 
-          const transactions =
-            await listTransactions(
-              userToken.access_token,
-            );
+      setStatusText(
+        'Umsätze werden zugeordnet…',
+      );
 
-          const mapped =
-            transactions
-              .map(
-                mapTinkTransaction,
-              )
-              .filter(
-                (
-                  item,
-                ): item is NonNullable<
-                  ReturnType<
-                    typeof mapTinkTransaction
-                  >
-                > => item !== null,
-              );
+      const {
+        grouped,
+        assignedCount,
+        unmatchedCount,
+      } = groupTinkTransactionsByLocalAccount(
+        importPayload.transactions,
+        accountIdMap,
+        mapTinkTransaction,
+      );
 
-          if (
-            mapped.length >
-            0
-          ) {
-            await upsertProviderTransactions(
-              localAccount.id,
+      for (const [localAccountId, transactions] of grouped) {
+        await upsertProviderTransactions(
+          localAccountId,
+          transactions.map((item) => ({
+            ...item,
+            isRecurring: false,
+          })),
+        );
+      }
 
-              mapped.map(
-                (
-                  item,
-                ) => ({
-                  ...item,
+      debugLog.info(
+        'BANK',
+        `Tink-Import: ${accountIdMap.size} Konten · ${importPayload.transactions.length} Umsätze · ${assignedCount} zugeordnet`,
+      );
 
-                  isRecurring: false,
-                }),
-              ),
-            );
-          }
-        } catch (transactionError) {
-          /*
-           * Konten ohne Transaktions-
-           * Berechtigung sind okay -
-           * Fehler nur journalisieren.
-           */
-          debugLog.warn(
-            'BANK',
-
-            `${APP_ERROR_CODES.BNK_TINK_SYNC_FAILED}: Umsätze für Konto ${externalAccountId} konnten nicht geladen werden`,
-
-            transactionError,
-          );
-        }
+      if (unmatchedCount > 0) {
+        debugLog.warn(
+          'BANK',
+          `${APP_ERROR_CODES.BNK_TINK_SYNC_FAILED}: ${unmatchedCount} Tink-Umsätze ohne sichere Kontozuordnung übersprungen`,
+        );
       }
 
       await refreshFinanceData();

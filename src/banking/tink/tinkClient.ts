@@ -20,39 +20,21 @@
  *   der braucht keine Delegation.
  *
  * SECURITY-VERTRAG:
- * Sandbox-Credentials duerfen gebundelt
- * werden (EXPO_PUBLIC_TINK_*). Fuer die
- * Production-Umgebung MUESSEN client_id/
- * secret serverseitig liegen (Edge Function)
- * und diese Datei nur noch ohne Secret
- * arbeiten. Nie Produktions-Secrets ins APK!
+ * Im mobilen Bundle liegt ausschliesslich
+ * die oeffentliche Tink Client-ID fuer den
+ * Hosted-Link. Code-Austausch und Datenabruf
+ * laufen authentifiziert ueber die Supabase
+ * Edge Function `tink-banking`. Client-Secret
+ * und Tink-User-Token verlassen den Server nie.
  */
 
-const TINK_API_BASE =
-  'https://api.tink.com';
+import {
+  getSupabaseClient,
+} from '@/services/cloud/cloudClient';
 
 const CLIENT_ID =
   process.env.EXPO_PUBLIC_TINK_CLIENT_ID ??
   '';
-
-const CLIENT_SECRET =
-  process.env.EXPO_PUBLIC_TINK_CLIENT_SECRET ??
-  '';
-
-export type TinkTokenResponse =
-  {
-    access_token:
-      string;
-
-    token_type:
-      string;
-
-    expires_in:
-      number;
-
-    scope:
-      string;
-  };
 
 export type TinkAmount =
   {
@@ -98,6 +80,9 @@ export type TinkAccount =
 
 export type TinkTransaction =
   {
+    accountId?:
+      string;
+
     externalId?:
       string;
 
@@ -130,94 +115,6 @@ export type TinkTransaction =
       unscaledValue?: string;
     };
   };
-
-async function postForm(
-  path:
-    string,
-
-  form:
-    Record<
-      string,
-      string
-    >,
-): Promise<TinkTokenResponse> {
-  const body =
-    Object.entries(
-      form,
-    )
-      .map(
-        ([key, value]) =>
-          `${encodeURIComponent(key)}=${encodeURIComponent(value)}`,
-      )
-      .join('&');
-
-  const response =
-    await fetch(
-      `${TINK_API_BASE}${path}`,
-
-      {
-        method:
-          'POST',
-
-        headers: {
-          'Content-Type':
-            'application/x-www-form-urlencoded',
-        },
-
-        body,
-      },
-    );
-
-  if (
-    !response.ok
-  ) {
-    throw new Error(
-      `Tink ${path} failed: ${response.status}`,
-    );
-  }
-
-  return (await response.json()) as TinkTokenResponse;
-}
-
-/**
- * App-Level-Token (client_credentials).
- * Reicht fuer User-Management/Providers -
- * NICHT fuer Datenzugriff.
- */
-export async function getClientAccessToken(
-  scope:
-    string =
-    'providers:read user:read user:create',
-): Promise<string> {
-  if (
-    !CLIENT_ID ||
-    !CLIENT_SECRET
-  ) {
-    throw new Error(
-      'Tink nicht konfiguriert (EXPO_PUBLIC_TINK_* fehlt).',
-    );
-  }
-
-  const token =
-    await postForm(
-      '/api/v1/oauth/token',
-
-      {
-        client_id:
-          CLIENT_ID,
-
-        client_secret:
-          CLIENT_SECRET,
-
-        grant_type:
-          'client_credentials',
-
-        scope,
-      },
-    );
-
-  return token.access_token;
-}
 
 /**
  * Tink Link Start-URL: der User waehlt
@@ -276,108 +173,69 @@ export function buildTinkLinkUrl(
   return `https://link.tink.com/1.0/authorize?${params.toString()}`;
 }
 
+export type TinkImportPayload = {
+  accounts: TinkAccount[];
+
+  transactions: TinkTransaction[];
+};
+
 /**
- * Authorization Code (aus dem Redirect)
- * gegen einen USER access token tauschen.
+ * Tauscht den Authorization Code und liest
+ * Bankdaten ausschliesslich serverseitig.
+ * Supabase uebermittelt die aktuelle Auth-
+ * Session an die JWT-geschuetzte Funktion.
  */
-export async function exchangeAuthorizationCode(
+export async function fetchTinkImport(
   code:
     string,
-): Promise<TinkTokenResponse> {
-  return postForm(
-    '/api/v1/oauth/token',
+): Promise<TinkImportPayload> {
+  const client =
+    getSupabaseClient();
 
-    {
-      client_id:
-        CLIENT_ID,
-
-      client_secret:
-        CLIENT_SECRET,
-
-      grant_type:
-        'authorization_code',
-
-      code,
-
-      redirect_uri:
-        'financeapp://bank/tink',
-    },
-  );
-}
-
-async function getJson<T>(
-  path:
-    string,
-
-  accessToken:
-    string,
-): Promise<T> {
-  const response =
-    await fetch(
-      `${TINK_API_BASE}${path}`,
-
-      {
-        method:
-          'GET',
-
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-        },
-      },
-    );
-
-  if (
-    !response.ok
-  ) {
+  if (!client) {
     throw new Error(
-      `Tink GET ${path} failed: ${response.status}`,
+      'Cloud ist nicht konfiguriert.',
     );
   }
 
-  return (await response.json()) as T;
-}
+  const {
+    data,
+    error,
+  } = await client.functions.invoke<TinkImportPayload>(
+    'tink-banking',
+    {
+      body: {
+        action: 'exchange-and-fetch',
+        code,
+        redirectUri:
+          'financeapp://bank/tink',
+      },
+    },
+  );
 
-type AccountsEnvelope =
-  {
-    accounts?:
-      TinkAccount[];
-  };
-
-type TransactionsEnvelope =
-  {
-    transactions?:
-      TinkTransaction[];
-  };
-
-export async function listAccounts(
-  userAccessToken:
-    string,
-): Promise<TinkAccount[]> {
-  const payload =
-    await getJson<AccountsEnvelope>(
-      '/data/v2/accounts',
-
-      userAccessToken,
+  if (error) {
+    throw new Error(
+      `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`,
     );
+  }
 
-  return payload.accounts ??
-    [];
-}
-
-export async function listTransactions(
-  userAccessToken:
-    string,
-): Promise<TinkTransaction[]> {
-  const payload =
-    await getJson<TransactionsEnvelope>(
-      '/data/v2/transactions',
-
-      userAccessToken,
+  if (!data) {
+    throw new Error(
+      'Leere Antwort vom sicheren Tink-Dienst.',
     );
+  }
 
-  return payload.transactions ??
-    [];
+  return {
+    accounts:
+      Array.isArray(data.accounts)
+        ? data.accounts
+        : [],
+
+    transactions:
+      Array.isArray(data.transactions)
+        ? data.transactions
+        : [],
+  };
 }
 
 /*

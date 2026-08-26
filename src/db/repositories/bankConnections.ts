@@ -122,7 +122,28 @@ export async function createBankConnection(
         ?,
         ?,
         NULL
-      );
+      )
+      ON CONFLICT (
+        provider_id,
+        external_connection_id
+      )
+      DO UPDATE SET
+        institution_id =
+          excluded.institution_id,
+
+        institution_name =
+          excluded.institution_name,
+
+        status =
+          excluded.status,
+
+        is_demo =
+          excluded.is_demo,
+
+        last_synced_at =
+          excluded.last_synced_at,
+
+        deleted_at = NULL;
     `,
     id,
     input.providerId,
@@ -137,33 +158,39 @@ export async function createBankConnection(
     now
   );
 
-  return {
-    id,
-
-    providerId:
+  const row =
+    await db.getFirstAsync<BankConnectionRow>(
+      `
+        SELECT
+          id,
+          provider_id,
+          external_connection_id,
+          institution_id,
+          institution_name,
+          status,
+          is_demo,
+          created_at,
+          updated_at,
+          last_synced_at
+        FROM bank_connections
+        WHERE provider_id = ?
+          AND external_connection_id = ?
+          AND deleted_at IS NULL
+        LIMIT 1;
+      `,
       input.providerId,
-
-    externalConnectionId:
       input.externalConnectionId,
+    );
 
-    institutionId:
-      input.institutionId,
+  if (!row) {
+    throw new Error(
+      'Bank connection could not be loaded after upsert.',
+    );
+  }
 
-    institutionName:
-      input.institutionName,
-
-    status:
-      input.status,
-
-    isDemo:
-      input.isDemo,
-
-    createdAt:
-      now,
-
-    updatedAt:
-      now,
-  };
+  return mapBankConnectionRow(
+    row,
+  );
 }
 
 export async function getBankConnections():
@@ -279,38 +306,53 @@ export async function deleteBankConnection(
   const db =
     await getDatabase();
 
+  /**
+   * TOMBSTONE-DELETE (M5-Kontrakt):
+   *
+   * Verbindung, Konten und Umsaetze
+   * werden soft-deleted, damit die
+   * Loeschung ueber die Cloud auf alle
+   * Geraete propagiert. Ein Hard-Delete
+   * wuerde Cloud-Restdaten hinterlassen,
+   * die bei Cursor-/Owner-Reset
+   * zurueckkehren koennen.
+   */
   await db.withTransactionAsync(
     async () => {
-      /**
-       * accounts.bank_connection_id besitzt
-       * aktuell bewusst noch keinen echten
-       * SQLite-Foreign-Key, da die Spalte
-       * per Migration ergänzt wurde.
-       *
-       * Deshalb löschen wir Accounts
-       * explizit.
-       *
-       * Transactions werden anschließend
-       * über:
-       *
-       * transactions.account_id
-       * ON DELETE CASCADE
-       *
-       * automatisch entfernt.
-       */
+      const now = new Date().toISOString();
+
       await db.runAsync(
         `
-          DELETE FROM accounts
-          WHERE bank_connection_id = ?;
+          UPDATE transactions
+          SET deleted_at = ?
+          WHERE account_id IN (
+            SELECT id FROM accounts
+            WHERE bank_connection_id = ?
+          )
+            AND deleted_at IS NULL;
         `,
+        now,
         id
       );
 
       await db.runAsync(
         `
-          DELETE FROM bank_connections
+          UPDATE accounts
+          SET deleted_at = ?
+          WHERE bank_connection_id = ?
+            AND deleted_at IS NULL;
+        `,
+        now,
+        id
+      );
+
+      await db.runAsync(
+        `
+          UPDATE bank_connections
+          SET deleted_at = ?
           WHERE id = ?;
         `,
+        now,
         id
       );
     }

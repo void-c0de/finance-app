@@ -177,7 +177,13 @@ export async function upsertProviderAccount(
           excluded.institution_name,
 
         last_synced_at =
-          excluded.last_synced_at;
+          excluded.last_synced_at,
+
+        /*
+         * Re-Connect nach Tombstone-
+         * Delete: Konto wiederbeleben.
+         */
+        deleted_at = NULL;
     `,
 
     generatedId,

@@ -211,7 +211,13 @@ export async function upsertProviderTransactions(
                 excluded.counterparty_iban,
 
               is_recurring =
-                excluded.is_recurring;
+                excluded.is_recurring,
+
+              /*
+               * Re-Import nach Tombstone-
+               * Delete: Umsatz wiederbeleben.
+               */
+              deleted_at = NULL;
           `,
           generatedId,
           accountId,

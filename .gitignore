@@ -37,7 +37,10 @@ yarn-error.*
 *.tsbuildinfo
 
 # local debug / diagnostic artifacts
-*DEBUG*
+/*DEBUG*.txt
+/*DEBUG*.log
+/ROUTER_DEBUG*.txt
+/START_METRO_DEBUG.ps1
 finance-diagnostics.txt
 METRO_FULL_DEBUG.log
 
@@ -49,3 +52,6 @@ example
 # generated native folders
 /ios
 /android
+
+# local Supabase CLI link/cache
+/supabase/.temp/
