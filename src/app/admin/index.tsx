@@ -13,7 +13,8 @@ export default function AdminScreen() {
   const { colors, spacing, typography } = useFinanceTheme();
   const { access, isLoading, refresh } = useProductAccessStore();
   useEffect(() => { void refresh(); }, [refresh]);
-  if (!isLoading && !access.isSuperuser) return <Redirect href="/(tabs)/more" />;
+  if (isLoading) return <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}><View style={{ padding: spacing.xl }}><Text style={[typography.body, { color: colors.textSecondary }]}>Berechtigung wird geprüft…</Text></View></SafeAreaView>;
+  if (!access.isSuperuser) return <Redirect href="/(tabs)/more" />;
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>

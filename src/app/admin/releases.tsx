@@ -28,7 +28,8 @@ export default function AdminReleasesScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { void refresh(); }, [refresh]);
-  if (!isLoading && !access.isSuperuser) return <Redirect href="/(tabs)/more" />;
+  if (isLoading) return <View style={[styles.loading, { backgroundColor: colors.background }]}><Text style={[typography.body, { color: colors.textSecondary }]}>Berechtigung wird geprüft…</Text></View>;
+  if (!access.isSuperuser) return <Redirect href="/(tabs)/more" />;
   async function publish() {
     const buildNumber = Number(build);
     if (!version.trim() || !Number.isInteger(buildNumber) || !title.trim() || !summary.trim()) { setMessage('Version, Build, Titel und Zusammenfassung sind erforderlich.'); return; }
@@ -53,4 +54,4 @@ export default function AdminReleasesScreen() {
     </FinanceCard>
   </FinanceKeyboardScreen>;
 }
-const styles = StyleSheet.create({ header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, spacer: { width: 44 }, wrap: { flexDirection: 'row', flexWrap: 'wrap' } });
+const styles = StyleSheet.create({ loading: { flex: 1, padding: 24, justifyContent: 'center' }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, spacer: { width: 44 }, wrap: { flexDirection: 'row', flexWrap: 'wrap' } });

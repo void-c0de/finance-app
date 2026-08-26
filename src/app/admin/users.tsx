@@ -23,7 +23,8 @@ export default function AdminUsersScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [dialog, setDialog] = useState<FinanceDialogConfig | null>(null);
   useEffect(() => { void refresh(); }, [refresh]);
-  if (!isLoading && !access.isSuperuser) return <Redirect href="/(tabs)/more" />;
+  if (isLoading) return <View style={[styles.loading, { backgroundColor: colors.background }]}><Text style={[typography.body, { color: colors.textSecondary }]}>Berechtigung wird geprüft…</Text></View>;
+  if (!access.isSuperuser) return <Redirect href="/(tabs)/more" />;
 
   async function grant() {
     if (!email.includes('@') || busy) return;
@@ -54,4 +55,4 @@ export default function AdminUsersScreen() {
     <FinanceDialog visible={dialog !== null} config={dialog} onClose={() => setDialog(null)} />
   </>;
 }
-const styles = StyleSheet.create({ header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, spacer: { width: 44 }, wrap: { flexDirection: 'row', flexWrap: 'wrap' } });
+const styles = StyleSheet.create({ loading: { flex: 1, padding: 24, justifyContent: 'center' }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, spacer: { width: 44 }, wrap: { flexDirection: 'row', flexWrap: 'wrap' } });
