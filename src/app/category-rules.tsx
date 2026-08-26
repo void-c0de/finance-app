@@ -5,6 +5,7 @@ import {
 
 import {
     router,
+    type Href,
 } from 'expo-router';
 
 import {
@@ -57,6 +58,10 @@ import {
     useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import {
+    useProductAccessStore,
+} from '@/stores/useProductAccessStore';
+
 import type {
     CategoryRule,
 } from '@/types/finance';
@@ -88,6 +93,11 @@ export default function CategoryRulesScreen() {
     useFinanceStore(
       (state) =>
         state.categories
+    );
+
+  const access =
+    useProductAccessStore(
+      (state) => state.access,
     );
 
   const [
@@ -126,8 +136,12 @@ export default function CategoryRulesScreen() {
   }
 
   useEffect(() => {
-    void loadRules();
-  }, []);
+    if (access.isPremium) {
+      void loadRules();
+    } else {
+      setIsLoading(false);
+    }
+  }, [access.isPremium]);
 
   function categoryNameFor(
     categoryId:
@@ -207,6 +221,31 @@ export default function CategoryRulesScreen() {
           },
         },
       ],
+    );
+  }
+
+  if (!access.isPremium) {
+    return (
+      <SafeAreaView
+        edges={['top', 'bottom']}
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      >
+        <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}>
+          <FinancePressable accessibilityRole="button" accessibilityLabel="Zurück" onPress={() => router.back()} intent="navigation" style={styles.backButton}>
+            <View style={styles.backContent}><Text style={[styles.backIcon, { color: colors.text }]}>‹</Text></View>
+          </FinancePressable>
+          <Text style={[typography.title, { color: colors.text }]}>Kategorie-Regeln</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={{ padding: spacing.xl }}>
+          <FinanceCard variant="highlight">
+            <Text style={[typography.caption, { color: colors.primary }]}>PREMIUM-AUTOMATISIERUNG</Text>
+            <Text style={[typography.cardTitle, { color: colors.text, marginTop: spacing.sm }]}>Wiederkehrende Zuordnungen automatisch erledigen</Text>
+            <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>Manuelle Kategorien bleiben Standard. Premium ergänzt eigene Händler- und Beschreibungsregeln.</Text>
+            <FinanceButton label="Premium ansehen" onPress={() => router.push('/premium' as Href)} style={{ marginTop: spacing.lg }} />
+          </FinanceCard>
+        </View>
+      </SafeAreaView>
     );
   }
 

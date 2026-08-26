@@ -6,6 +6,7 @@ import {
 } from 'expo-router';
 
 import * as SplashScreen from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
 
 import {
   StatusBar,
@@ -37,6 +38,11 @@ import {
 } from '@/components/feedback/AppBootSplash';
 
 import {
+  FinanceDialog,
+  type FinanceDialogConfig,
+} from '@/components/feedback/FinanceDialog';
+
+import {
   FinanceButton,
 } from '@/components/interaction/FinanceButton';
 
@@ -60,6 +66,17 @@ import {
   loadAuthenticatedApplicationData,
   prepareApplication,
 } from '@/services/appBootstrap';
+
+import {
+  applyPendingReload,
+  checkProductUpdate,
+  markPatchNotesSeen,
+  shouldShowPatchNotes,
+} from '@/services/appUpdates';
+
+import {
+  useProductAccessStore,
+} from '@/stores/useProductAccessStore';
 
 void SplashScreen
   .preventAutoHideAsync();
@@ -118,10 +135,15 @@ export default function RootLayout() {
   const [
     startupError,
     setStartupError,
-  ] =
+    ] =
     useState<
       string | null
     >(null);
+
+  const [
+    updateDialog,
+    setUpdateDialog,
+  ] = useState<FinanceDialogConfig | null>(null);
 
   const appState =
     useRef<AppStateStatus>(
@@ -384,6 +406,44 @@ export default function RootLayout() {
   }, [
     runInitialBoot,
   ]);
+
+  useEffect(() => {
+    if (phase !== 'unlocked') return;
+
+    void useProductAccessStore.getState().hydrate()
+      .then(() => useProductAccessStore.getState().refresh());
+
+    void checkProductUpdate({ background: true }).then(async (result) => {
+      if (!result) return;
+      const release = result.release;
+      if (result.status !== 'ready_to_install') {
+        if (release && await shouldShowPatchNotes(release)) {
+          setUpdateDialog({
+            title: `Neu in Finance ${release.version}`,
+            message: `${release.title}\n\n${release.summary}`,
+            confirmLabel: 'Verstanden',
+            onConfirm: () => { void markPatchNotesSeen(release); },
+          });
+        }
+        return;
+      }
+      setUpdateDialog({
+        title: result.nativeUpgradeRequired ? 'App-Update erforderlich' : 'Update verfügbar',
+        message: release
+          ? `${release.title}\n\n${release.summary}`
+          : result.message,
+        confirmLabel: result.nativeUpgradeRequired ? 'Update öffnen' : 'Jetzt aktualisieren',
+        cancelLabel: result.nativeUpgradeRequired || release?.level === 'required' ? undefined : 'Später',
+        onConfirm: () => {
+          if (result.nativeUpgradeRequired && release?.storeUrl) {
+            void WebBrowser.openBrowserAsync(release.storeUrl);
+            return;
+          }
+          if (!result.nativeUpgradeRequired) void applyPendingReload();
+        },
+      });
+    });
+  }, [phase]);
 
   useEffect(() => {
     const subscription =
@@ -652,6 +712,12 @@ export default function RootLayout() {
             />
           </FinanceBlurHost>
         )}
+
+        <FinanceDialog
+          visible={updateDialog !== null}
+          config={updateDialog}
+          onClose={() => setUpdateDialog(null)}
+        />
       </InteractionFeedbackProvider>
     </ThemeProvider>
   );

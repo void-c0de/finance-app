@@ -36,8 +36,13 @@ whenever native compatibility changes.
 The manifest is served through the Expo-protocol gateway in
 `supabase/functions/expo-updates`; immutable bundles and assets remain on
 GitHub Pages. If the service is unavailable, the embedded bundle still starts.
-Update checks are user-triggered from the app settings so an unreachable update
-service can never delay or block a cold start.
+Update checks run only after local unlock, are rate-limited, and can also be
+triggered from settings. An unreachable update service never delays or blocks
+a cold start.
+
+Product access, Superuser authorization, Premium coupons and release metadata
+are documented in [`PRODUCT.md`](./PRODUCT.md). The repeatable standalone and
+OTA release contract is documented in [`RELEASE.md`](./RELEASE.md).
 
 The currently used local APK is development-distribution only because it is
 debug-signed. Public distribution requires a private upload key and an Android

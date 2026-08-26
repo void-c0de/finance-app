@@ -7,7 +7,9 @@
 - JavaScript-only OTA releases keep the same app/runtime version and may target only that runtime.
 - Native dependency, Expo SDK, config-plugin or native configuration changes require a new native version/runtime.
 - The embedded update stays enabled as the anti-bricking fallback.
-- Startup never waits for the update server. Update checks are manual and happen only after local startup.
+- Startup never waits for the update server. Product-level checks happen only after local unlock and are limited to one attempt per six hours.
+- `app_releases` carries server-managed patch notes, update urgency, native minimum version and an optional store/download URL.
+- Compatible OTA updates and required native upgrades are always treated as separate paths.
 - Do not publish an OTA built from native dependencies that differ from its target binary.
 
 ## Environments
@@ -37,3 +39,5 @@ cd android
 The current local `release` build type is signed with the debug keystore and is suitable only for internal testing. A dedicated protected upload key or EAS-managed production credential is required before external distribution. Never commit keystores or passwords.
 
 Before distributing any build, run TypeScript, lint, all domain tests, Expo Doctor, `npm run test:release-config`, a cold start without Metro, and a data-preserving update test.
+
+Release metadata is published from **Mehr → Administration → Release-Steuerung**. This action is authorized server-side and audited. Paid billing and public store distribution remain separate milestones.

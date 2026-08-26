@@ -19,6 +19,12 @@
  *   den Kaltstart niemals blockiert.
  */
 
+import Constants from 'expo-constants';
+import * as SecureStore from 'expo-secure-store';
+
+import { getSupabaseClient } from '@/services/cloud/cloudClient';
+import { requiresNativeUpgrade, type UpdateLevel } from '@/services/releaseCore';
+
 export type UpdateStatusKind =
   | 'unavailable'
   | 'up_to_date'
@@ -27,7 +33,7 @@ export type UpdateStatusKind =
   | 'error'
   | 'not_configured';
 
-type UpdateCheckResult = {
+export type UpdateCheckResult = {
   status: UpdateStatusKind;
 
   message:
@@ -39,6 +45,26 @@ type UpdateCheckResult = {
   runtimeVersion?:
     string;
 };
+
+export type ReleaseMetadata = {
+  version: string;
+  buildNumber: number;
+  runtimeVersion: string;
+  title: string;
+  summary: string;
+  level: UpdateLevel;
+  minimumNativeVersion: string | null;
+  storeUrl: string | null;
+};
+
+export type ProductUpdateResult = UpdateCheckResult & {
+  release: ReleaseMetadata | null;
+  nativeUpgradeRequired: boolean;
+};
+
+const BACKGROUND_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const SEEN_RELEASE_KEY = 'finance.seen-release.v1';
+let lastBackgroundCheckAt = 0;
 
 interface ExpoUpdatesModule {
   isEnabled: boolean;
@@ -251,4 +277,80 @@ export async function applyPendingReload(): Promise<boolean> {
 
     return false;
   }
+}
+
+export function getInstalledVersionInfo() {
+  return {
+    version: Constants.expoConfig?.version ?? 'unbekannt',
+    runtimeVersion: typeof Constants.expoConfig?.runtimeVersion === 'string'
+      ? Constants.expoConfig.runtimeVersion
+      : Constants.expoConfig?.version ?? 'unbekannt',
+  };
+}
+
+export async function getLatestReleaseMetadata(): Promise<ReleaseMetadata | null> {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    const { data, error } = await client
+      .from('app_releases')
+      .select('version,build_number,runtime_version,title,summary,update_level,minimum_native_version,store_url')
+      .eq('platform', 'android')
+      .eq('published', true)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      version: data.version,
+      buildNumber: data.build_number,
+      runtimeVersion: data.runtime_version,
+      title: data.title,
+      summary: data.summary,
+      level: data.update_level as UpdateLevel,
+      minimumNativeVersion: data.minimum_native_version,
+      storeUrl: data.store_url,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function releaseKey(release: ReleaseMetadata): string {
+  return `${release.version}:${release.buildNumber}`;
+}
+
+export async function shouldShowPatchNotes(release: ReleaseMetadata): Promise<boolean> {
+  const installed = getInstalledVersionInfo();
+  if (installed.version !== release.version) return false;
+  try {
+    return (await SecureStore.getItemAsync(SEEN_RELEASE_KEY)) !== releaseKey(release);
+  } catch {
+    return false;
+  }
+}
+
+export async function markPatchNotesSeen(release: ReleaseMetadata): Promise<void> {
+  try { await SecureStore.setItemAsync(SEEN_RELEASE_KEY, releaseKey(release)); } catch { /* non-critical */ }
+}
+
+export async function checkProductUpdate(options?: { background?: boolean }): Promise<ProductUpdateResult | null> {
+  const now = Date.now();
+  if (options?.background && now - lastBackgroundCheckAt < BACKGROUND_CHECK_INTERVAL_MS) return null;
+  if (options?.background) lastBackgroundCheckAt = now;
+  const release = await getLatestReleaseMetadata();
+  const installed = getInstalledVersionInfo();
+  const nativeUpgradeRequired = requiresNativeUpgrade(installed.version, release?.minimumNativeVersion ?? null);
+  if (nativeUpgradeRequired) {
+    return {
+      status: 'ready_to_install',
+      message: 'Eine neue App-Version ist für die weitere sichere Nutzung erforderlich.',
+      currentVersion: installed.version,
+      runtimeVersion: installed.runtimeVersion,
+      release,
+      nativeUpgradeRequired: true,
+    };
+  }
+  const ota = await checkAndInstallUpdate();
+  return { ...ota, release, nativeUpgradeRequired: false };
 }

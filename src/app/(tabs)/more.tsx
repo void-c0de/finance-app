@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import {
+  useEffect,
   useState,
 } from 'react';
 
@@ -40,7 +41,8 @@ import {
 
 import {
   applyPendingReload,
-  checkAndInstallUpdate,
+  checkProductUpdate,
+  getInstalledVersionInfo,
   isUpdateSystemAvailable,
   type UpdateStatusKind,
 } from '@/services/appUpdates';
@@ -56,6 +58,10 @@ import {
 import {
   useThemeStore,
 } from '@/stores/useThemeStore';
+
+import {
+  useProductAccessStore,
+} from '@/stores/useProductAccessStore';
 
 import {
   financeThemePreviewColors,
@@ -148,6 +154,18 @@ export default function MoreScreen() {
   const cloudSync =
     useCloudSyncStore();
 
+  const {
+    access: productAccess,
+    hydrate: hydrateProductAccess,
+    refresh: refreshProductAccess,
+  } =
+    useProductAccessStore();
+
+  useEffect(() => {
+    void hydrateProductAccess()
+      .then(() => refreshProductAccess());
+  }, [hydrateProductAccess, refreshProductAccess]);
+
   const syncStatusText =
     cloudSync.isBusy
       ? 'Synchronisiere…'
@@ -192,14 +210,17 @@ export default function MoreScreen() {
       'action'
     );
 
-    void checkAndInstallUpdate()
+    void checkProductUpdate()
       .then((result) => {
+        if (!result) return;
         setUpdateStatus(
           result.status
         );
 
         setUpdateMessage(
-          result.message
+          result.release
+            ? `${result.release.title} · ${result.release.summary}`
+            : result.message
         );
       })
       .finally(() => {
@@ -246,6 +267,55 @@ export default function MoreScreen() {
             spacing.huge,
         }}
       >
+        <Text
+          style={[
+            typography.caption,
+
+            styles.sectionLabel,
+
+            {
+              color:
+                colors.textMuted,
+
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.sm,
+            },
+          ]}
+        >
+          PRODUKT
+        </Text>
+
+        <FinanceCard padded={false}>
+          <SettingsRow
+            title="Premium"
+            description={
+              productAccess.isSuperuser
+                ? 'Superuser · alle Premium-Funktionen freigeschaltet'
+                : productAccess.isPremium
+                  ? 'Premium aktiv'
+                  : 'Standard · Vorteile und Coupon einlösen'
+            }
+            value={productAccess.isPremium ? 'PREMIUM' : undefined}
+            icon={<Text style={[styles.rowGlyph, { color: colors.primary }]}>◆</Text>}
+            onPress={() => router.push('/premium' as Href)}
+          />
+
+          {productAccess.isSuperuser ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                title="Administration"
+                description="Coupons, Entitlements und Releases"
+                icon={<Text style={[styles.rowGlyph, { color: colors.positive }]}>✦</Text>}
+                onPress={() => router.push('/admin' as Href)}
+              />
+            </>
+          ) : null}
+        </FinanceCard>
+
         <Text
           style={[
             typography.caption,
@@ -775,6 +845,14 @@ export default function MoreScreen() {
         </Text>
 
         <FinanceCard>
+          <SettingsRow
+            title={`Finance ${getInstalledVersionInfo().version}`}
+            description={`Runtime ${getInstalledVersionInfo().runtimeVersion}`}
+            value="Installiert"
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.border, marginVertical: spacing.sm }]} />
+
           <SettingsRow
             title="Updates"
 
