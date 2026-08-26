@@ -65,6 +65,10 @@ import {
 } from '@/hooks/use-finance-theme';
 
 import {
+  useCloudSyncStore,
+} from '@/stores/useCloudSyncStore';
+
+import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
@@ -98,6 +102,11 @@ export default function HomeScreen() {
     radius,
     typography,
   } = useFinanceTheme();
+
+  const cloudStatus =
+    useCloudSyncStore(
+      (state) => state.status,
+    );
 
   const accounts =
     useFinanceStore(
@@ -664,7 +673,11 @@ export default function HomeScreen() {
                   },
                 ]}
               >
-                Lokal
+                {cloudStatus === 'synced'
+                  ? 'Cloud synchronisiert'
+                  : cloudStatus === 'syncing'
+                    ? 'Cloud-Sync…'
+                    : 'Lokal geschützt'}
               </Text>
             </View>
           </View>

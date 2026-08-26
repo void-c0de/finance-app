@@ -92,6 +92,10 @@ import {
 } from '@/services/haptics';
 
 import {
+  useCloudSyncStore,
+} from '@/stores/useCloudSyncStore';
+
+import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
@@ -629,6 +633,10 @@ export default function TinkCallbackScreen() {
       }
 
       await refreshFinanceData();
+
+      await useCloudSyncStore
+        .getState()
+        .refreshCloudSync();
 
       await performFinanceHaptic(
         'success',

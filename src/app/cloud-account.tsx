@@ -465,9 +465,10 @@ export default function CloudAccountScreen() {
           },
         ]}
       >
-        Standardmäßig synchronisiert die App über das integrierte App-Konto.
-        Verbinde ein eigenes Konto, um deine Finanzdaten in einem vollständig
-        separaten, passwortgeschützten Datenraum zu speichern.
+        Melde dich mit deinem persönlichen Konto an, um die lokal
+        verschlüsselten Finanzdaten zusätzlich in deinem durch RLS isolierten
+        Supabase-Datenraum zu synchronisieren. Ohne Anmeldung bleiben sie nur
+        auf diesem Gerät.
       </Text>
 
       {account?.mode ===

@@ -60,6 +60,10 @@ import {
 } from '@/services/bankSync';
 
 import {
+  useCloudSyncStore,
+} from '@/stores/useCloudSyncStore';
+
+import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
@@ -120,6 +124,11 @@ export default function BankConnectionsScreen() {
     spacing,
     typography,
   } = useFinanceTheme();
+
+  const cloudStatus =
+    useCloudSyncStore(
+      (state) => state.status,
+    );
 
   const [
     connections,
@@ -641,7 +650,9 @@ export default function BankConnectionsScreen() {
                   },
                 ]}
               >
-                Lokal verschlüsselt
+                {cloudStatus === 'synced'
+                  ? 'Lokal verschlüsselt + Cloud-Sync'
+                  : 'Lokal verschlüsselt'}
               </Text>
 
               <Text
@@ -657,7 +668,9 @@ export default function BankConnectionsScreen() {
                   },
                 ]}
               >
-                Bankverbindungen, Konten und Umsätze liegen in deiner SQLCipher-Datenbank.
+                {cloudStatus === 'synced'
+                  ? 'Bankverbindungen, Konten und Umsätze sind auf dem Gerät verschlüsselt und in deinem persönlichen Supabase-Datenraum gesichert.'
+                  : 'Bankverbindungen, Konten und Umsätze liegen verschlüsselt auf dem Gerät. Melde dich für den persönlichen Supabase-Sync an.'}
               </Text>
             </View>
           </View>
