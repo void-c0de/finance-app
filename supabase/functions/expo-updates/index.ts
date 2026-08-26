@@ -1,5 +1,5 @@
 const MANIFEST_URL =
-  'https://void-c0de.github.io/finance-app/api/manifest.json';
+  'https://raw.githubusercontent.com/void-c0de/finance-app/master/docs/api/manifest.json';
 
 const PUBLIC_BASE =
   'https://void-c0de.github.io/finance-app';
