@@ -18,6 +18,7 @@ class TinkRequestError extends Error {
   constructor(
     readonly status: number,
     readonly requestId: string | null,
+    readonly providerCode: string | null,
     path: string,
   ) {
     super(`Tink ${path} returned ${status}`);
@@ -31,9 +32,28 @@ async function tinkRequest(
   const response = await fetch(`${TINK_API_BASE}${path}`, init);
 
   if (!response.ok) {
+    let providerCode: string | null = null;
+
+    try {
+      const payload = await response.clone().json() as Record<string, unknown>;
+      const candidate =
+        payload.error ?? payload.errorCode ?? payload.code ?? payload.reason;
+
+      if (typeof candidate === 'string') {
+        const normalized = candidate.slice(0, 80);
+
+        if (/^[A-Za-z0-9_.:-]+$/.test(normalized)) {
+          providerCode = normalized;
+        }
+      }
+    } catch {
+      // Providerantwort enthaelt kein verwertbares JSON.
+    }
+
     throw new TinkRequestError(
       response.status,
       response.headers.get('X-Request-ID'),
+      providerCode,
       path,
     );
   }
@@ -105,7 +125,6 @@ Deno.serve(async (request) => {
       client_secret: tinkClientSecret,
       grant_type: 'authorization_code',
       code: payload.code,
-      redirect_uri: REDIRECT_URI,
     });
 
     const tokenResponse = await tinkRequest('/api/v1/oauth/token', {
@@ -161,6 +180,11 @@ Deno.serve(async (request) => {
         ? error.requestId
         : null;
 
+    const providerCode =
+      error instanceof TinkRequestError
+        ? error.providerCode
+        : null;
+
     console.error('Tink banking request failed', {
       message:
         error instanceof Error
@@ -168,6 +192,7 @@ Deno.serve(async (request) => {
           : 'unknown_error',
       providerStatus,
       requestId,
+      providerCode,
       userId: userData.user.id,
     });
 
@@ -181,6 +206,7 @@ Deno.serve(async (request) => {
     return json(502, {
       error: errorCode,
       requestId,
+      providerCode,
     });
   }
 });

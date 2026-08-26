@@ -237,12 +237,23 @@ export async function fetchTinkImport(
         const body =
           await response.clone().json() as {
             error?: unknown;
+
+            providerCode?: unknown;
           };
 
         serverCode =
           typeof body.error === 'string'
             ? body.error
             : undefined;
+
+        const providerCode =
+          typeof body.providerCode === 'string'
+            ? body.providerCode
+            : undefined;
+
+        if (providerCode) {
+          serverCode = `${serverCode ?? 'provider_error'}:${providerCode}`;
+        }
       } catch {
         // Keine verwertbare JSON-Fehlerantwort.
       }
@@ -264,11 +275,19 @@ export async function fetchTinkImport(
           'Tink konnte die Bankdaten nach der Autorisierung nicht bereitstellen.',
       };
 
+    const [primaryCode, providerCode] =
+      serverCode?.split(':', 2) ?? [];
+
+    const baseMessage =
+      primaryCode
+        ? messageByCode[primaryCode] ??
+          `Sicherer Tink-Abruf fehlgeschlagen (${primaryCode}).`
+        : `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`;
+
     throw new Error(
-      serverCode
-        ? messageByCode[serverCode] ??
-          `Sicherer Tink-Abruf fehlgeschlagen (${serverCode}).`
-        : `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`,
+      providerCode
+        ? `${baseMessage} (${providerCode})`
+        : baseMessage,
     );
   }
 
