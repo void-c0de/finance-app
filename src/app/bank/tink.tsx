@@ -67,6 +67,7 @@ import {
 
 import {
   groupTinkTransactionsByLocalAccount,
+  mapTinkBookingStatus,
   readTinkAmount,
 } from '@/banking/tink/tinkImport';
 
@@ -282,6 +283,11 @@ function mapTinkTransaction(
       bookingDate:
         string;
 
+      bookingStatus:
+        'pending'
+        | 'booked'
+        | 'unknown';
+
       description:
         string;
 
@@ -368,6 +374,11 @@ function mapTinkTransaction(
         : 'expense',
 
     bookingDate,
+
+      bookingStatus:
+        mapTinkBookingStatus(
+          transaction.status
+        ),
 
     description,
 

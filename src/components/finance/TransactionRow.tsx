@@ -232,6 +232,11 @@ export function TransactionRow({
             transaction.bookingDate
           )}
 
+          {transaction.bookingStatus ===
+          'pending'
+            ? ' · Vorgemerkt'
+            : ''}
+
           {showAccountName &&
           accountName
             ? ` · ${accountName}`

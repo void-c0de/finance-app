@@ -15,6 +15,7 @@ import type {
 import type {
     CategorySource,
     Transaction,
+    TransactionBookingStatus,
     TransactionDirection,
 } from '@/types/finance';
 
@@ -33,6 +34,8 @@ type TransactionRow = {
   direction: string;
 
   booking_date: string;
+
+  booking_status: string;
 
   value_date:
     string | null;
@@ -82,6 +85,9 @@ function mapTransactionRow(
 
     bookingDate:
       row.booking_date,
+
+    bookingStatus:
+      row.booking_status as TransactionBookingStatus,
 
     valueDate:
       row.value_date ??
@@ -153,6 +159,7 @@ export async function upsertProviderTransactions(
               currency,
               direction,
               booking_date,
+              booking_status,
               value_date,
               description,
               counterparty_name,
@@ -162,6 +169,7 @@ export async function upsertProviderTransactions(
               created_at
             )
             VALUES (
+              ?,
               ?,
               ?,
               ?,
@@ -198,6 +206,9 @@ export async function upsertProviderTransactions(
               booking_date =
                 excluded.booking_date,
 
+              booking_status =
+                excluded.booking_status,
+
               value_date =
                 excluded.value_date,
 
@@ -227,6 +238,8 @@ export async function upsertProviderTransactions(
           transaction.currency,
           transaction.direction,
           transaction.bookingDate,
+          transaction.bookingStatus ??
+            'booked',
           transaction.valueDate ??
             null,
           transaction.description,
@@ -274,6 +287,7 @@ export async function getTransactions(
           currency,
           direction,
           booking_date,
+          booking_status,
           value_date,
           description,
           counterparty_name,
@@ -323,6 +337,7 @@ export async function getTransactionsForAccount(
           currency,
           direction,
           booking_date,
+          booking_status,
           value_date,
           description,
           counterparty_name,

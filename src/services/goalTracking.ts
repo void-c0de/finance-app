@@ -45,6 +45,13 @@ function transactionMatchesRule(
     string,
 ): boolean {
   if (
+    transaction.bookingStatus ===
+      'pending'
+  ) {
+    return false;
+  }
+
+  if (
     transaction.direction !==
       'income'
   ) {

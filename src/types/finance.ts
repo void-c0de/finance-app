@@ -10,6 +10,11 @@ export type TransactionDirection =
   | 'income'
   | 'expense';
 
+export type TransactionBookingStatus =
+  | 'pending'
+  | 'booked'
+  | 'unknown';
+
 export type BudgetPeriod =
   | 'weekly'
   | 'monthly'
@@ -71,6 +76,9 @@ export interface Transaction {
 
   bookingDate:
     string;
+
+  bookingStatus:
+    TransactionBookingStatus;
 
   valueDate?:
     string;

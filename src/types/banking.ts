@@ -97,6 +97,9 @@ export interface ProviderTransaction {
 
   bookingDate: string;
 
+  bookingStatus?:
+    import('./finance').TransactionBookingStatus;
+
   valueDate?: string;
 
   description: string;

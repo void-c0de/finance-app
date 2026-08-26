@@ -614,6 +614,11 @@ export default function TransactionDetailScreen() {
             {formatLongDate(
               transaction.bookingDate
             )}
+
+            {transaction.bookingStatus ===
+            'pending'
+              ? ' · Vorgemerkt'
+              : ''}
           </Text>
         </View>
 

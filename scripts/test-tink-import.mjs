@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   groupTinkTransactionsByLocalAccount,
+  mapTinkBookingStatus,
   readTinkAmount,
 } from '../src/banking/tink/tinkImport.ts';
 
@@ -54,5 +55,9 @@ assert.deepEqual(
     scale: '-2',
   },
 );
+
+assert.equal(mapTinkBookingStatus('PENDING'), 'pending');
+assert.equal(mapTinkBookingStatus('BOOKED'), 'booked');
+assert.equal(mapTinkBookingStatus('UNDEFINED'), 'unknown');
 
 console.log('Tink account grouping: OK');

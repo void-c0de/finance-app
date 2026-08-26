@@ -15,6 +15,8 @@ export function calculateIncomeMinor(
     transactions
       .filter(
         (transaction) =>
+          transaction.bookingStatus !==
+            'pending' &&
           transaction.direction ===
           'income'
       )
@@ -33,6 +35,8 @@ export function calculateExpensesMinor(
     transactions
       .filter(
         (transaction) =>
+          transaction.bookingStatus !==
+            'pending' &&
           transaction.direction ===
           'expense'
       )

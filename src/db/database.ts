@@ -644,6 +644,20 @@ const migrations:
           AND deleted_at IS NULL;
       `,
     },
+
+    {
+      /** M12 — Provider-neutraler Buchungsstatus. */
+      version: 12,
+
+      sql: `
+        ALTER TABLE transactions
+        ADD COLUMN booking_status TEXT NOT NULL DEFAULT 'booked';
+
+        CREATE INDEX IF NOT EXISTS
+          idx_transactions_booking_status
+        ON transactions(booking_status, booking_date);
+      `,
+    },
   ];
 
 async function configureDatabase(

@@ -3,6 +3,24 @@ import type {
   TinkTransaction,
 } from './tinkClient';
 
+import type {
+  TransactionBookingStatus,
+} from '@/types/finance';
+
+export function mapTinkBookingStatus(
+  status: TinkTransaction['status'],
+): TransactionBookingStatus {
+  if (status === 'PENDING') {
+    return 'pending';
+  }
+
+  if (status === 'BOOKED') {
+    return 'booked';
+  }
+
+  return 'unknown';
+}
+
 export type ParsedTinkAmount = {
   unscaledValue?: string;
 

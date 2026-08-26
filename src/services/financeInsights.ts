@@ -202,6 +202,9 @@ export function buildFinanceInsights(
     of monthTransactions
   ) {
     if (
+      transaction.bookingStatus ===
+        'pending' ||
+
       transaction.direction !==
       'expense'
     ) {
