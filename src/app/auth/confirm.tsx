@@ -12,7 +12,6 @@ import {
     ActivityIndicator,
     StyleSheet,
     Text,
-    View,
 } from 'react-native';
 
 import {

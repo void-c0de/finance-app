@@ -17,7 +17,6 @@ import {
 
 import {
     useAutoScrollOnFocus,
-    useFinanceKeyboardScroll,
 } from '@/components/layout/FinanceKeyboardScreen';
 
 import {
@@ -107,9 +106,6 @@ export function FinanceTextField({
     typography,
   } =
     useFinanceTheme();
-
-  const scrollContext =
-    useFinanceKeyboardScroll();
 
   const internalWrapper =
     useState<View | null>(null);

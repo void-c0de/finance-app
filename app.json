@@ -51,7 +51,7 @@
       "enabled": true,
       "url": "https://cqemndaghehbehtjnkwy.supabase.co/functions/v1/expo-updates",
       "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD"
+      "checkAutomatically": "NEVER"
     }
   }
 }

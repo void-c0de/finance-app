@@ -60,8 +60,6 @@ import {
 
   type TinkAccount,
 
-  type TinkAmount,
-
   type TinkTransaction,
 } from '@/banking/tink/tinkClient';
 

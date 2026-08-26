@@ -293,7 +293,7 @@ export function getRecentDebugLogs(): DebugLogEntry[] {
  */
 export function buildDebugUploadPayload(
   limit = 50,
-): Array<{
+): {
   ts: string;
 
   level: string;
@@ -305,7 +305,7 @@ export function buildDebugUploadPayload(
   details:
     | string
     | null;
-}> {
+}[] {
   return buffer
     .slice(
       -limit,

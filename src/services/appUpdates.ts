@@ -12,10 +12,11 @@
  * - In Release-/Dev-Client-Builds mit
  *   konfigurierter Update-URL gilt:
  *
- *   ON_LOAD prüft automatisch beim Start,
- *   fallbackToCacheTimeout 0 startet
- *   sofort den gecachten Stand und
- *   lädt neue Updates im Hintergrund.
+ *   Der App-Start bleibt vollständig
+ *   offline-fähig. Updates werden bewusst
+ *   erst über die Einstellungen geprüft,
+ *   damit ein nicht erreichbarer Server
+ *   den Kaltstart niemals blockiert.
  */
 
 export type UpdateStatusKind =
@@ -91,6 +92,7 @@ function getUpdatesModule():
      * die App beim Start zu gefährden.
      */
     const module =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('expo-updates') as ExpoUpdatesModule;
 
     cachedModule =

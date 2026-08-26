@@ -169,7 +169,7 @@ export default function MoreScreen() {
   ] =
     useState<string>(
       isUpdateSystemAvailable()
-        ? 'Bereit. Updates werden beim Start automatisch gesucht.'
+        ? 'Bereit. Die App startet offline; Updates kannst du hier sicher abrufen.'
         : 'Update-Dienst in diesem Build noch nicht aktiv.'
     );
 

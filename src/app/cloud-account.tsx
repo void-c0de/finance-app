@@ -166,7 +166,6 @@ export default function CloudAccountScreen() {
    */
   useEffect(() => {
     void loadAccount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function validateInputs():

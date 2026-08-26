@@ -2,9 +2,6 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-
-import {
   Modal,
 } from 'react-native';
 
