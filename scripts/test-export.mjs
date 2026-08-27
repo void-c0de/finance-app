@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 
 import {
   buildExportLookup,
+  buildFinanceBackupJson,
   buildRecurringCsv,
   buildSavingsGoalsCsv,
   buildTransactionsCsv,
   csvCell,
   exportFileName,
+  FINANCE_BACKUP_FORMAT,
+  FINANCE_BACKUP_VERSION,
   minorToPlain,
   toCsv,
 } from '../src/services/exportCore.ts';
@@ -73,5 +76,28 @@ const recCsv = buildRecurringCsv([
 assert.ok(recCsv.includes('Netflix,subscription,Ausgabe,high,ja,monthly,17.99,17.99,EUR,2026-08-04,2026-09-03'));
 
 assert.match(exportFileName('transactions', new Date('2026-08-27T00:00:00Z')), /^finance-transactions-2026-08-27\.csv$/);
+assert.match(exportFileName('full_backup', new Date('2026-08-27T00:00:00Z')), /^finance-full_backup-2026-08-27\.json$/);
+
+// --- full backup JSON: versioned, user-owned data only, no secrets ---
+const backupStr = buildFinanceBackupJson({
+  accounts: [{ id: 'acc', name: 'Giro', iban: 'DE00' }],
+  transactions: [{ id: 't', amountMinor: 100, description: 'REWE' }],
+  categories: [{ id: 'food', name: 'Lebensmittel' }],
+  budgets: [{ id: 'b', amountMinor: 5000 }],
+  savingsGoals: [{ id: 'g', name: 'Notgroschen' }],
+  recurringSeries: [{ seriesKey: 'k', kind: 'subscription' }],
+  appVersion: '1.3.0',
+  now: new Date('2026-08-27T10:00:00Z'),
+});
+const backup = JSON.parse(backupStr);
+assert.equal(backup.format, FINANCE_BACKUP_FORMAT);
+assert.equal(backup.version, FINANCE_BACKUP_VERSION);
+assert.equal(backup.appVersion, '1.3.0');
+assert.equal(backup.createdAt, '2026-08-27T10:00:00.000Z');
+assert.deepEqual(Object.keys(backup.data).sort(), ['accounts', 'budgets', 'categories', 'recurringSeries', 'savingsGoals', 'transactions'].sort());
+assert.equal(backup.data.transactions[0].description, 'REWE');
+
+const forbidden = /token|password|passwort|secret|jwt|refresh|bearer|service_role|apikey|api_key|encryption|securestore/i;
+assert.equal(forbidden.test(backupStr), false, 'Backup enthält keine Secrets/Sitzungsbegriffe');
 
 console.log('Export core: all tests passed');

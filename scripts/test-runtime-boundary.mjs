@@ -22,8 +22,8 @@ assert.match(appVersion, SEMVER, 'app.json expo.version muss dreistelliges SemVe
 assert.match(manifest.runtimeVersion, SEMVER, 'Manifest runtimeVersion muss dreistelliges SemVer sein');
 
 // Diese native Generation ist ausdrücklich freigegeben.
-assert.equal(appVersion, '1.2.0', 'Dieser Meilenstein liefert nativ 1.2.0 aus');
-assert.equal(appJson.expo.android.versionCode, 3, 'Android versionCode 3 gehört zu 1.2.0');
+assert.equal(appVersion, '1.3.0', 'Dieser Meilenstein liefert nativ 1.3.0 aus (expo-sharing = native Grenze)');
+assert.equal(appJson.expo.android.versionCode, 4, 'Android versionCode 4 gehört zu 1.3.0');
 assert.equal(appJson.expo.runtimeVersion?.policy, 'appVersion', 'Runtime folgt weiterhin der App-Version');
 
 // Das veröffentlichte OTA-Manifest darf keine Runtime bewerben, die neuer als der
@@ -49,11 +49,11 @@ for (const asset of manifest.assets ?? []) {
   );
 }
 
-// Versionslogik: ein 1.1.0-Gerät muss ein erzwungenes 1.2.0-Minimum als
-// nativen Pflicht-Upgrade erkennen, ein 1.2.0-Gerät nicht.
-assert.equal(requiresNativeUpgrade('1.1.0', '1.2.0'), true);
-assert.equal(requiresNativeUpgrade('1.2.0', '1.2.0'), false);
-assert.equal(requiresNativeUpgrade('1.2.0', null), false);
+// Versionslogik: ein älteres Gerät muss ein erzwungenes 1.3.0-Minimum als
+// nativen Pflicht-Upgrade erkennen, ein 1.3.0-Gerät nicht.
+assert.equal(requiresNativeUpgrade('1.2.0', '1.3.0'), true);
+assert.equal(requiresNativeUpgrade('1.3.0', '1.3.0'), false);
+assert.equal(requiresNativeUpgrade('1.3.0', null), false);
 assert.equal(compareVersions(appVersion, '1.1.0') > 0, true, 'Native Generation ist gegenüber 1.1.0 vorgerückt');
 
 console.log(

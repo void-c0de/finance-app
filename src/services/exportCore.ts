@@ -164,17 +164,75 @@ export function buildRecurringCsv(items: readonly RecurringItem[]): string {
   return toCsv(headers, rows);
 }
 
-export type ExportKind = 'transactions' | 'budgets' | 'savings_goals' | 'recurring';
+export type ExportKind = 'transactions' | 'budgets' | 'savings_goals' | 'recurring' | 'full_backup';
 
 export const EXPORT_KIND_LABEL: Record<ExportKind, string> = {
   transactions: 'Umsätze',
   budgets: 'Budgets',
   savings_goals: 'Sparziele',
   recurring: 'Wiederkehrende Zahlungen',
+  full_backup: 'Vollständiges Backup',
 };
 
 /** Dateiname mit Zeitstempel, ohne Sonderzeichen. */
 export function exportFileName(kind: ExportKind, referenceDate = new Date()): string {
   const stamp = referenceDate.toISOString().slice(0, 10);
-  return `finance-${kind}-${stamp}.csv`;
+  const extension = kind === 'full_backup' ? 'json' : 'csv';
+  return `finance-${kind}-${stamp}.${extension}`;
+}
+
+// ---------------------------------------------------------------------------
+// Versioned full-backup JSON — user-owned finance data only
+// ---------------------------------------------------------------------------
+
+export const FINANCE_BACKUP_FORMAT = 'finance-app-backup';
+export const FINANCE_BACKUP_VERSION = 1;
+
+export type FinanceBackup = {
+  format: typeof FINANCE_BACKUP_FORMAT;
+  version: number;
+  createdAt: string;
+  appVersion: string | null;
+  data: {
+    accounts: unknown[];
+    transactions: unknown[];
+    categories: unknown[];
+    budgets: unknown[];
+    savingsGoals: unknown[];
+    recurringSeries: unknown[];
+  };
+};
+
+/**
+ * Baut ein versioniertes Backup nur aus nutzereigenen Finanzdaten.
+ *
+ * Enthält bewusst NICHT: Passwörter, Sessions, JWTs, Tink-/Provider-Token,
+ * Supabase-Secrets, Verschlüsselungsschlüssel oder SecureStore-Inhalte.
+ * Ein Import ist noch nicht implementiert – der Export dient dem Aufbewahren.
+ */
+export function buildFinanceBackupJson(input: {
+  accounts: readonly unknown[];
+  transactions: readonly unknown[];
+  categories: readonly unknown[];
+  budgets: readonly unknown[];
+  savingsGoals: readonly unknown[];
+  recurringSeries: readonly unknown[];
+  appVersion?: string | null;
+  now?: Date;
+}): string {
+  const backup: FinanceBackup = {
+    format: FINANCE_BACKUP_FORMAT,
+    version: FINANCE_BACKUP_VERSION,
+    createdAt: (input.now ?? new Date()).toISOString(),
+    appVersion: input.appVersion ?? null,
+    data: {
+      accounts: [...input.accounts],
+      transactions: [...input.transactions],
+      categories: [...input.categories],
+      budgets: [...input.budgets],
+      savingsGoals: [...input.savingsGoals],
+      recurringSeries: [...input.recurringSeries],
+    },
+  };
+  return `${JSON.stringify(backup, null, 2)}\n`;
 }

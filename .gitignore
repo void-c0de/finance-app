@@ -47,6 +47,10 @@ METRO_FULL_DEBUG.log
 # ota export scratch
 .ota-export/
 
+# generated finance exports (never commit user finance data)
+/finance-*.csv
+/finance-*.json
+
 example
 
 # generated native folders

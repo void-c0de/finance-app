@@ -1,28 +1,25 @@
 import { type Href, router } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FinanceCard } from '@/components/finance/FinanceCard';
+import { FinanceDialog, type FinanceDialogConfig } from '@/components/feedback/FinanceDialog';
 import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { FinancePressable } from '@/components/interaction/FinancePressable';
-import { debugLog } from '@/core/debugLog';
+import { PremiumSheet } from '@/components/premium/PremiumSheet';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
+import { listRecurringSeries, type RecurringSeries } from '@/db/repositories/recurringSeries';
 import { buildFinanceInsights } from '@/services/financeInsights';
-import { hasCapability } from '@/services/entitlementCore';
+import { hasCapability, type PremiumGateContext } from '@/services/entitlementCore';
+import { EXPORT_KIND_LABEL, type ExportKind } from '@/services/exportCore';
+import { exportAndShare } from '@/services/exportService';
 import { performFinanceHaptic } from '@/services/haptics';
-import {
-  buildBudgetsCsv,
-  buildExportLookup,
-  buildRecurringCsv,
-  buildSavingsGoalsCsv,
-  buildTransactionsCsv,
-  EXPORT_KIND_LABEL,
-  exportFileName,
-  type ExportKind,
-} from '@/services/exportCore';
+import { trackPremiumEvent } from '@/services/premiumTelemetry';
 import { useFinanceStore } from '@/stores/useFinanceStore';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
+
+type Row = { kind: ExportKind; premium: boolean; count: number; hint: string; context: PremiumGateContext };
 
 export default function ExportScreen() {
   const { colors, spacing, radius, typography } = useFinanceTheme();
@@ -34,49 +31,68 @@ export default function ExportScreen() {
   const recurringOverrides = useFinanceStore((state) => state.recurringOverrides);
   const access = useProductAccessStore((state) => state.access);
   const canExportAll = hasCapability(access, 'advanced_exports');
-  const [busy, setBusy] = useState<ExportKind | null>(null);
+  const canFullExport = hasCapability(access, 'full_finance_export');
 
-  const lookup = useMemo(
-    () => buildExportLookup(categories, accounts),
-    [categories, accounts],
-  );
+  const [recurringSeries, setRecurringSeries] = useState<RecurringSeries[]>([]);
+  const [busy, setBusy] = useState<ExportKind | null>(null);
+  const [gate, setGate] = useState<PremiumGateContext | null>(null);
+  const [dialog, setDialog] = useState<FinanceDialogConfig | null>(null);
+
+  useEffect(() => {
+    void listRecurringSeries().then(setRecurringSeries).catch(() => setRecurringSeries([]));
+  }, []);
+
   const recurringItems = useMemo(
     () => buildFinanceInsights({ transactions, categories, budgets, recurringOverrides }).recurringItems,
     [transactions, categories, budgets, recurringOverrides],
   );
 
-  async function exportKind(kind: ExportKind) {
+  const bundle = {
+    transactions,
+    budgets,
+    goals,
+    categories,
+    accounts,
+    recurringItems,
+    recurringSeries,
+  };
+
+  async function runExport(kind: ExportKind) {
     if (busy) return;
     setBusy(kind);
     try {
-      const csv =
-        kind === 'transactions'
-          ? buildTransactionsCsv(transactions, lookup)
-          : kind === 'budgets'
-            ? buildBudgetsCsv(budgets, lookup)
-            : kind === 'savings_goals'
-              ? buildSavingsGoalsCsv(goals)
-              : buildRecurringCsv(recurringItems);
-
       await performFinanceHaptic('selection');
-      await Share.share({
-        title: `${EXPORT_KIND_LABEL[kind]} · ${exportFileName(kind)}`,
-        message: csv,
-      });
-    } catch (error) {
-      debugLog.error('EXPORT', `${kind}-Export fehlgeschlagen`, error);
-      await performFinanceHaptic('warning');
+      const result = await exportAndShare(kind, bundle);
+      if (result === 'unavailable') {
+        setDialog({
+          title: 'Teilen nicht verfügbar',
+          message: 'Auf diesem Gerät steht das System-Teilen-Menü nicht bereit.',
+          confirmLabel: 'Verstanden',
+        });
+      } else if (result === 'error') {
+        setDialog({
+          title: 'Export fehlgeschlagen',
+          message: 'Bitte versuche es erneut. Es wurde nichts hochgeladen.',
+          confirmLabel: 'Verstanden',
+        });
+      }
     } finally {
       setBusy(null);
     }
   }
 
-  const rows: { kind: ExportKind; count: number; premium: boolean }[] = [
-    { kind: 'transactions', count: transactions.length, premium: false },
-    { kind: 'budgets', count: budgets.length, premium: true },
-    { kind: 'savings_goals', count: goals.length, premium: true },
-    { kind: 'recurring', count: recurringItems.length, premium: true },
+  const rows: Row[] = [
+    { kind: 'transactions', premium: false, count: transactions.length, hint: 'CSV · alle Umsätze', context: 'advanced_export' },
+    { kind: 'budgets', premium: true, count: budgets.length, hint: 'CSV', context: 'advanced_export' },
+    { kind: 'savings_goals', premium: true, count: goals.length, hint: 'CSV', context: 'advanced_export' },
+    { kind: 'recurring', premium: true, count: recurringItems.length, hint: 'CSV', context: 'advanced_export' },
+    { kind: 'full_backup', premium: true, count: transactions.length + budgets.length + goals.length, hint: 'JSON · Backup zum Aufbewahren', context: 'full_export' },
   ];
+
+  function isLocked(row: Row): boolean {
+    if (!row.premium) return false;
+    return row.kind === 'full_backup' ? !canFullExport : !canExportAll;
+  }
 
   return (
     <SafeAreaView edges={['top']} style={[styles.flex, { backgroundColor: colors.background }]}>
@@ -97,12 +113,12 @@ export default function ExportScreen() {
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
         <Text style={[typography.body, { color: colors.textSecondary, marginBottom: spacing.lg }]}>
-          Exportierte Dateien enthalten deine Finanzdaten. Teile sie nur mit Zielen, denen du vertraust; die App lädt nichts automatisch hoch.
+          Exportierte Dateien enthalten deine Finanzdaten – keine Zugangsdaten oder Tokens. Sie werden als echte Datei über das System-Teilen-Menü bereitgestellt; die App lädt nichts automatisch hoch.
         </Text>
 
         <FinanceCard padded={false}>
           {rows.map((row, index) => {
-            const locked = row.premium && !canExportAll;
+            const locked = isLocked(row);
             return (
               <View
                 key={row.kind}
@@ -111,9 +127,7 @@ export default function ExportScreen() {
                 <View style={{ padding: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                      <Text style={[typography.bodyMedium, { color: colors.text }]}>
-                        {EXPORT_KIND_LABEL[row.kind]}
-                      </Text>
+                      <Text style={[typography.bodyMedium, { color: colors.text }]}>{EXPORT_KIND_LABEL[row.kind]}</Text>
                       {row.premium ? (
                         <View style={{ paddingHorizontal: spacing.xs, paddingVertical: 2, borderRadius: radius.sm, backgroundColor: colors.surfaceInteractive }}>
                           <Text style={[typography.caption, { color: locked ? colors.textMuted : colors.primary }]}>Premium</Text>
@@ -121,7 +135,7 @@ export default function ExportScreen() {
                       ) : null}
                     </View>
                     <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xxs }]}>
-                      {row.count} {row.count === 1 ? 'Eintrag' : 'Einträge'} · CSV
+                      {row.count} {row.count === 1 ? 'Eintrag' : 'Einträge'} · {row.hint}
                     </Text>
                   </View>
                   <FinanceButton
@@ -130,7 +144,14 @@ export default function ExportScreen() {
                     size="small"
                     loading={busy === row.kind}
                     disabled={busy !== null || row.count === 0}
-                    onPress={() => (locked ? router.push('/premium' as Href) : exportKind(row.kind))}
+                    onPress={() => {
+                      if (locked) {
+                        trackPremiumEvent('premium_gate_opened', `export:${row.kind}`);
+                        setGate(row.context);
+                      } else {
+                        void runExport(row.kind);
+                      }
+                    }}
                   />
                 </View>
               </View>
@@ -139,9 +160,20 @@ export default function ExportScreen() {
         </FinanceCard>
 
         <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.lg }]}>
-          Die CSV-Datei wird über das Android-Teilen-Menü bereitgestellt (z. B. an E-Mail, Notizen oder Dateien). Direkte Datei-Anhänge folgen mit einem nativen Update.
+          Der Umsätze-Export bleibt im Standard-Tarif – deine eigenen Daten sollen dir gehören. Ein Wieder-Import des Backups ist noch nicht möglich; die Datei dient dem Aufbewahren.
         </Text>
+        <FinancePressable
+          accessibilityRole="button"
+          onPress={() => router.push('/premium' as Href)}
+          intent="navigation"
+          contentStyle={{ paddingTop: spacing.md }}
+        >
+          <Text style={[typography.caption, { color: colors.primary }]}>Was Premium sonst noch kann →</Text>
+        </FinancePressable>
       </View>
+
+      <PremiumSheet context={gate} onClose={() => setGate(null)} />
+      <FinanceDialog visible={dialog !== null} config={dialog} onClose={() => setDialog(null)} />
     </SafeAreaView>
   );
 }
