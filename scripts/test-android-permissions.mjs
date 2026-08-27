@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -72,8 +72,7 @@ const aapt = findAapt();
 if (existsSync(apk) && aapt) {
   let out = '';
   try {
-    const args = aapt.isAapt2 ? ['dump', 'permissions', apk] : ['dump', 'permissions', apk];
-    out = execFileSync(aapt.bin, args, { encoding: 'utf8', shell: process.platform === 'win32' });
+    out = execSync(`"${aapt.bin}" dump permissions "${apk}"`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (error) {
     out = (error.stdout ?? '').toString();
   }

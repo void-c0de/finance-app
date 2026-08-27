@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
@@ -83,13 +83,10 @@ if (isAab) {
   determined = /Owner:/.test(out);
 } else {
   const apksignerBin = findApksigner();
-  const useShell = apksignerBin.endsWith('.bat') || process.platform === 'win32';
+  const cmd = `"${apksignerBin}" verify --print-certs "${artifact}"`;
   let out = '';
   try {
-    out = execFileSync(apksignerBin, ['verify', '--print-certs', artifact], {
-      encoding: 'utf8',
-      shell: useShell,
-    });
+    out = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (error) {
     // apksigner exits non-zero on an unsigned artifact but still prints certs.
     out = `${(error.stdout ?? '').toString()}${(error.stderr ?? '').toString()}`;

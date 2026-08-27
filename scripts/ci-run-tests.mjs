@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs';
  * Bewusst reihum (die Suiten sind schnell und teilen teils Dateien).
  */
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-const scripts = Object.keys(pkg.scripts).filter((k) => k.startsWith('test:'));
+// Nur echte Suiten – `test:all` ist dieser Runner selbst.
+const scripts = Object.keys(pkg.scripts).filter((k) => k.startsWith('test:') && k !== 'test:all');
 
 let failed = 0;
 for (const name of scripts) {
