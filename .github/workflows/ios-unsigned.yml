@@ -1,0 +1,78 @@
+name: iOS unsigned build
+
+# Manual only — consumes macOS Actions minutes. Produces an UNSIGNED .ipa that
+# you sign locally on Windows with AltStore/Sideloadly using your own free Apple
+# ID (Personal Team). No Apple Developer Program membership. No Apple credentials
+# in CI. See IOS_FREE_DEVICE_INSTALL.md.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - run: npm ci
+
+      - name: Generate the iOS project
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: CocoaPods
+        working-directory: ios
+        run: |
+          gem install cocoapods --no-document
+          pod install --repo-update
+
+      - name: Build unsigned (Release, device SDK)
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          WORKSPACE=$(ls -d *.xcworkspace | head -1)
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).workspace.schemes[0]))")
+          echo "Workspace=$WORKSPACE Scheme=$SCHEME"
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Package unsigned IPA
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app | head -1)
+          echo "App bundle: $APP"
+          rm -rf Payload FinanceApp-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qr FinanceApp-unsigned.ipa Payload
+          unzip -l FinanceApp-unsigned.ipa | head -20
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinanceApp-unsigned-ipa
+          path: ios/FinanceApp-unsigned.ipa
+          retention-days: 7
+          if-no-files-found: error

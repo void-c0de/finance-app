@@ -8,7 +8,14 @@
     "scheme": "financeapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.nocta-xz.financeapp",
+      "buildNumber": "6",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Finance App entsperrt deine Finanzübersicht mit Face ID.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,6 +47,12 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Finance App entsperrt deine Finanzübersicht mit Face ID."
+        }
+      ],
       "./plugins/withFinanceUploadSigning",
       "./plugins/withReleaseHardening",
       "expo-sharing"
