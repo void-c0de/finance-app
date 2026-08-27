@@ -658,6 +658,60 @@ const migrations:
         ON transactions(booking_status, booking_date);
       `,
     },
+
+    {
+      /**
+       * M13 — Persistierte wiederkehrende Serien (Nutzerkorrekturen).
+       *
+       * `recurring_series` beschreibt NICHT die Transaktionswahrheit, sondern
+       * die Entscheidung des Nutzers zu einer wiederkehrenden Beziehung:
+       * bestätigte Art, geänderte Art oder „ist keine wiederkehrende Zahlung"
+       * (`muted = 1`). Die Heuristik in `recurringInsightsCore` respektiert diese
+       * Serien; eine gemutete Serie erscheint nirgends mehr.
+       *
+       * Die Primär-ID IST die stabile, geräteübergreifende Serie-Identität aus
+       * `recurringSeriesKey(accountId, currency, direction, merchant)`. Dadurch
+       * erzeugen zwei Geräte für dieselbe Serie exakt dieselbe Zeile, und der
+       * Sync-Konflikt läuft deterministisch über `ON CONFLICT(id)` + LWW.
+       * Sync-fähig über die üblichen Zeitstempel + Tombstones.
+       */
+      version: 13,
+
+      sql: `
+        CREATE TABLE IF NOT EXISTS recurring_series (
+          id TEXT PRIMARY KEY NOT NULL,
+          merchant_name TEXT,
+          kind TEXT NOT NULL DEFAULT 'uncertain',
+          muted INTEGER NOT NULL DEFAULT 0,
+          user_confirmed INTEGER NOT NULL DEFAULT 1,
+          expected_amount_minor INTEGER,
+          currency TEXT,
+          cadence TEXT,
+          note TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          deleted_at TEXT
+        );
+
+        CREATE TRIGGER IF NOT EXISTS trg_recurring_series_insert
+        AFTER INSERT ON recurring_series
+        BEGIN
+          UPDATE recurring_series SET
+            created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS trg_recurring_series_update
+        AFTER UPDATE ON recurring_series
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+          UPDATE recurring_series SET
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          WHERE id = NEW.id;
+        END;
+      `,
+    },
   ];
 
 async function configureDatabase(

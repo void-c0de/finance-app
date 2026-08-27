@@ -446,6 +446,47 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
 
     {
       localTable:
+        'recurring_series',
+
+      remoteTable:
+        'finance_recurring_series',
+
+      booleanColumns: [
+        'muted',
+        'user_confirmed',
+      ],
+
+      pushColumns: [
+        'id',
+        'merchant_name',
+        'kind',
+        'muted',
+        'user_confirmed',
+        'expected_amount_minor',
+        'currency',
+        'cadence',
+        'note',
+        'deleted_at',
+      ],
+
+      pullColumns: [
+        'id',
+        'merchant_name',
+        'kind',
+        'muted',
+        'user_confirmed',
+        'expected_amount_minor',
+        'currency',
+        'cadence',
+        'note',
+        'deleted_at',
+        'created_at',
+        'updated_at',
+      ],
+    },
+
+    {
+      localTable:
         'transactions',
 
       remoteTable:

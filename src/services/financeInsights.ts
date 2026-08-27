@@ -17,6 +17,7 @@ import { buildBudgetProgress } from '@/services/budgetInsightsCore';
 import {
     buildRecurringInsights,
     type RecurringItem,
+    type RecurringOverride,
     type RecurringSummary,
 } from '@/services/recurringInsightsCore';
 
@@ -152,6 +153,9 @@ export function buildFinanceInsights(
 
     referenceDate?:
       Date;
+
+    recurringOverrides?:
+      ReadonlyMap<string, RecurringOverride>;
   }
 ): FinanceInsights {
   const monthTransactions =
@@ -382,6 +386,7 @@ export function buildFinanceInsights(
   const recurring = buildRecurringInsights(input.transactions, {
     normalizeMerchant: normalizeMerchantName,
     referenceDate: input.referenceDate,
+    overridesByKey: input.recurringOverrides,
   });
 
   const projectedRecurringMinor = recurring.summary.monthlyCommittedMinor;

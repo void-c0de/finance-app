@@ -15,6 +15,10 @@ import type {
   Transaction,
 } from '@/types/finance';
 
+import type {
+  RecurringOverride,
+} from '@/services/recurringInsightsCore';
+
 type FinanceState = {
   accounts:
     BankAccount[];
@@ -30,6 +34,9 @@ type FinanceState = {
 
   goals:
     SavingsGoal[];
+
+  recurringOverrides:
+    ReadonlyMap<string, RecurringOverride>;
 
   isLoading:
     boolean;
@@ -96,6 +103,9 @@ export const useFinanceStore =
 
       goals:
         [],
+
+      recurringOverrides:
+        new Map(),
 
       isLoading:
         true,
@@ -202,6 +212,9 @@ export const useFinanceStore =
               goals:
                 snapshot.goals,
 
+              recurringOverrides:
+                snapshot.recurringOverrides,
+
               isLoading:
                 false,
 
@@ -254,6 +267,9 @@ export const useFinanceStore =
 
           goals:
             [],
+
+          recurringOverrides:
+            new Map(),
 
           isLoading:
             true,

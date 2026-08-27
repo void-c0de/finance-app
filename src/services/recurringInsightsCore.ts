@@ -190,6 +190,31 @@ function monthlyMultiplierFor(cadence: RecurringCadence, effectiveIntervalDays: 
   }
 }
 
+/**
+ * Stabile, geräteübergreifende Identität einer wiederkehrenden Serie.
+ * Konto-IDs synchronisieren als text-PK, daher ist der Schlüssel überall gleich.
+ * Wird sowohl zum Gruppieren als auch als `series_key` der persistierten
+ * Nutzerkorrektur verwendet.
+ */
+export function recurringSeriesKey(
+  accountId: string,
+  currency: string,
+  direction: 'income' | 'expense',
+  normalizedMerchant: string,
+): string {
+  return `${accountId}|${currency}|${direction}|${normalizedMerchant.toLocaleLowerCase('de-DE')}`;
+}
+
+/** Persistierte Nutzerkorrektur zu einer Serie. */
+export type RecurringOverride = {
+  kind?: RecurringKind;
+  /** Nutzer hat „ist keine wiederkehrende Zahlung" gewählt – Serie wird überall unterdrückt. */
+  muted?: boolean;
+  /** Nutzer hat die Serie ausdrücklich bestätigt. */
+  confirmed?: boolean;
+  expectedAmountMinor?: number | null;
+};
+
 export type RecurringItem = {
   key: string;
   title: string;
@@ -199,6 +224,10 @@ export type RecurringItem = {
   kind: RecurringKind;
   confidence: RecurringConfidence;
   cadence: RecurringCadence;
+  /** Median-Abstand aufeinanderfolgender Buchungen in Tagen (Fallback 30). */
+  intervalDays: number;
+  /** Nutzer hat diese Serie ausdrücklich bestätigt (höchste Vertrauensstufe). */
+  userConfirmed: boolean;
   /** Zuletzt beobachteter Betrag (Minor-Units, immer positiv). */
   amountMinor: number;
   /** Auf einen Monat normierter Schätzwert (Minor-Units). */
@@ -210,13 +239,23 @@ export type RecurringItem = {
   driftPercent?: number;
 };
 
+/** Zählt als monatlich gebundene Ausgabe: bestätigt, oder Abo/Rechnung mit hoher Konfidenz. */
+export function isCommittedExpense(item: RecurringItem): boolean {
+  if (item.direction !== 'expense') return false;
+  if (item.userConfirmed) return item.kind !== 'income';
+  return (item.kind === 'subscription' || item.kind === 'bill') && item.confidence === 'high';
+}
+
 export type RecurringSummary = {
   subscriptionCount: number;
   billCount: number;
   incomeCount: number;
   uncertainCount: number;
-  /** Monatlich gebundene Ausgaben (Abos + Rechnungen + unbestätigt). */
+  confirmedCount: number;
+  /** Monatlich gebundene Ausgaben – nur bestätigte bzw. hochsichere Abos/Rechnungen. */
   monthlyCommittedMinor: number;
+  /** Monatlich erwartete Ausgaben aus unsicheren Kandidaten (separat ausweisen). */
+  monthlyUncertainMinor: number;
   /** Monatlich erwartetes wiederkehrendes Einkommen. */
   monthlyRecurringIncomeMinor: number;
 };
@@ -245,7 +284,8 @@ export function buildRecurringInsights(
     normalizeMerchant?: (value: string | null | undefined) => string;
     referenceDate?: Date;
     horizonDays?: number;
-    manualKindByKey?: ReadonlyMap<string, RecurringKind>;
+    /** Persistierte Nutzerkorrekturen, per `recurringSeriesKey`. */
+    overridesByKey?: ReadonlyMap<string, RecurringOverride>;
   },
 ): RecurringInsights {
   const normalizeMerchant = options?.normalizeMerchant ?? defaultNormalizer;
@@ -268,7 +308,12 @@ export function buildRecurringInsights(
     );
     if (!title) continue;
 
-    const key = `${transaction.accountId}|${transaction.currency}|${transaction.direction}|${title.toLocaleLowerCase('de-DE')}`;
+    const key = recurringSeriesKey(
+      transaction.accountId,
+      transaction.currency,
+      transaction.direction,
+      title,
+    );
     const group = groups.get(key) ?? [];
     group.push(transaction);
     groups.set(key, group);
@@ -277,6 +322,11 @@ export function buildRecurringInsights(
   const items: RecurringItem[] = [];
 
   for (const [key, group] of groups) {
+    const override = options?.overridesByKey?.get(key);
+    if (override?.muted) {
+      continue;
+    }
+
     group.sort(
       (left, right) => Date.parse(left.bookingDate) - Date.parse(right.bookingDate),
     );
@@ -302,13 +352,21 @@ export function buildRecurringInsights(
       amountsMinor,
       intervalDaysMedian,
       occurrences: group.length,
-      manualKind: options?.manualKindByKey?.get(key) ?? null,
+      manualKind: override?.kind ?? null,
     });
 
+    const userConfirmed = Boolean(override?.confirmed || override?.kind);
+    const kind = classification.kind;
+    const confidence = userConfirmed ? 'high' : classification.confidence;
+
     const effectiveInterval = intervalDaysMedian ?? 30;
+    const observedAmountMinor = Math.abs(latest.amountMinor);
+    const baseAmountMinor =
+      typeof override?.expectedAmountMinor === 'number' && override.expectedAmountMinor > 0
+        ? override.expectedAmountMinor
+        : observedAmountMinor;
     const monthlyEstimateMinor = Math.round(
-      Math.abs(latest.amountMinor) *
-        monthlyMultiplierFor(classification.cadence, effectiveInterval),
+      baseAmountMinor * monthlyMultiplierFor(classification.cadence, effectiveInterval),
     );
 
     let nextTimestamp = Date.parse(latest.bookingDate) + effectiveInterval * DAY_MS;
@@ -333,15 +391,17 @@ export function buildRecurringInsights(
       accountId: latest.accountId,
       currency: latest.currency,
       direction: latest.direction,
-      kind: classification.kind,
-      confidence: classification.confidence,
+      kind,
+      confidence,
       cadence: classification.cadence,
-      amountMinor: Math.abs(latest.amountMinor),
+      intervalDays: effectiveInterval,
+      userConfirmed,
+      amountMinor: observedAmountMinor,
       monthlyEstimateMinor,
       occurrences: group.length,
       lastDate: latest.bookingDate.slice(0, 10),
       nextDate: new Date(nextTimestamp).toISOString().slice(0, 10),
-      reason: classification.reason,
+      reason: override?.confirmed && !override?.kind ? 'Bestätigt' : classification.reason,
       driftPercent,
     });
   }
@@ -353,7 +413,9 @@ export function buildRecurringInsights(
     billCount: 0,
     incomeCount: 0,
     uncertainCount: 0,
+    confirmedCount: 0,
     monthlyCommittedMinor: 0,
+    monthlyUncertainMinor: 0,
     monthlyRecurringIncomeMinor: 0,
   };
 
@@ -362,11 +424,14 @@ export function buildRecurringInsights(
     else if (item.kind === 'bill') summary.billCount += 1;
     else if (item.kind === 'income') summary.incomeCount += 1;
     else summary.uncertainCount += 1;
+    if (item.userConfirmed) summary.confirmedCount += 1;
 
-    if (item.direction === 'expense') {
+    if (item.direction === 'income') {
+      summary.monthlyRecurringIncomeMinor += item.monthlyEstimateMinor;
+    } else if (isCommittedExpense(item)) {
       summary.monthlyCommittedMinor += item.monthlyEstimateMinor;
     } else {
-      summary.monthlyRecurringIncomeMinor += item.monthlyEstimateMinor;
+      summary.monthlyUncertainMinor += item.monthlyEstimateMinor;
     }
   }
 
@@ -379,4 +444,182 @@ export function buildRecurringInsights(
   );
 
   return { items, summary, upcoming };
+}
+
+// ---------------------------------------------------------------------------
+// Financial commitments engine — "Wie viel Geld ist schon gebunden?"
+// ---------------------------------------------------------------------------
+
+export type CommitmentBucket = 'confirmed' | 'likely' | 'uncertain';
+
+/** In welche Sicherheitsstufe fällt eine Ausgaben-Serie? */
+export function commitmentBucket(item: RecurringItem): CommitmentBucket {
+  if (item.direction !== 'expense') return 'uncertain';
+  if (item.userConfirmed && item.kind !== 'income') return 'confirmed';
+  if ((item.kind === 'subscription' || item.kind === 'bill') && item.confidence === 'high') {
+    return 'likely';
+  }
+  return 'uncertain';
+}
+
+export type MonthlyCommitments = {
+  /** Bestätigte monatliche Ausgabenbindung. */
+  confirmedMinor: number;
+  /** Hochsicher erkannte, aber nicht bestätigte monatliche Bindung. */
+  likelyMinor: number;
+  /** Unsichere Kandidaten – bewusst NICHT als gebunden gezählt. */
+  uncertainMinor: number;
+  /** confirmed + likely – die belastbare „Fixkosten"-Zahl. */
+  committedMinor: number;
+  /** Monatlich erwartetes wiederkehrendes Einkommen (senkt Fixkosten NICHT). */
+  recurringIncomeMinor: number;
+  byBucket: Record<CommitmentBucket, RecurringItem[]>;
+};
+
+export function buildMonthlyCommitments(
+  items: readonly RecurringItem[],
+): MonthlyCommitments {
+  const result: MonthlyCommitments = {
+    confirmedMinor: 0,
+    likelyMinor: 0,
+    uncertainMinor: 0,
+    committedMinor: 0,
+    recurringIncomeMinor: 0,
+    byBucket: { confirmed: [], likely: [], uncertain: [] },
+  };
+
+  for (const item of items) {
+    if (item.direction === 'income') {
+      result.recurringIncomeMinor += item.monthlyEstimateMinor;
+      continue;
+    }
+    const bucket = commitmentBucket(item);
+    result.byBucket[bucket].push(item);
+    if (bucket === 'confirmed') result.confirmedMinor += item.monthlyEstimateMinor;
+    else if (bucket === 'likely') result.likelyMinor += item.monthlyEstimateMinor;
+    else result.uncertainMinor += item.monthlyEstimateMinor;
+  }
+
+  result.committedMinor = result.confirmedMinor + result.likelyMinor;
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Cashflow forecast — conservative, certainty-labelled, never a promise
+// ---------------------------------------------------------------------------
+
+export type ForecastCertainty = 'known' | 'likely' | 'uncertain';
+
+export type ForecastOccurrence = {
+  seriesKey: string;
+  title: string;
+  date: string;
+  /** Signiert: negativ = Abfluss, positiv = Zufluss. */
+  amountMinor: number;
+  certainty: ForecastCertainty;
+  direction: 'income' | 'expense';
+};
+
+export type CashflowForecast = {
+  horizonDays: number;
+  openingBalanceMinor: number;
+  /** Bestätigte Abflüsse im Horizont (negativ). */
+  knownOutflowMinor: number;
+  /** Hochsicher erkannte, unbestätigte Abflüsse (negativ). */
+  likelyOutflowMinor: number;
+  /** Unsichere Kandidaten (negativ) – nur informativ. */
+  uncertainOutflowMinor: number;
+  /** Erwartete wiederkehrende Zuflüsse im Horizont (positiv). */
+  expectedInflowMinor: number;
+  /** opening + bekannte Abflüsse + bestätigte/erkannte Zuflüsse. */
+  projectedAfterKnownMinor: number;
+  /** opening + (bekannte + erkannte) Abflüsse + Zuflüsse. Unsicheres bleibt außen vor. */
+  projectedAfterLikelyMinor: number;
+  occurrences: ForecastOccurrence[];
+};
+
+function occurrenceCertainty(item: RecurringItem): ForecastCertainty {
+  if (item.direction === 'income') {
+    return item.userConfirmed || item.confidence === 'high' ? 'known' : 'likely';
+  }
+  const bucket = commitmentBucket(item);
+  if (bucket === 'confirmed') return 'known';
+  if (bucket === 'likely') return 'likely';
+  return 'uncertain';
+}
+
+/**
+ * Konservative Vorschau. Zählt NUR projizierte wiederkehrende Vorkommen im
+ * Zeitfenster (nextDate .. nextDate+Horizont). Bereits gebuchte Umsätze werden
+ * nicht doppelt gezählt, weil `nextDate` immer in der Zukunft liegt.
+ * Diskretionäre künftige Ausgaben werden bewusst NICHT geschätzt.
+ */
+export function buildCashflowForecast(input: {
+  openingBalanceMinor: number;
+  recurringItems: readonly RecurringItem[];
+  referenceDate?: Date;
+  horizonDays?: number;
+}): CashflowForecast {
+  const now = input.referenceDate ?? new Date();
+  const horizonDays = input.horizonDays ?? 30;
+  const horizonEnd = now.getTime() + horizonDays * DAY_MS;
+
+  const occurrences: ForecastOccurrence[] = [];
+
+  for (const item of input.recurringItems) {
+    if (item.occurrences < 2) continue;
+    const step = Math.max(1, item.intervalDays) * DAY_MS;
+    const certainty = occurrenceCertainty(item);
+    let ts = Date.parse(`${item.nextDate}T00:00:00.000Z`);
+    if (Number.isNaN(ts)) continue;
+
+    let guard = 0;
+    while (ts <= horizonEnd && guard < 64) {
+      guard += 1;
+      if (ts > now.getTime()) {
+        occurrences.push({
+          seriesKey: item.key,
+          title: item.title,
+          date: new Date(ts).toISOString().slice(0, 10),
+          amountMinor: item.direction === 'expense' ? -item.amountMinor : item.amountMinor,
+          certainty,
+          direction: item.direction,
+        });
+      }
+      ts += step;
+    }
+  }
+
+  occurrences.sort((left, right) => left.date.localeCompare(right.date));
+
+  let knownOutflowMinor = 0;
+  let likelyOutflowMinor = 0;
+  let uncertainOutflowMinor = 0;
+  let expectedInflowMinor = 0;
+
+  for (const occurrence of occurrences) {
+    if (occurrence.direction === 'income') {
+      if (occurrence.certainty !== 'uncertain') expectedInflowMinor += occurrence.amountMinor;
+      continue;
+    }
+    if (occurrence.certainty === 'known') knownOutflowMinor += occurrence.amountMinor;
+    else if (occurrence.certainty === 'likely') likelyOutflowMinor += occurrence.amountMinor;
+    else uncertainOutflowMinor += occurrence.amountMinor;
+  }
+
+  const projectedAfterKnownMinor =
+    input.openingBalanceMinor + knownOutflowMinor + expectedInflowMinor;
+  const projectedAfterLikelyMinor = projectedAfterKnownMinor + likelyOutflowMinor;
+
+  return {
+    horizonDays,
+    openingBalanceMinor: input.openingBalanceMinor,
+    knownOutflowMinor,
+    likelyOutflowMinor,
+    uncertainOutflowMinor,
+    expectedInflowMinor,
+    projectedAfterKnownMinor,
+    projectedAfterLikelyMinor,
+    occurrences,
+  };
 }

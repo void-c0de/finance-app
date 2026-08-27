@@ -24,6 +24,15 @@ import {
 } from '@/db/repositories/savingsGoals';
 
 import {
+    listMutedSeriesKeys,
+    loadRecurringOverrides,
+} from '@/db/repositories/recurringSeries';
+
+import type {
+    RecurringOverride,
+} from '@/services/recurringInsightsCore';
+
+import {
     autoCategorizeTransactions,
 } from '@/services/autoCategorization';
 
@@ -73,6 +82,8 @@ export type FinanceSnapshot = {
   budgets: Budget[];
 
   goals: SavingsGoal[];
+
+  recurringOverrides: Map<string, RecurringOverride>;
 
   syncFailureCount: number;
 };
@@ -178,9 +189,13 @@ export async function refreshFinanceSnapshot(
     );
   }
 
+  const mutedSeriesKeys =
+    await listMutedSeriesKeys();
+
   const recurringCount =
     await detectAndPersistRecurringTransactions(
       transactions,
+      { mutedSeriesKeys },
     );
 
   if (recurringCount > 0) {
@@ -227,11 +242,14 @@ export async function refreshFinanceSnapshot(
   const [
     categories,
     budgets,
+    recurringOverrides,
   ] =
     await Promise.all([
       getCategories(),
 
       getBudgets(),
+
+      loadRecurringOverrides(),
     ]);
 
   /*
@@ -267,6 +285,8 @@ export async function refreshFinanceSnapshot(
     budgets,
 
     goals,
+
+    recurringOverrides,
 
     syncFailureCount:
       syncResult.failed.length,
