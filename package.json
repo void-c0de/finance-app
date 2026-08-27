@@ -59,6 +59,7 @@
     "test:recurring-classification": "node --experimental-strip-types scripts/test-recurring-classification.mjs",
     "test:recurring-insights": "node --experimental-strip-types scripts/test-recurring-insights.mjs",
     "test:pending": "node --experimental-strip-types scripts/test-pending-reconciliation.mjs",
+    "test:sync-merge": "node --experimental-strip-types scripts/test-sync-merge.mjs",
     "test:transfers": "node --experimental-strip-types scripts/test-internal-transfers.mjs",
     "test:release-config": "node scripts/test-release-config.mjs",
     "test:runtime-boundary": "node --experimental-strip-types scripts/test-runtime-boundary.mjs",

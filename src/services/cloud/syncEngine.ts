@@ -16,6 +16,12 @@ import {
 } from '@/core/money';
 
 import {
+    normalizeSyncTimestamp,
+    shouldApplyIncomingRow,
+    SYNC_EPOCH_CURSOR,
+} from '@/services/cloud/syncMergeCore';
+
+import {
     ensureCloudSession,
     getSupabaseClient,
 } from '@/services/cloud/cloudClient';
@@ -148,8 +154,7 @@ type TableMapping = {
     >;
 };
 
-const EPOCH_CURSOR =
-  '1970-01-01T00:00:00.000Z';
+const EPOCH_CURSOR = SYNC_EPOCH_CURSOR;
 
 /*
  * Reihenfolge wichtig:
@@ -523,35 +528,7 @@ const TABLE_MAPPINGS: readonly TableMapping[] =
     },
   ];
 
-/**
- * Vereinheitlicht Zeitstempel auf das
- * Z-Suffix, damit lexikographische
- * SQLite-Vergleiche konsistent bleiben.
- */
-function normalizeTimestamp(
-  value: unknown,
-): string | null {
-  if (
-    typeof value !==
-      'string' ||
-    value.length === 0
-  ) {
-    return null;
-  }
-
-  if (
-    value.endsWith(
-      '+00:00',
-    )
-  ) {
-    return `${value.slice(
-      0,
-      -6,
-    )}Z`;
-  }
-
-  return value;
-}
+const normalizeTimestamp = normalizeSyncTimestamp;
 
 async function getSyncMetadata(
   key: string,
@@ -775,29 +752,14 @@ async function applyPullRow(
     throw error;
   }
 
-  const incomingUpdatedAt =
-    normalizeTimestamp(
+  if (
+    existing?.updated_at &&
+    !shouldApplyIncomingRow(
+      existing.updated_at,
       row.updated_at,
-    ) ??
-    EPOCH_CURSOR;
-
-  if (existing?.updated_at) {
-    const localUpdatedAt =
-      normalizeTimestamp(
-        existing.updated_at,
-      ) ??
-      EPOCH_CURSOR;
-
-    /*
-     * LWW: Nur anwenden, wenn die
-     * eingehende Version nicht älter ist.
-     */
-    if (
-      incomingUpdatedAt <
-      localUpdatedAt
-    ) {
-      return;
-    }
+    )
+  ) {
+    return;
   }
 
   /*

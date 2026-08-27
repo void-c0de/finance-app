@@ -19,6 +19,44 @@
 - Tink production access requires a provider agreement and server-side token/consent lifecycle. Sandbox/demo capability must never be presented as production connectivity.
 - Password screening uses only the free HIBP k-anonymity range API. No API key or additional secret is required; raw passwords and complete hashes must never be added to logs, analytics or support diagnostics.
 
+## Tink banking lifecycle (2026-08-27 audit)
+
+The mobile bundle contains only the public Tink client ID for the hosted Tink
+Link flow. All confidential steps run in `supabase/functions/tink-banking`
+behind a Supabase Auth JWT.
+
+Production-ready today:
+
+- Hosted Tink Link authorization (`link.tink.com`), redirect to `financeapp://bank/tink`.
+- Server-side `authorization_code` → access-token exchange; token never returned to the app.
+- One-shot read of `/data/v2/accounts` and `/data/v2/transactions`.
+- Idempotent import: accounts and transactions upsert on their natural keys and
+  a re-import after a tombstone revives the row (`deleted_at = NULL`); manual
+  categories and merchant rules are never overwritten.
+- Pending→booked reconciliation and own-transfer exclusion run on the imported data.
+- Provider errors are surfaced as stable codes (`provider_authorization_failed`,
+  `provider_data_failed`, …) with an optional whitelisted Tink code and request id.
+- An authorization/consent failure now sets the connection to `requires_action`
+  and offers "Erneut verbinden"; local accounts and transactions are preserved.
+
+Sandbox-only / blocked on an external dependency:
+
+- **Continuous access / token refresh** — the Edge Function does not persist a
+  refresh token, so every data refresh is a fresh hosted-link authorization.
+  Server-side refresh-token storage plus a `refresh:finished` webhook needs a
+  Tink production agreement and a secure server token store. *Blocked: provider
+  agreement + server secret storage.*
+- **Server consent-expiry tracking** — there is no server record of consent
+  validity; the client models health heuristically and on failed re-import.
+- **Delegated `authorization-grant`** — returns 403 without console enablement;
+  the hosted link is the supported mobile path and does not need it.
+- `EXPO_PUBLIC_TINK_ENVIRONMENT` defaults to `sandbox`; set `production` only
+  after Tink activates production Account Aggregation for the client ID and the
+  Edge Function holds the corresponding production secret.
+
+`TINK_CLIENT_SECRET` and Tink user tokens must never appear in the mobile
+bundle; `scripts/publish-ota.mjs` fails the release if it finds them.
+
 ## Android builds
 
 Internal universal APK:

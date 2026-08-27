@@ -197,6 +197,32 @@ export type TinkImportPayload = {
 };
 
 /**
+ * Strukturierter Fehler des sicheren Tink-Abrufs. `code` ist der stabile
+ * Server-Fehlercode der Edge Function (z. B. `provider_authorization_failed`),
+ * `providerCode` ein optionaler, whitelist-geprüfter Tink-Code. Keine Tokens,
+ * Authorization-Codes oder Provider-Payloads landen jemals hier.
+ */
+export class TinkImportError extends Error {
+  constructor(
+    readonly code: string,
+    readonly providerCode: string | null,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'TinkImportError';
+  }
+
+  /** Erfordert eine erneute Bankfreigabe des Nutzers. */
+  get requiresReauthorization(): boolean {
+    return (
+      this.code === 'provider_authorization_failed' ||
+      this.code === 'invalid_request' ||
+      this.code === 'invalid_session'
+    );
+  }
+}
+
+/**
  * Tauscht den Authorization Code und liest
  * Bankdaten ausschliesslich serverseitig.
  * Supabase uebermittelt die aktuelle Auth-
@@ -293,7 +319,9 @@ export async function fetchTinkImport(
           `Sicherer Tink-Abruf fehlgeschlagen (${primaryCode}).`
         : `Sicherer Tink-Abruf fehlgeschlagen (${error.name}).`;
 
-    throw new Error(
+    throw new TinkImportError(
+      primaryCode ?? 'unknown',
+      providerCode ?? null,
       providerCode
         ? `${baseMessage} (${providerCode})`
         : baseMessage,

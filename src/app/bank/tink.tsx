@@ -60,6 +60,8 @@ import {
 
   isTinkProduction,
 
+  TinkImportError,
+
   type TinkAccount,
 
   type TinkTransaction,
@@ -75,6 +77,8 @@ import {
   createBankConnection,
 
   getBankConnections,
+
+  updateBankConnectionStatus,
 } from '@/db/repositories/bankConnections';
 
 import {
@@ -661,16 +665,48 @@ export default function TinkCallbackScreen() {
 
       setPhase('idle');
 
+      const needsReauth =
+        error instanceof TinkImportError &&
+        error.requiresReauthorization;
+
+      if (needsReauth) {
+        /*
+         * Freigabe abgelaufen/abgelehnt: bestehende Verbindung auf
+         * "requires_action" setzen, damit die Bankverbindungen-Liste den
+         * Reconnect-Hinweis zeigt. Lokale Konten und Umsätze bleiben erhalten.
+         */
+        try {
+          const tink = (await getBankConnections()).find(
+            (connection) => connection.providerId === TINK_PROVIDER_ID,
+          );
+
+          if (tink) {
+            await updateBankConnectionStatus(tink.id, 'requires_action');
+            await refreshFinanceData();
+          }
+        } catch (statusError) {
+          debugLog.warn(
+            'BANK',
+            `${APP_ERROR_CODES.BNK_TINK_SYNC_FAILED}: Reconnect-Status konnte nicht gesetzt werden`,
+            statusError,
+          );
+        }
+      }
+
       setDialog({
-        title: 'Bankverbindung fehlgeschlagen',
+        title: needsReauth
+          ? 'Bankfreigabe erneuern'
+          : 'Bankverbindung fehlgeschlagen',
 
-        message:
-          error instanceof Error
+        message: needsReauth
+          ? 'Die Freigabe bei deiner Bank ist abgelaufen oder wurde abgelehnt. Deine bisherigen Konten und Umsätze bleiben erhalten – starte die Verbindung einfach neu.'
+          : error instanceof Error
             ? error.message
-
             : 'Der Tink-Import konnte nicht abgeschlossen werden.',
 
-        confirmLabel: 'Verstanden',
+        confirmLabel: needsReauth ? 'Erneut verbinden' : 'Verstanden',
+
+        onConfirm: needsReauth ? () => startTinkLink() : undefined,
       });
     }
   }
