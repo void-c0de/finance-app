@@ -7,6 +7,8 @@ import {
   SYNC_EPOCH_CURSOR,
 } from '../src/services/cloud/syncMergeCore.ts';
 
+import { buildRestorePlan, RESTORE_ORDER } from '../src/services/backupImportCore.ts';
+
 /**
  * Offline/Sync-Beweismatrix.
  *
@@ -235,6 +237,47 @@ const active = (store) => [...store.rows.values()].filter((row) => !row.deleted_
       );
     }
   }
+}
+
+// --- BACKUP RESTORE + CLOUD SYNC: no duplication, no resurrection ----
+// A restore is a local merge. Restored rows carry their ORIGINAL backup
+// timestamps, so LWW against the cloud stays correct on the next sync.
+{
+  const empty = Object.fromEntries(RESTORE_ORDER.map((d) => [d, new Map()]));
+
+  // (a) fresh device restores a backup, then syncs -> each row appears once
+  const backup = {
+    formatVersion: 2,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    appVersion: '1.4.0',
+    rows: {
+      ...Object.fromEntries(RESTORE_ORDER.map((d) => [d, []])),
+      categories: [{ id: 'c1', name: 'Lebensmittel', updatedAt: '2026-05-01T00:00:00.000Z' }],
+      accounts: [{ id: 'a1', updatedAt: '2026-05-01T00:00:00.000Z' }],
+      transactions: [{ id: 't1', accountId: 'a1', updatedAt: '2026-05-01T00:00:00.000Z' }],
+    },
+  };
+  const freshPlan = buildRestorePlan(backup, empty);
+  assert.equal(freshPlan.perDomain.transactions.create, 1);
+  assert.equal(freshPlan.totalWrites, 3, 'jede Backup-Zeile genau einmal geschrieben');
+
+  // simulate: after restore the device holds those rows, then the server is
+  // pulled. The server has a NEWER tombstone for t1 (deleted elsewhere).
+  const device = makeDevice('RESTORED');
+  device.rows.set('t1', { id: 't1', deleted_at: null, updated_at: '2026-05-01T00:00:00.000Z' });
+  const server = makeServer();
+  server.rows.set('t1', { id: 't1', deleted_at: '2026-07-01T00:00:00.000Z', updated_at: '2026-07-01T00:00:00.000Z' });
+  pull(device, server);
+  assert.equal(active(device).length, 0, 'neuerer Cloud-Tombstone gewinnt gegen die restaurierte Zeile');
+
+  // (b) device that already has NEWER data ignores the older backup row
+  const localNewer = {
+    ...empty,
+    transactions: new Map([['t1', { updatedAt: '2026-09-01T00:00:00.000Z', deletedAt: null }]]),
+  };
+  const plan = buildRestorePlan(backup, localNewer);
+  assert.equal(plan.perDomain.transactions.create, 0);
+  assert.equal(plan.perDomain.transactions.skipOlder, 1, 'Import überschreibt neuere lokale Wahrheit nicht');
 }
 
 console.log('Offline/sync matrix: all scenarios passed');

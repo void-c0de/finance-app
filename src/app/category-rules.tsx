@@ -63,6 +63,7 @@ import {
 } from '@/stores/useProductAccessStore';
 
 import {
+    hasCapability,
     PREMIUM_GATE_COPY,
 } from '@/services/entitlementCore';
 
@@ -103,6 +104,9 @@ export default function CategoryRulesScreen() {
     useProductAccessStore(
       (state) => state.access,
     );
+
+  // Zentrale Autorität statt roher isPremium-Prüfung (Premium-Ablauf-konsistent).
+  const canAutomateRules = hasCapability(access, 'advanced_category_rules');
 
   const [
     rules,
@@ -224,7 +228,7 @@ export default function CategoryRulesScreen() {
     );
   }
 
-  if (!access.isPremium && !isLoading && rules.length === 0) {
+  if (!canAutomateRules && !isLoading && rules.length === 0) {
     return (
       <SafeAreaView
         edges={['top', 'bottom']}
@@ -407,7 +411,7 @@ export default function CategoryRulesScreen() {
           REGELN ({rules.length})
         </Text>
 
-        {!access.isPremium && rules.length > 0 ? (
+        {!canAutomateRules && rules.length > 0 ? (
           <FinanceCard style={{ marginBottom: spacing.md }}>
             <Text style={[typography.small, { color: colors.textSecondary }]}>
               Deine bestehenden Regeln bleiben aktiv und du kannst sie hier verwalten. Neue automatische Regeln entstehen wieder mit Premium.

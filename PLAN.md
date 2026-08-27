@@ -13,7 +13,7 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 - **DONE** Supabase auth + per-user cloud sync (LWW, tombstones, cursors).
   Merge semantics are a pure, tested core (`syncMergeCore`).
 - **DONE** Standalone Android release; embedded update; OTA gateway with strict
-  runtime-version matching. Native generation **1.2.0 / versionCode 3**.
+  runtime-version matching. Native generation **1.4.0 / versionCode 5**.
 - **DONE** Server-authoritative Standard / Premium / Superuser, capability
   registry, coupons, admin center, release publishing, redacted diagnostics.
 - **DONE** Password security (zxcvbn-ts score ≥ 3, HIBP k-anonymity, fail-closed).
@@ -57,9 +57,11 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
   itself is stale**. Surfaced in the attention center and `/analytics`.
 - **DONE** CSV export (`exportCore`): transactions (Standard), budgets /
   savings goals / recurring (Premium). Integer money, RFC-4180 escaping,
-  Excel-friendly BOM/CRLF. Delivered via the Android share sheet.
-- **NEXT** File-attachment export (needs `expo-sharing`, a native-boundary
-  addition for the next native build); month-range picker for `/analytics`.
+  Excel-friendly BOM/CRLF. Real file via `expo-sharing`.
+- **DONE** Versioned `finance-app-backup` v2 + strict import / atomic LWW
+  restore (`backupImportCore`, `backupRestoreService`). See Data portability.
+- **NEXT** Month-range picker for `/analytics`; backup import conflict UI is not
+  needed (deterministic merge covers it).
 
 ## Banking
 
@@ -102,15 +104,16 @@ These are distinct operations with distinct safety models:
 | Operation | Effect | Status |
 | --- | --- | --- |
 | **Logout** (`Cloud-Konto`) | ends the Supabase session; local SQLCipher data untouched; sync stops | DONE |
-| **Export my data** (`Daten exportieren`) | read-only CSV of user-owned data via the share sheet; nothing deleted, nothing uploaded by the app | DONE (transactions Standard, rest Premium) |
-| **Local device reset** | wipes the on-device SQLCipher DB only; cloud copy remains and re-syncs on next login | exists in `Daten & Datenschutz`; **kept behind a destructive confirmation** |
-| **Delete cloud finance data** | server-side tombstone/removal of `finance_*` rows for the owner | **NOT built** — needs a mature, audited server RPC and a strong confirmation flow |
-| **Delete account** | Supabase auth user removal (cascades `finance_*` via `ON DELETE CASCADE`) | **NOT built** — irreversible; belongs to a dedicated account-deletion milestone |
-| **New-device restore** | fresh login → full pull rebuilds every synced domain in dependency order | DONE |
+| **Export my data** (`Daten exportieren`) | real file (CSV/JSON) via the share sheet; nothing deleted, nothing uploaded | DONE (transactions Standard, rest Premium) |
+| **Backup + restore** (`Daten & Datenschutz`) | versioned `finance-app-backup` JSON; import = strict validation → preview → atomic LWW merge (never blind replace, never resurrects a newer tombstone) | DONE |
+| **Local device reset** | wipes the on-device SQLCipher rows + sync cursors only; cloud copy remains and re-syncs | DONE — typed confirmation + unsynced-change warning |
+| **Delete cloud finance data** | `request_data_deletion('finance_data')` → 3-day cancellable grace → `finalize_my_due_deletion()` purges only the caller's `finance_*` rows (FK-safe), sync engine wipes local | DONE (server-authoritative, audited, lazy finalisation — no scheduler) |
+| **Delete account** | as above + `finalize-account-deletion` Edge Function deletes the caller's auth user (service role) | RPC + grace + Edge Function code DONE; **Edge Function deploy is an external blocker** |
+| **New-device restore** | fresh login → full pull rebuilds every synced domain in dependency order; analytics re-derived at read time | DONE |
 
-Rule: destructive cloud/account deletion is not implemented until its safety
-model (confirmation, audit, undo window where possible) is mature. Basic
-portability (export, restore) is real now.
+Rule: every destructive operation is server-authoritative where it touches the
+cloud, self-scoped (`auth.uid()`, no target-user argument), audited, and behind
+a cancellable grace window. Nothing is deleted inside the grace window.
 
 ## Billing readiness (not billing)
 
@@ -124,6 +127,11 @@ portability (export, restore) is real now.
 - Not integrated now: no safe billing test infrastructure exists and coupon /
   admin grants already deliver the product value. No fake "coming soon" UI
   beyond the one honest line on the Premium screen.
+- **DONE (readiness):** `billingCore` — pure purchase-verification shapes,
+  `PREMIUM_PRODUCTS` (monthly/yearly), configurable `PREMIUM_PRICING` (currently
+  `null`), and `resolveEntitlement` (superuser wins; latest expiry wins;
+  permanent beats dates; coupon/admin extend, never shorten). Tested. No
+  dependency, no checkout.
 
 ## Freemium model
 
@@ -154,19 +162,21 @@ portability (export, restore) is real now.
 
 ## Release
 
-- **DONE** 1.3.0 / versionCode 4 native boundary (adds `expo-sharing` +
-  `expo-file-system`); runtime-boundary and release-config tests updated.
+- **DONE** 1.4.0 / versionCode 5 native boundary (adds `expo-document-picker`
+  for backup import); runtime-boundary and release-config tests updated.
+  Previous: 1.3.0 / versionCode 4 (`expo-sharing` + `expo-file-system`).
 - **PARTIAL** Native artifacts — debug-signed APK/AAB build locally and
   cold-start clean on device; development/internal only.
 - **BLOCKED** Play upload — needs a protected upload key (`FINANCE_UPLOAD_*`) or
   EAS-managed credentials, held by the maintainer, never committed.
+- **BLOCKED** `finalize-account-deletion` Edge Function deploy — needs
+  `supabase functions deploy` + `SUPABASE_SERVICE_ROLE_KEY` secret. Cloud
+  finance-data deletion works without it.
 
 ## Not started
 
 - Paid billing (Google Play Billing / RevenueCat receipt verification). The
-  entitlement model and Premium Center are architecture-ready; the client never
-  grants itself Premium.
-- Backup **import / restore** (export is done; a safe, tested import flow is a
-  separate milestone).
+  entitlement model, Premium Center and `billingCore` are architecture-ready;
+  the client never grants itself Premium.
 - iOS.
 - Multi-currency goals and budgets.

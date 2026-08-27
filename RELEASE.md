@@ -233,3 +233,52 @@ Prepared German patch notes for 1.3.0:
 
 Signing is unchanged: without `FINANCE_UPLOAD_*` the release build is
 debug-signed (development artifact only).
+
+## 1.4.0 / versionCode 5 — native boundary (2026-08-27)
+
+Deliberate native generation. It adds one native module — **`expo-document-picker`
+(~57.0.1)** — so a user can select a backup file to import. Restore is a core
+trust feature (WS41 "make a deliberate next-version decision and document why"),
+so:
+
+- `expo.version` → `1.4.0`, `android.versionCode` → `5`, `package.json` → `1.4.0`.
+- `runtimeVersion.policy` stays `appVersion`; the runtime is therefore `1.4.0`.
+- Everything else in this milestone (backup import/restore core, Data & Privacy
+  center, cloud/account deletion RPCs, billing readiness, `localDataReset`,
+  `pendingSyncStatus`, the sync-engine deletion hook) is pure JS/TS and would
+  have been OTA-safe for `1.3.0`, but ships in the `1.4.0` binary alongside the
+  document picker.
+- A `1.3.0` device must **not** receive `1.4.0` JS: `npm run test:runtime-boundary`
+  now asserts `appVersion === 1.4.0` / `versionCode === 5` and that
+  `requiresNativeUpgrade('1.3.0', '1.4.0')` is true. The `expo-updates` edge
+  function enforces exact `expo-runtime-version` matching.
+- The `1.4.0` OTA channel starts empty; `1.4.0` devices run the embedded bundle
+  until a `1.4.0` OTA is published from a JS build made against the `1.4.0`
+  binary.
+
+Supabase migration `20260827160000_add_data_lifecycle.sql` was applied to the
+linked project (`db push`, `db lint` clean, `migration list` parity). It only
+creates functions/table; deletions run solely on explicit user action.
+
+Update-system safety (audited, unchanged — documented here):
+- Local SQLCipher startup (`runInitialBoot`) completes before any update check.
+  The background update check runs only `if (phase === 'unlocked')`, so an
+  unreachable update server never blocks the app opening its local data.
+- `useEmbeddedUpdate: true` + `fallbackToCacheTimeout: 0` → the embedded bundle
+  is always the safe fallback; a failed OTA fetch is silent and non-blocking.
+- Patch notes: one `Neu in Finance <version>` dialog after a matching native
+  version transition, remembered in SecureStore. Not a changelog wall.
+
+Prepared German patch notes for 1.4.0:
+
+- Finanz-Backup wiederherstellen: Datei prüfen, Vorschau ansehen, sicher zusammenführen
+- Neuer Bereich „Mehr → Daten & Datenschutz": Backup, Import, Cloud-Sync, Reset, Löschung – klar getrennt
+- Cloud-Finanzdaten oder Konto löschen – mit 3-Tage-Kulanzfenster und jederzeitiger Stornierung
+- Lokaler Reset warnt jetzt, wenn Änderungen noch nicht synchronisiert sind
+- Import überschreibt nie neuere Daten und stellt bewusst Gelöschtes nicht wieder her
+
+External blockers:
+- Play upload key (`FINANCE_UPLOAD_*`) — build stays debug-signed without it.
+- `finalize-account-deletion` Edge Function deploy (`supabase functions deploy`
+  + `SUPABASE_SERVICE_ROLE_KEY` secret). Cloud finance-data deletion is fully
+  functional without it; only the auth-user row removal waits on the deploy.

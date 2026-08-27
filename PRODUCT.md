@@ -148,8 +148,18 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 
 - `exportCore` produces CSV from **user-owned data only**: transactions, budgets, savings goals, recurring series. No tokens, sessions, provider credentials, secret IDs, raw provider payloads or debug data. Integer-only money formatting; RFC-4180 escaping; UTF-8 BOM + CRLF so Excel reads umlauts.
 - Transactions CSV is a Standard capability (basic portability of your own data is never paywalled). Budgets / savings goals / recurring export is `advanced_exports` (Premium).
-- Delivery is the Android share sheet (`Share`). The app never uploads an export anywhere; the privacy note on the export screen says so. A direct file attachment needs a native module and is planned for the next native build.
-- Logout, local device reset, "export my data", cloud-data deletion and account deletion are treated as distinct operations with distinct safety models — see `PLAN.md`. Destructive cloud/account deletion is not implemented until its confirmation/audit model is mature.
+- Delivery is a real file written to the app cache plus the Android share sheet (`expo-sharing`). The app never uploads an export anywhere; the privacy note on the screen says so. The temp file is best-effort deleted after sharing.
+
+## Backup, restore and deletion
+
+Four operations, four distinct safety models. They are never conflated in the UI (`Mehr → Daten & Datenschutz`).
+
+- **Backup erstellen** — `full_finance_export` (Premium). A versioned `finance-app-backup` JSON (**v2**: accounts, transactions, categories, category rules, budgets, savings goals, goal contributions, recurring series, bank-connection *metadata*, plus per-row sync timestamps). Contains **no** passwords, sessions, JWTs, refresh/Tink/provider tokens, Supabase secrets, SQLCipher keys or SecureStore contents. v1 files stay importable.
+- **Backup importieren** — free. `backupImportCore.inspectBackup` treats the file as untrusted: byte-size cap, JSON parse guard, format/version check, per-row field validation (id pattern, enum, ISO timestamp, **safe-integer money only**, string-length cap), duplicate-id rejection, required-FK integrity (broken → reject, never partial), optional-FK sanitised to null, prototype-pollution rejection. Then a preview (counts) before any write.
+- **Restore semantics** — a **merge**, never a blind replace. `backupRestoreService.applyRestore` runs one `withExclusiveTransactionAsync`; any failure rolls the whole thing back. Per row it applies last-writer-wins against the local state (`shouldApplyIncomingRow` semantics): an older backup row never overwrites a newer local row, and **never resurrects a newer local tombstone**. Restored rows keep their original backup `created_at`/`updated_at` so LWW stays correct against the cloud on the next sync. Bank connections are restored as `status = 'requires_action'` metadata only — an import never restores a bank authorisation.
+- **Lokale Daten zurücksetzen** — clears only the on-device SQLCipher rows and sync cursors. Cloud copy and account are untouched; a configured sync rebuilds the device on next run. `countUnsyncedChanges()` (mirrors the push predicate exactly) is shown first and **warns before unsynced local changes are lost**.
+- **Cloud-Finanzdaten löschen** / **Konto löschen** — server-authoritative. `request_data_deletion()` opens a **3-day cancellable grace window**; nothing is deleted during it. After it lapses, `finalize_my_due_deletion()` (called opportunistically at sync start — no scheduler, free-tier only) purges only the caller's `finance_*` rows in FK-safe order and the sync engine then wipes the local DB so the same run cannot re-upload deleted data. Account deletion additionally needs the `finalize-account-deletion` Edge Function (service-role `auth.admin.deleteUser` on the caller only) — deploying it is an external blocker; finance-data deletion works without it. Every function is `SECURITY DEFINER`, `search_path` pinned, `anon` revoked, and accepts **no target-user argument**. Typed `LÖSCHEN` / `ZURÜCKSETZEN` confirmation — safety friction, not confirm-shaming.
+- New-device recovery derives every analytic (comparisons, trends, commitments, forecast, price changes, missed payments, budget/goal progress) at read time from synced base data — nothing derived needs to sync and nothing derived can be lost.
 
 ## Attention center
 
@@ -204,6 +214,13 @@ This protects every official app authentication flow. Supabase's paid leaked-pas
 - Active Premium is extended from `max(now, current expiry)` and is never shortened.
 - Superuser Premium is an authorization override and does not use an artificial far-future expiry.
 
+## Billing readiness (not billing)
+
+- `billingCore` is the pure, dependency-free contract for a future purchase flow. No billing library is integrated and there is **no checkout** — `PREMIUM_PRICING` is `null` and the Premium screen shows an honest "prices follow with the store release" line.
+- `resolveEntitlement` is the deterministic precedence rule across every source (`superuser`, `coupon`, `admin`, `google_play`, `revenuecat`, `store`, `migration`): the Superuser role wins outright; otherwise the candidate with the **latest** expiry wins and `permanent` beats any date — so a coupon or admin grant can only ever extend a running paid term, never shorten it. `mergePurchaseExpiry` mirrors the server-side coupon rule.
+- The authoritative rule is unchanged: a client purchase claim is not an entitlement. Only a server-verified `user_subscriptions` row grants Premium. `PurchaseVerificationRequest`/`Result` and `PREMIUM_PRODUCTS` (monthly/yearly) are shaped so a future Play Billing / RevenueCat → Edge-Function verification path drops in without an architecture change.
+- `scripts/test-billing-readiness.mjs` covers the precedence combinations (coupon→paid, paid→coupon, admin↔coupon order-independence, permanent, superuser, expired/revoked) and purchase-request validation.
+
 ## Update product flow
 
 - Local SQLCipher startup never waits for update infrastructure.
@@ -219,3 +236,5 @@ This protects every official app authentication flow. Supabase's paid leaked-pas
 `supabase/tests/product_entitlements.sql` is a rollback-only live integration test covering duplicate use, expiry, disabled coupons, maximum uses and Premium extension. It leaves no test rows behind.
 
 The same rollback suite also proves that a normal authenticated user cannot create coupons, grant Premium, publish releases, read the admin audit log, change their role or insert their own subscription. The real Superuser account is never downgraded for testing.
+
+`supabase/tests/data_lifecycle.sql` is the equivalent rollback-only test for deletion: it proves the grace window is ~3 days, that finalisation is a no-op during the window, that a user cannot see or cancel another user's request (RLS), that a non-superuser cannot sweep or list requests, and that a backdated (due) request finalises to `completed` with no `finance_*` rows left for that owner. It always rolls back.
