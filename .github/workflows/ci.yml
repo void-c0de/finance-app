@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# No secrets are used. This workflow never signs or ships an Android artifact.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Secret / data-exposure guard
+        run: node scripts/ci-secret-guard.mjs
+
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Domain test suites
+        run: node scripts/ci-run-tests.mjs
+
+      - name: expo-doctor
+        run: npx expo-doctor || echo "::warning::expo-doctor reported issues (non-blocking)"

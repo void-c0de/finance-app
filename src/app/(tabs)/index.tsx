@@ -1749,9 +1749,9 @@ export default function HomeScreen() {
           <FinanceEmptyState
             title="Noch kein Konto"
 
-            description="Füge eine Bankverbindung hinzu, um Salden und Umsätze zu sehen."
+            description="Verbinde eine Bank über Open Banking – oder starte mit einer Demo-Verbindung, um die App mit Beispieldaten auszuprobieren."
 
-            actionLabel="Bank verbinden"
+            actionLabel="Konto hinzufügen"
 
             onAction={() => {
               router.push(
