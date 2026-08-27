@@ -157,5 +157,71 @@ assert.equal(
 db.prepare(`UPDATE savings_goals SET deleted_at = 'gone' WHERE id = 'g1'`).run();
 assert.equal(db.prepare(`SELECT COUNT(*) c FROM goal_contributions WHERE goal_id='g1'`).get().c, 2, 'Kind-Zeilen bleiben physisch erhalten');
 
+// --- transaktionaler Restore: alles-oder-nichts ---------------------
+// Spiegelt backupRestoreService.applyRestore: mehrere Upserts in EINER
+// Transaktion; schlägt ein Schritt fehl, bleibt die DB unverändert.
+{
+  db.exec(`
+    CREATE TABLE restore_accounts (id TEXT PRIMARY KEY, name TEXT NOT NULL, balance REAL NOT NULL);
+    CREATE TABLE restore_tx (
+      id TEXT PRIMARY KEY, account_id TEXT NOT NULL, amount REAL NOT NULL,
+      FOREIGN KEY (account_id) REFERENCES restore_accounts(id)
+    );
+    INSERT INTO restore_accounts VALUES ('a1', 'Bestand', 100.0);
+  `);
+
+  const before = db.prepare('SELECT name, balance FROM restore_accounts WHERE id = ?').get('a1');
+
+  let rolledBack = false;
+  try {
+    db.exec('BEGIN');
+    db.prepare(`INSERT INTO restore_accounts (id, name, balance) VALUES ('a1','Neu',999.0)
+                ON CONFLICT(id) DO UPDATE SET name = excluded.name, balance = excluded.balance`).run();
+    db.prepare('INSERT INTO restore_tx (id, account_id, amount) VALUES (?,?,?)').run('t1', 'a1', 5.0);
+    // fehlerhafter Schritt: FK auf nicht existierendes Konto
+    db.prepare('INSERT INTO restore_tx (id, account_id, amount) VALUES (?,?,?)').run('t2', 'ghost', 5.0);
+    db.exec('COMMIT');
+  } catch {
+    db.exec('ROLLBACK');
+    rolledBack = true;
+  }
+
+  assert.equal(rolledBack, true, 'defekte FK bricht die Restore-Transaktion ab');
+  const after = db.prepare('SELECT name, balance FROM restore_accounts WHERE id = ?').get('a1');
+  assert.deepEqual(after, before, 'nach Rollback ist das Konto unverändert');
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM restore_tx').get().c, 0, 'keine halb geschriebenen Umsätze');
+}
+
+// --- Restore setzt Backup-Zeitstempel trotz Insert-Trigger ----------
+{
+  db.exec(`
+    CREATE TABLE restore_stamped (
+      id TEXT PRIMARY KEY, kind TEXT NOT NULL,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT
+    );
+    CREATE TRIGGER trg_restore_stamped_insert AFTER INSERT ON restore_stamped
+    BEGIN
+      UPDATE restore_stamped SET
+        created_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+      WHERE id = NEW.id;
+    END;
+    CREATE TRIGGER trg_restore_stamped_update AFTER UPDATE ON restore_stamped
+    WHEN NEW.updated_at = OLD.updated_at
+    BEGIN
+      UPDATE restore_stamped SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = NEW.id;
+    END;
+  `);
+  const BACKUP_TS = '2026-02-02T02:02:02.000Z';
+  db.exec('BEGIN');
+  db.prepare(`INSERT INTO restore_stamped (id, kind, created_at, updated_at, deleted_at) VALUES ('s1','x',?,?,NULL)`).run(BACKUP_TS, BACKUP_TS);
+  // korrektiver UPDATE (wie im Restore-Service) – Trigger feuert nicht, weil sich updated_at ändert
+  db.prepare(`UPDATE restore_stamped SET created_at = ?, updated_at = ?, deleted_at = ? WHERE id = 's1'`).run(BACKUP_TS, BACKUP_TS, null);
+  db.exec('COMMIT');
+  const row = db.prepare('SELECT created_at, updated_at FROM restore_stamped WHERE id = ?').get('s1');
+  assert.equal(row.updated_at, BACKUP_TS, 'Restore behält den Backup-updated_at (LWW-korrekt)');
+  assert.equal(row.created_at, BACKUP_TS, 'Restore behält den Backup-created_at');
+}
+
 db.close();
 console.log('SQLite repository semantics (plain SQLite, not SQLCipher): all tests passed');

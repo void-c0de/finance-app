@@ -83,18 +83,25 @@ const backupStr = buildFinanceBackupJson({
   accounts: [{ id: 'acc', name: 'Giro', iban: 'DE00' }],
   transactions: [{ id: 't', amountMinor: 100, description: 'REWE' }],
   categories: [{ id: 'food', name: 'Lebensmittel' }],
+  categoryRules: [{ id: 'r', matchValue: 'rewe' }],
   budgets: [{ id: 'b', amountMinor: 5000 }],
   savingsGoals: [{ id: 'g', name: 'Notgroschen' }],
+  goalContributions: [{ id: 'gc', goalId: 'g', amountMinor: 1000 }],
   recurringSeries: [{ seriesKey: 'k', kind: 'subscription' }],
-  appVersion: '1.3.0',
+  bankConnections: [{ id: 'bc', providerId: 'tink' }],
+  appVersion: '1.4.0',
   now: new Date('2026-08-27T10:00:00Z'),
 });
 const backup = JSON.parse(backupStr);
 assert.equal(backup.format, FINANCE_BACKUP_FORMAT);
 assert.equal(backup.version, FINANCE_BACKUP_VERSION);
-assert.equal(backup.appVersion, '1.3.0');
+assert.equal(backup.version, 2, 'Backup-Format ist auf v2');
+assert.equal(backup.appVersion, '1.4.0');
 assert.equal(backup.createdAt, '2026-08-27T10:00:00.000Z');
-assert.deepEqual(Object.keys(backup.data).sort(), ['accounts', 'budgets', 'categories', 'recurringSeries', 'savingsGoals', 'transactions'].sort());
+assert.deepEqual(
+  Object.keys(backup.data).sort(),
+  ['accounts', 'bankConnections', 'budgets', 'categories', 'categoryRules', 'goalContributions', 'recurringSeries', 'savingsGoals', 'transactions'].sort(),
+);
 assert.equal(backup.data.transactions[0].description, 'REWE');
 
 const forbidden = /token|password|passwort|secret|jwt|refresh|bearer|service_role|apikey|api_key|encryption|securestore/i;

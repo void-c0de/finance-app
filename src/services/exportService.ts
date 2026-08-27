@@ -17,6 +17,7 @@ import {
   exportFileName,
   type ExportKind,
 } from '@/services/exportCore';
+import { collectBackupData } from '@/services/backupRestoreService';
 
 export type ExportResult = 'shared' | 'unavailable' | 'error';
 
@@ -30,7 +31,7 @@ export type ExportBundle = {
   recurringSeries: readonly RecurringSeries[];
 };
 
-function contentFor(kind: ExportKind, bundle: ExportBundle): { body: string; mimeType: string; uti: string } {
+async function contentFor(kind: ExportKind, bundle: ExportBundle): Promise<{ body: string; mimeType: string; uti: string }> {
   const lookup = buildExportLookup(bundle.categories, bundle.accounts);
   switch (kind) {
     case 'transactions':
@@ -41,20 +42,16 @@ function contentFor(kind: ExportKind, bundle: ExportBundle): { body: string; mim
       return { body: buildSavingsGoalsCsv(bundle.goals), mimeType: 'text/csv', uti: 'public.comma-separated-values-text' };
     case 'recurring':
       return { body: buildRecurringCsv(bundle.recurringItems), mimeType: 'text/csv', uti: 'public.comma-separated-values-text' };
-    case 'full_backup':
+    case 'full_backup': {
+      // Voll-Backup direkt aus der DB – mit Sync-Zeitstempeln je Zeile, damit
+      // ein späterer Import per Last-Writer-Wins sicher zusammenführen kann.
+      const data = await collectBackupData();
       return {
-        body: buildFinanceBackupJson({
-          accounts: bundle.accounts,
-          transactions: bundle.transactions,
-          categories: bundle.categories,
-          budgets: bundle.budgets,
-          savingsGoals: bundle.goals,
-          recurringSeries: bundle.recurringSeries,
-          appVersion: Constants.expoConfig?.version ?? null,
-        }),
+        body: buildFinanceBackupJson({ ...data, appVersion: Constants.expoConfig?.version ?? null }),
         mimeType: 'application/json',
         uti: 'public.json',
       };
+    }
   }
 }
 
@@ -70,7 +67,7 @@ export async function exportAndShare(kind: ExportKind, bundle: ExportBundle): Pr
       return 'unavailable';
     }
 
-    const { body, mimeType, uti } = contentFor(kind, bundle);
+    const { body, mimeType, uti } = await contentFor(kind, bundle);
     const file = new File(Paths.cache, exportFileName(kind));
 
     try {

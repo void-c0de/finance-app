@@ -186,7 +186,13 @@ export function exportFileName(kind: ExportKind, referenceDate = new Date()): st
 // ---------------------------------------------------------------------------
 
 export const FINANCE_BACKUP_FORMAT = 'finance-app-backup';
-export const FINANCE_BACKUP_VERSION = 1;
+/**
+ * Version 2: zusätzlich Kategorie-Regeln, Sparbeiträge und Bankverbindungs-
+ * Metadaten sowie Sync-Zeitstempel je Zeile, damit ein Import per Last-Writer-
+ * Wins sicher mit bereits synchronisierten Daten zusammengeführt werden kann.
+ * Version 1 (ohne diese Felder) bleibt importierbar.
+ */
+export const FINANCE_BACKUP_VERSION = 2;
 
 export type FinanceBackup = {
   format: typeof FINANCE_BACKUP_FORMAT;
@@ -197,9 +203,12 @@ export type FinanceBackup = {
     accounts: unknown[];
     transactions: unknown[];
     categories: unknown[];
+    categoryRules: unknown[];
     budgets: unknown[];
     savingsGoals: unknown[];
+    goalContributions: unknown[];
     recurringSeries: unknown[];
+    bankConnections: unknown[];
   };
 };
 
@@ -208,15 +217,19 @@ export type FinanceBackup = {
  *
  * Enthält bewusst NICHT: Passwörter, Sessions, JWTs, Tink-/Provider-Token,
  * Supabase-Secrets, Verschlüsselungsschlüssel oder SecureStore-Inhalte.
- * Ein Import ist noch nicht implementiert – der Export dient dem Aufbewahren.
+ * Bankverbindungen werden nur als getrennte Metadaten gesichert – ein Import
+ * stellt niemals eine Bank-Autorisierung wieder her.
  */
 export function buildFinanceBackupJson(input: {
   accounts: readonly unknown[];
   transactions: readonly unknown[];
   categories: readonly unknown[];
+  categoryRules?: readonly unknown[];
   budgets: readonly unknown[];
   savingsGoals: readonly unknown[];
+  goalContributions?: readonly unknown[];
   recurringSeries: readonly unknown[];
+  bankConnections?: readonly unknown[];
   appVersion?: string | null;
   now?: Date;
 }): string {
@@ -229,9 +242,12 @@ export function buildFinanceBackupJson(input: {
       accounts: [...input.accounts],
       transactions: [...input.transactions],
       categories: [...input.categories],
+      categoryRules: [...(input.categoryRules ?? [])],
       budgets: [...input.budgets],
       savingsGoals: [...input.savingsGoals],
+      goalContributions: [...(input.goalContributions ?? [])],
       recurringSeries: [...input.recurringSeries],
+      bankConnections: [...(input.bankConnections ?? [])],
     },
   };
   return `${JSON.stringify(backup, null, 2)}\n`;
