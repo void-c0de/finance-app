@@ -32,10 +32,6 @@ import {
 } from '@/components/interaction/FinanceButton';
 
 import {
-  FinancePressable,
-} from '@/components/interaction/FinancePressable';
-
-import {
   performFinanceHaptic,
 } from '@/services/haptics';
 
@@ -64,67 +60,8 @@ import {
 } from '@/stores/useProductAccessStore';
 
 import {
-  financeThemePreviewColors,
-  type FinanceThemeName,
+  FINANCE_THEMES,
 } from '@/theme/finance-theme';
-
-type ThemeOption = {
-  id:
-    FinanceThemeName;
-
-  title:
-    string;
-
-  description:
-    string;
-};
-
-const themeOptions:
-ThemeOption[] = [
-  {
-    id:
-      'system',
-
-    title:
-      'System',
-
-    description:
-      'Automatisch',
-  },
-
-  {
-    id:
-      'light',
-
-    title:
-      'Hell',
-
-    description:
-      'Helles Design',
-  },
-
-  {
-    id:
-      'dark',
-
-    title:
-      'Dunkel',
-
-    description:
-      'Dark Mode',
-  },
-
-  {
-    id:
-      'amoled',
-
-    title:
-      'AMOLED',
-
-    description:
-      'Echtes Schwarz',
-  },
-];
 
 export default function MoreScreen() {
   const {
@@ -132,6 +69,7 @@ export default function MoreScreen() {
     radius,
     spacing,
     typography,
+    premiumThemeFallbackActive,
   } =
     useFinanceTheme();
 
@@ -143,13 +81,8 @@ export default function MoreScreen() {
         state.themeName
     );
 
-  const setThemeName =
-    useThemeStore(
-      (
-        state
-      ) =>
-        state.setThemeName
-    );
+  const currentThemeLabel =
+    FINANCE_THEMES.find((theme) => theme.id === selectedTheme)?.label ?? 'System';
 
   const cloudSync =
     useCloudSyncStore();
@@ -471,169 +404,17 @@ export default function MoreScreen() {
           DARSTELLUNG
         </Text>
 
-        <FinanceCard>
-          <Text
-            style={[
-              typography.sectionTitle,
-
-              {
-                color:
-                  colors.text,
-              },
-            ]}
-          >
-            Erscheinungsbild
-          </Text>
-
-          <Text
-            style={[
-              typography.small,
-
-              {
-                color:
-                  colors.textSecondary,
-
-                marginTop:
-                  spacing.xs,
-              },
-            ]}
-          >
-            Wähle das Farbschema der App.
-          </Text>
-
-          <View
-            style={[
-              styles.themeGrid,
-
-              {
-                gap:
-                  spacing.sm,
-
-                marginTop:
-                  spacing.xl,
-              },
-            ]}
-          >
-            {themeOptions.map(
-              (
-                theme
-              ) => {
-                const selected =
-                  selectedTheme ===
-                  theme.id;
-
-                const previewColor =
-                  financeThemePreviewColors[
-                    theme.id
-                  ] ??
-                  colors.background;
-
-                return (
-                  <FinancePressable
-                    key={
-                      theme.id
-                    }
-
-                    accessibilityRole="button"
-
-                    accessibilityState={{
-                      selected,
-                    }}
-
-                    onPress={() => {
-                      void setThemeName(
-                        theme.id
-                      );
-
-                      void performFinanceHaptic(
-                        'selection'
-                      );
-                    }}
-
-                    feedbackVariant="subtle"
-
-                    tapScale={
-                      0.98
-                    }
-
-                    style={[
-                      styles.themeOption,
-
-                      {
-                        backgroundColor:
-                          selected
-                            ? colors.primarySoft
-
-                            : colors.surfaceInteractive,
-
-                        borderColor:
-                          selected
-                            ? colors.primary
-
-                            : colors.border,
-
-                        borderRadius:
-                          radius.lg,
-                      },
-                    ]}
-
-                    contentStyle={
-                      styles.themeOptionContent
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.themePreview,
-
-                        {
-                          backgroundColor:
-                            previewColor,
-
-                          borderColor:
-                            colors.borderStrong,
-                        },
-                      ]}
-                    />
-
-                    <Text
-                      style={[
-                        typography.smallMedium,
-
-                        {
-                          color:
-                            selected
-                              ? colors.primary
-
-                              : colors.text,
-
-                          marginTop:
-                            spacing.sm,
-                        },
-                      ]}
-                    >
-                      {theme.title}
-                    </Text>
-
-                    <Text
-                      style={[
-                        typography.caption,
-
-                        {
-                          color:
-                            colors.textSecondary,
-
-                          marginTop:
-                            spacing.xs,
-                        },
-                      ]}
-                    >
-                      {theme.description}
-                    </Text>
-                  </FinancePressable>
-                );
-              }
-            )}
-          </View>
+        <FinanceCard padded={false}>
+          <SettingsRow
+            title="Themes"
+            description={
+              premiumThemeFallbackActive
+                ? "Premium-Design gespeichert – Fallback aktiv"
+                : `Aktuell: ${currentThemeLabel}`
+            }
+            icon={<Text style={[styles.rowGlyph, { color: colors.primary }]}>◐</Text>}
+            onPress={() => router.push("/themes" as Href)}
+          />
         </FinanceCard>
 
         <Text
@@ -1107,40 +888,6 @@ const styles =
         15,
     },
 
-    themeGrid: {
-      flexDirection:
-        'row',
-
-      flexWrap:
-        'wrap',
-    },
-
-    themeOption: {
-      width:
-        '48%',
-
-      borderWidth:
-        1,
-    },
-
-    themeOptionContent: {
-      padding:
-        14,
-    },
-
-    themePreview: {
-      width:
-        '100%',
-
-      height:
-        35,
-
-      borderRadius:
-        10,
-
-      borderWidth:
-        1,
-    },
 
     divider: {
       height:

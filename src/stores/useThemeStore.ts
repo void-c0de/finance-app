@@ -1,89 +1,71 @@
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 
-import type { FinanceThemeName } from '@/theme/finance-theme';
+import {
+  isFinanceThemeName,
+  isPremiumTheme,
+  type FinanceThemeName,
+} from '@/theme/finance-theme';
 
 const THEME_STORAGE_KEY = 'finance_theme';
+const LAST_FREE_THEME_KEY = 'finance_theme_last_free';
 
-const validThemes: FinanceThemeName[] = [
-  'system',
-  'light',
-  'dark',
-  'amoled',
-];
-
-function isFinanceThemeName(
-  value: string | null
-): value is FinanceThemeName {
-  return (
-    value !== null &&
-    validThemes.includes(value as FinanceThemeName)
-  );
-}
+const DEFAULT_THEME: FinanceThemeName = 'amoled';
 
 interface ThemeState {
+  /** Die tatsächliche Nutzerpräferenz – kann ein Premium-Theme sein, auch ohne Premium. */
   themeName: FinanceThemeName;
+  /** Zuletzt gewähltes kostenloses Theme – visueller Fallback, wenn Premium inaktiv ist. */
+  lastFreeTheme: FinanceThemeName;
   hasHydrated: boolean;
 
-  setThemeName: (
-    themeName: FinanceThemeName
-  ) => Promise<void>;
-
+  setThemeName: (themeName: FinanceThemeName) => Promise<void>;
   hydrateTheme: () => Promise<void>;
 }
 
-export const useThemeStore =
-  create<ThemeState>((set, get) => ({
-    themeName: 'amoled',
-    hasHydrated: false,
+export const useThemeStore = create<ThemeState>((set, get) => ({
+  themeName: DEFAULT_THEME,
+  lastFreeTheme: DEFAULT_THEME,
+  hasHydrated: false,
 
-    setThemeName: async (themeName) => {
-      set({
-        themeName,
-      });
+  setThemeName: async (themeName) => {
+    if (!isFinanceThemeName(themeName)) return;
 
-      try {
-        await SecureStore.setItemAsync(
-          THEME_STORAGE_KEY,
-          themeName
-        );
-      } catch (error) {
-        console.error(
-          'Theme preference could not be saved:',
-          error
-        );
+    const patch: Partial<ThemeState> = { themeName };
+    if (!isPremiumTheme(themeName)) {
+      patch.lastFreeTheme = themeName;
+    }
+    set(patch);
+
+    try {
+      await SecureStore.setItemAsync(THEME_STORAGE_KEY, themeName);
+      if (patch.lastFreeTheme) {
+        await SecureStore.setItemAsync(LAST_FREE_THEME_KEY, patch.lastFreeTheme);
       }
-    },
+    } catch (error) {
+      console.error('Theme preference could not be saved:', error);
+    }
+  },
 
-    hydrateTheme: async () => {
-      if (get().hasHydrated) {
-        return;
-      }
+  hydrateTheme: async () => {
+    if (get().hasHydrated) return;
 
-      try {
-        const savedTheme =
-          await SecureStore.getItemAsync(
-            THEME_STORAGE_KEY
-          );
-
-        set({
-          themeName: isFinanceThemeName(
-            savedTheme
-          )
-            ? savedTheme
-            : 'amoled',
-          hasHydrated: true,
-        });
-      } catch (error) {
-        console.error(
-          'Theme preference could not be loaded:',
-          error
-        );
-
-        set({
-          themeName: 'amoled',
-          hasHydrated: true,
-        });
-      }
-    },
-  }));
+    try {
+      const [saved, savedFree] = await Promise.all([
+        SecureStore.getItemAsync(THEME_STORAGE_KEY),
+        SecureStore.getItemAsync(LAST_FREE_THEME_KEY),
+      ]);
+      const themeName = isFinanceThemeName(saved) ? saved : DEFAULT_THEME;
+      const lastFreeTheme =
+        isFinanceThemeName(savedFree) && !isPremiumTheme(savedFree)
+          ? savedFree
+          : isPremiumTheme(themeName)
+            ? DEFAULT_THEME
+            : themeName;
+      set({ themeName, lastFreeTheme, hasHydrated: true });
+    } catch (error) {
+      console.error('Theme preference could not be loaded:', error);
+      set({ themeName: DEFAULT_THEME, lastFreeTheme: DEFAULT_THEME, hasHydrated: true });
+    }
+  },
+}));
