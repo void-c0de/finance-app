@@ -61,8 +61,8 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
   Excel-friendly BOM/CRLF. Real file via `expo-sharing`.
 - **DONE** Versioned `finance-app-backup` v2 + strict import / atomic LWW
   restore (`backupImportCore`, `backupRestoreService`). See Data portability.
-- **NEXT** Month-range picker for `/analytics`; backup import conflict UI is not
-  needed (deterministic merge covers it).
+- **DONE** Month-range picker for `/analytics` (3/6/12/24, Premium). EUR base-
+  currency scoping so mixed-currency accounts never share a sum.
 
 ## Banking
 
@@ -109,7 +109,7 @@ These are distinct operations with distinct safety models:
 | **Backup + restore** (`Daten & Datenschutz`) | versioned `finance-app-backup` JSON; import = strict validation → preview → atomic LWW merge (never blind replace, never resurrects a newer tombstone) | DONE |
 | **Local device reset** | wipes the on-device SQLCipher rows + sync cursors only; cloud copy remains and re-syncs | DONE — typed confirmation + unsynced-change warning |
 | **Delete cloud finance data** | `request_data_deletion('finance_data')` → 3-day cancellable grace → `finalize_my_due_deletion()` purges only the caller's `finance_*` rows (FK-safe), sync engine wipes local | DONE (server-authoritative, audited, lazy finalisation — no scheduler) |
-| **Delete account** | as above + `finalize-account-deletion` Edge Function deletes the caller's auth user (service role) | RPC + grace + Edge Function code DONE; **Edge Function deploy is an external blocker** |
+| **Delete account** | as above + `finalize-account-deletion` Edge Function deletes the caller's auth user (service role) | DONE — Edge Function **deployed** and live-tested; web + in-app paths |
 | **New-device restore** | fresh login → full pull rebuilds every synced domain in dependency order; analytics re-derived at read time | DONE |
 
 Rule: every destructive operation is server-authoritative where it touches the
@@ -190,3 +190,15 @@ a cancellable grace window. Nothing is deleted inside the grace window.
   itself Premium. No obsolete billing library is present.
 - iOS.
 - Multi-currency goals and budgets.
+
+## RC2 hardening milestone (2026-08-28)
+
+- **DONE** Demo data mode (`/demo`), debug-log 14-day retention, admin audit-log
+  viewer + deletion panel, analytics 3/6/12/24 month range, EUR base-currency
+  scoping (no mixed-currency sums), billing verification server (deployed:
+  `verify-purchase`/`billing-webhook` + `billing_subscriptions`), support
+  diagnostic bundle, windowed transaction list, core resilience guards.
+- **DONE** iOS build readiness — the project **compiles** on Apple's toolchain
+  (GitHub macOS runner, Xcode 26.6). Free personal-iPhone path documented in
+  `IOS_FREE_DEVICE_INSTALL.md` (Xcode Personal Team OR Windows+GitHub runner+AltStore).
+- Native stays 1.5.0 / versionCode 6 / runtime 1.5.0 (RC2 is JS/server/web/CI).

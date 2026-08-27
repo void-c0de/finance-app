@@ -365,3 +365,42 @@ External blockers (only these):
    upload, closed-test setup, IARC rating.
 3. Legal fields in `docs/datenschutz.html` (`[BITTE ERGÄNZEN]`).
 4. Tink production agreement → only to leave sandbox; not a store blocker.
+
+## RC2 — 1.5.0 / versionCode 6 (unchanged), pure JS/server/web/CI (2026-08-28)
+
+**No native boundary.** `versionName`, `versionCode` and `runtimeVersion` stay
+`1.5.0` / `6` / `1.5.0`. Everything below is OTA-compatible with a 1.5.0 device;
+an RC2 OTA is prepared but not published.
+
+- **Demo data mode** (`/demo`, `__DEV__ || Superuser`): deterministic synthetic
+  dataset (3 accounts, ~128 tx / 6 months, budgets, goals, price-change) written
+  via `applyRestore`; `clearDemoData` tombstones only `demo-` rows.
+- **`app_debug_logs` retention: 14 days** — `prune_my_debug_logs` (self-scoped,
+  lazy at sync) + `admin_prune_debug_logs`. Migration `20260828120000`.
+- **Admin**: deletion-request panel + **audit-log viewer** (metadata only,
+  action-prefix filters).
+- **Analytics month range** 3 / 6 / 12 / 24 (Premium); trend-correctness edge
+  cases tested (empty months, deleted category, huge integers).
+- **Multi-currency**: `FINANCE_BASE_CURRENCY = EUR`; foreign-currency
+  transactions no longer pollute income/expense/cashflow; foreign accounts
+  partitioned and labelled on the dashboard. No FX conversion.
+- **Billing server** (deployed): migration `20260828140000`
+  (`billing_subscriptions`, token stored SHA-256 only, `apply_verified_subscription`
+  merge with never-shorten precedence), Edge Functions `verify-purchase`
+  (`not_configured` 501 until Google creds) + `billing-webhook`. `src/services/billing.ts`
+  wrapper — never grants Premium locally. No billing client library added.
+- **Support diagnostic bundle**: `Mehr → Daten & Datenschutz → Diagnose für
+  Support erstellen` — redacted text, safety-checked, shared as a file.
+- **Transaction list windowed** (40 rows + "Weitere anzeigen") — no freeze at
+  10k+. `test:perf-scale` proves the pure cores stay <20 ms at 40k tx.
+- **Core resilience**: `test:resilience` + an `isUsable()` guard in `analyticsCore`.
+- **iOS build readiness**: `ios.bundleIdentifier` `com.nocta-xz.financeapp`,
+  Face ID Info.plist string, SQLCipher confirmed on iOS, `eas.json` simulator
+  profile, `.github/workflows/ios-unsigned.yml` (macOS-26 runner → **compiles**,
+  Swift 6.2). See `IOS_FREE_DEVICE_INSTALL.md`.
+- **CI unchanged** (green). `DEPENDENCY_AUDIT.md`: 12 moderate npm-audit entries
+  are build-tooling only (`@expo/config-plugins → xcode → uuid`), no runtime
+  exposure, no safe fix without an SDK downgrade.
+
+3 migrations pushed this milestone (`20260828120000`, `20260828140000`), db lint
+clean, parity 14/14. 3 Edge Functions deployed/updated.
