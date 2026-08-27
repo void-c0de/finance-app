@@ -28,6 +28,14 @@ import {
     loadRecurringOverrides,
 } from '@/db/repositories/recurringSeries';
 
+import {
+    getBankConnections,
+} from '@/db/repositories/bankConnections';
+
+import type {
+    BankConnection,
+} from '@/types/banking';
+
 import type {
     RecurringOverride,
 } from '@/services/recurringInsightsCore';
@@ -84,6 +92,8 @@ export type FinanceSnapshot = {
   goals: SavingsGoal[];
 
   recurringOverrides: Map<string, RecurringOverride>;
+
+  bankConnections: BankConnection[];
 
   syncFailureCount: number;
 };
@@ -243,6 +253,7 @@ export async function refreshFinanceSnapshot(
     categories,
     budgets,
     recurringOverrides,
+    bankConnections,
   ] =
     await Promise.all([
       getCategories(),
@@ -250,6 +261,8 @@ export async function refreshFinanceSnapshot(
       getBudgets(),
 
       loadRecurringOverrides(),
+
+      getBankConnections(),
     ]);
 
   /*
@@ -287,6 +300,8 @@ export async function refreshFinanceSnapshot(
     goals,
 
     recurringOverrides,
+
+    bankConnections,
 
     syncFailureCount:
       syncResult.failed.length,

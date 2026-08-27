@@ -19,6 +19,10 @@ import type {
   RecurringOverride,
 } from '@/services/recurringInsightsCore';
 
+import type {
+  BankConnection,
+} from '@/types/banking';
+
 type FinanceState = {
   accounts:
     BankAccount[];
@@ -37,6 +41,9 @@ type FinanceState = {
 
   recurringOverrides:
     ReadonlyMap<string, RecurringOverride>;
+
+  bankConnections:
+    BankConnection[];
 
   isLoading:
     boolean;
@@ -106,6 +113,9 @@ export const useFinanceStore =
 
       recurringOverrides:
         new Map(),
+
+      bankConnections:
+        [],
 
       isLoading:
         true,
@@ -215,6 +225,9 @@ export const useFinanceStore =
               recurringOverrides:
                 snapshot.recurringOverrides,
 
+              bankConnections:
+                snapshot.bankConnections,
+
               isLoading:
                 false,
 
@@ -270,6 +283,9 @@ export const useFinanceStore =
 
           recurringOverrides:
             new Map(),
+
+          bankConnections:
+            [],
 
           isLoading:
             true,

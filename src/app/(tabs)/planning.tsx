@@ -32,20 +32,12 @@ import {
 } from '@/components/finance/MoneyText';
 
 import {
-  TransactionRow,
-} from '@/components/finance/TransactionRow';
-
-import {
   FinanceButton,
 } from '@/components/interaction/FinanceButton';
 
 import {
   FinancePressable,
 } from '@/components/interaction/FinancePressable';
-
-import {
-  FinanceEmptyState,
-} from '@/components/states/FinanceEmptyState';
 
 import {
   type FinanceDialogConfig,
@@ -85,6 +77,10 @@ import {
 } from '@/services/recurringInsightsCore';
 
 import {
+  RecurringManager,
+} from '@/components/finance/RecurringManager';
+
+import {
   goalProgressBarPercent,
   goalProgressPercent,
 } from '@/services/goalProgressCore';
@@ -96,10 +92,6 @@ import {
 import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
-
-import type {
-  Transaction,
-} from '@/types/finance';
 
 function createSuggestedBudgetMinor(
   spendingMinor:
@@ -154,12 +146,12 @@ export default function PlanningScreen() {
   } =
     useFinanceTheme();
 
-  const accounts =
+  const recurringOverrides =
     useFinanceStore(
       (
         state
       ) =>
-        state.accounts
+        state.recurringOverrides
     );
 
   const transactions =
@@ -269,11 +261,14 @@ export default function PlanningScreen() {
           categories,
 
           budgets,
+
+          recurringOverrides,
         }),
       [
         budgets,
         categories,
         transactions,
+        recurringOverrides,
       ]
     );
 
@@ -330,61 +325,6 @@ export default function PlanningScreen() {
         insights.categorySpending,
       ]
     );
-
-  const accountNames =
-    useMemo(
-      () =>
-        new Map(
-          accounts.map(
-            (
-              account
-            ) => [
-              account.id,
-              account.name,
-            ]
-          )
-        ),
-      [
-        accounts,
-      ]
-    );
-
-  const recurringTransactions =
-    useMemo(
-      () => {
-        const recurringIds =
-          new Set(
-            insights.recurringExpenses.map(
-              (
-                item
-              ) =>
-                item.transactionId
-            )
-          );
-
-        return transactions.filter(
-          (
-            transaction
-          ) =>
-            recurringIds.has(
-              transaction.id
-            )
-        );
-      },
-      [
-        insights.recurringExpenses,
-        transactions,
-      ]
-    );
-
-  function openTransaction(
-    transaction:
-      Transaction
-  ) {
-    router.push(
-      `/transaction/${transaction.id}` as Href
-    );
-  }
 
   async function acceptBudgetSuggestion(
     suggestion:
@@ -1579,7 +1519,7 @@ export default function PlanningScreen() {
                   { color: colors.text },
                 ]}
               >
-                Erwartete Monatsbelastung
+                Gebundene Fixkosten
               </Text>
 
               <Text
@@ -1591,7 +1531,10 @@ export default function PlanningScreen() {
                   },
                 ]}
               >
-                Aus erkannten Zahlungsrhythmen hochgerechnet
+                Bestätigte und hochsicher erkannte Abos/Rechnungen · monatlich
+                {insights.recurringSummary.monthlyUncertainMinor > 0
+                  ? ` · zzgl. ${formatMinorUnits(insights.recurringSummary.monthlyUncertainMinor, 'EUR')} unbestätigt`
+                  : ''}
               </Text>
             </View>
 
@@ -1647,65 +1590,10 @@ export default function PlanningScreen() {
             false
           }
         >
-          {recurringTransactions.length ===
-          0 ? (
-            <FinanceEmptyState
-              title="Noch keine wiederkehrenden Kosten"
-
-              description="Sobald wiederkehrende Zahlungen erkannt werden, erscheinen sie hier."
-
-              style={{
-                margin:
-                  spacing.lg,
-              }}
-            />
-          ) : (
-            recurringTransactions.map(
-              (
-                transaction,
-                index
-              ) => (
-                <View
-                  key={
-                    transaction.id
-                  }
-                >
-                  <TransactionRow
-                    transaction={
-                      transaction
-                    }
-
-                    accountName={
-                      accountNames.get(
-                        transaction.accountId
-                      )
-                    }
-
-                    onPress={() =>
-                      openTransaction(
-                        transaction
-                      )
-                    }
-                  />
-
-                  {index <
-                    recurringTransactions.length -
-                      1 && (
-                    <View
-                      style={[
-                        styles.transactionDivider,
-
-                        {
-                          backgroundColor:
-                            colors.border,
-                        },
-                      ]}
-                    />
-                  )}
-                </View>
-              )
-            )
-          )}
+          <RecurringManager
+            items={insights.recurringItems}
+            onChanged={() => refreshFinanceData({ forceSync: false })}
+          />
         </FinanceCard>
 
         <View

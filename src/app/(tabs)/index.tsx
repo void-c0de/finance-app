@@ -69,12 +69,29 @@ import {
 } from '@/services/financeInsights';
 
 import {
+  buildCashflowForecast,
   RECURRING_KIND_LABEL,
 } from '@/services/recurringInsightsCore';
 
 import {
+  buildAttentionItems,
+} from '@/services/attentionCore';
+
+import {
+  hasCapability,
+} from '@/services/entitlementCore';
+
+import {
+  useProductAccessStore,
+} from '@/stores/useProductAccessStore';
+
+import {
   goalProgressPercent,
 } from '@/services/goalProgressCore';
+
+import {
+  formatMinorUnits,
+} from '@/core/money';
 
 import {
   useFinanceTheme,
@@ -146,6 +163,24 @@ export default function HomeScreen() {
     useFinanceStore(
       (state) =>
         state.goals
+    );
+
+  const recurringOverrides =
+    useFinanceStore(
+      (state) =>
+        state.recurringOverrides
+    );
+
+  const bankConnections =
+    useFinanceStore(
+      (state) =>
+        state.bankConnections
+    );
+
+  const productAccess =
+    useProductAccessStore(
+      (state) =>
+        state.access
     );
 
   const categories =
@@ -292,12 +327,14 @@ export default function HomeScreen() {
           transactions,
           categories,
           budgets,
+          recurringOverrides,
         }),
 
       [
         transactions,
         categories,
         budgets,
+        recurringOverrides,
       ]
     );
 
@@ -316,6 +353,61 @@ export default function HomeScreen() {
   const nextRecurring =
     insights.upcomingRecurring[0] ??
     null;
+
+  const canForecast =
+    hasCapability(
+      productAccess,
+      'premium_analytics',
+    );
+
+  const attentionItems =
+    useMemo(
+      () =>
+        buildAttentionItems({
+          uncategorizedExpenseCount:
+            insights.uncategorizedExpenseCount,
+          uncertainRecurringCount:
+            insights.recurringSummary.uncertainCount,
+          overBudgetCount:
+            budgetSummary.overBudgetCount,
+          bankConnections:
+            bankConnections.map((connection) => ({
+              id: connection.id,
+              institutionName: connection.institutionName,
+              status: connection.status,
+            })),
+          cloudSyncFailed:
+            cloudStatus === 'error',
+        }),
+
+      [
+        insights.uncategorizedExpenseCount,
+        insights.recurringSummary.uncertainCount,
+        budgetSummary.overBudgetCount,
+        bankConnections,
+        cloudStatus,
+      ]
+    );
+
+  const forecast =
+    useMemo(
+      () =>
+        canForecast
+          ? buildCashflowForecast({
+              openingBalanceMinor:
+                totalBalanceMinor,
+              recurringItems:
+                insights.recurringItems,
+              horizonDays: 30,
+            })
+          : null,
+
+      [
+        canForecast,
+        totalBalanceMinor,
+        insights.recurringItems,
+      ]
+    );
 
   const currentMonth =
     useMemo(
@@ -818,6 +910,131 @@ export default function HomeScreen() {
             </FinancePressable>
           </View>
         </FinanceCard>
+
+        {attentionItems.length > 0 ? (
+          <FinanceCard style={{ marginTop: spacing.md }}>
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textMuted },
+              ]}
+            >
+              BRAUCHT AUFMERKSAMKEIT
+            </Text>
+
+            {attentionItems.slice(0, 3).map((item, index) => {
+              const accent =
+                item.priority === 'critical'
+                  ? colors.negative
+                  : item.priority === 'action_required'
+                    ? colors.warning
+                    : colors.textSecondary;
+              return (
+                <FinancePressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.title}
+                  onPress={() => router.push(item.route as Href)}
+                  intent="navigation"
+                  style={{
+                    marginTop: index === 0 ? spacing.md : spacing.sm,
+                    borderLeftWidth: 3,
+                    borderLeftColor: accent,
+                    paddingLeft: spacing.md,
+                  }}
+                >
+                  <Text
+                    style={[
+                      typography.bodyMedium,
+                      { color: colors.text },
+                    ]}
+                  >
+                    {item.title}
+                  </Text>
+                  <Text
+                    style={[
+                      typography.caption,
+                      { color: colors.textSecondary, marginTop: spacing.xxs },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {item.detail}
+                  </Text>
+                </FinancePressable>
+              );
+            })}
+
+            {attentionItems.length > 3 ? (
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textMuted, marginTop: spacing.sm },
+                ]}
+              >
+                +{attentionItems.length - 3} weitere
+              </Text>
+            ) : null}
+          </FinanceCard>
+        ) : null}
+
+        {forecast ? (
+          <FinanceCard style={{ marginTop: spacing.md }}>
+            <View style={styles.header}>
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textMuted },
+                ]}
+              >
+                PROGNOSE · 30 TAGE
+              </Text>
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.primary },
+                ]}
+              >
+                Premium
+              </Text>
+            </View>
+
+            <MoneyText
+              amountMinor={forecast.projectedAfterKnownMinor}
+              currency="EUR"
+              size="l"
+              forceSign={null}
+              style={{ marginTop: spacing.md }}
+            />
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textSecondary, marginTop: spacing.xxs },
+              ]}
+            >
+              Verfügbar heute {formatMinorUnits(forecast.openingBalanceMinor, 'EUR')} · bekannte Fixkosten {formatMinorUnits(forecast.knownOutflowMinor, 'EUR')} · erwartetes Einkommen {formatMinorUnits(forecast.expectedInflowMinor, 'EUR')}
+            </Text>
+
+            {forecast.likelyOutflowMinor < 0 ? (
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textSecondary, marginTop: spacing.xs },
+                ]}
+              >
+                Mit erkannten (unbestätigten) Zahlungen: {formatMinorUnits(forecast.projectedAfterLikelyMinor, 'EUR')}
+              </Text>
+            ) : null}
+
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textMuted, marginTop: spacing.sm },
+              ]}
+            >
+              Nur bekannte wiederkehrende Zahlungen. Kein garantierter Monatsendstand – künftige freie Ausgaben sind nicht eingerechnet.
+            </Text>
+          </FinanceCard>
+        ) : null}
 
         <View
           style={[
@@ -1656,69 +1873,6 @@ export default function HomeScreen() {
           </FinanceCard>
         ) : null}
 
-        {insights.uncategorizedExpenseCount >
-        0 ? (
-          <FinancePressable
-            accessibilityRole="button"
-            accessibilityLabel={`${insights.uncategorizedExpenseCount} unkategorisierte Ausgaben prüfen`}
-            onPress={() =>
-              router.push(
-                '/uncategorized' as Href
-              )
-            }
-            intent="navigation"
-            style={{
-              marginTop:
-                spacing.md,
-            }}
-          >
-            <FinanceCard>
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color:
-                      colors.textMuted,
-                  },
-                ]}
-              >
-                ZU PRÜFEN
-              </Text>
-
-              <Text
-                style={[
-                  typography.bodyMedium,
-                  {
-                    color:
-                      colors.text,
-                    marginTop:
-                      spacing.md,
-                  },
-                ]}
-              >
-                {insights.uncategorizedExpenseCount}{' '}
-                {insights.uncategorizedExpenseCount ===
-                1
-                  ? 'Ausgabe ohne Kategorie'
-                  : 'Ausgaben ohne Kategorie'}
-              </Text>
-
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color:
-                      colors.textSecondary,
-                    marginTop:
-                      spacing.xxs,
-                  },
-                ]}
-              >
-                Kategorisieren verbessert Budgets und Auswertungen.
-              </Text>
-            </FinanceCard>
-          </FinancePressable>
-        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
