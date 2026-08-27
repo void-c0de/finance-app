@@ -26,6 +26,14 @@ import {
     getSupabaseClient,
 } from '@/services/cloud/cloudClient';
 
+import {
+    runDueDeletionFinalization,
+} from '@/services/dataLifecycle';
+
+import {
+    wipeLocalFinanceDataLocked,
+} from '@/services/localDataReset';
+
 /**
  * M6 — Cloud-Sync-Engine.
  *
@@ -1264,6 +1272,31 @@ async function executeCloudSync(): Promise<CloudSyncResult> {
       'CLOUD',
       `Sync-Start (user ${session.userId.slice(0, 8)}…)`,
     );
+
+    /*
+     * Faule Finalisierung fälliger Löschanträge (Kulanzfenster abgelaufen).
+     * Serverseitig werden die eigenen `finance_*`-Zeilen gelöscht. Danach
+     * MUSS die lokale DB geleert werden – sonst würde derselbe Lauf die
+     * gerade gelöschten Daten wieder hochladen.
+     */
+    try {
+      const finalization = await runDueDeletionFinalization();
+      if (finalization.finalized) {
+        await wipeLocalFinanceDataLocked();
+        debugLog.info(
+          'CLOUD',
+          `Löschantrag finalisiert · ${finalization.rowsDeleted ?? 0} Cloud-Zeilen · lokale DB geleert`,
+        );
+        return {
+          status: 'synced',
+          message: 'Finanzdaten gelöscht',
+          pushed: 0,
+          pulled: 0,
+        };
+      }
+    } catch (finalizationError) {
+      debugLog.warn('CLOUD', 'Lösch-Finalisierung übersprungen', finalizationError);
+    }
 
     /*
      * Besitzerwechsel-Erkennung:
