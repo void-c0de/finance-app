@@ -62,7 +62,9 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 
 - **DONE** 1.2.0 / versionCode 3 native metadata; runtime-boundary test guards
   against advertising a newer bundle to an older runtime.
-- **PARTIAL** Native artifacts — debug-signed APK/AAB are development-only.
+- **PARTIAL** Native artifacts — 1.2.0 / versionCode 3 APK (~137 MB) and AAB
+  (~101 MB) build locally and cold-start clean on device; both debug-signed,
+  so development/internal only.
 - **BLOCKED** Play upload — needs a protected upload key (`FINANCE_UPLOAD_*`) or
   EAS-managed credentials, held by the maintainer, never committed.
 

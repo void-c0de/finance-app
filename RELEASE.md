@@ -144,3 +144,22 @@ Prepared German patch notes for 1.2.0:
 Signing status for 1.2.0 is unchanged: without `FINANCE_UPLOAD_*` the release
 build falls back to the debug keystore (development artifact only). A protected
 upload key or EAS-managed credential is still required before Play upload.
+
+### 1.2.0 build results (2026-08-27, local, Windows)
+
+- `npx expo prebuild --platform android` regenerated `android/` at
+  `versionName 1.2.0` / `versionCode 3` with the signing plugin applied.
+- `gradlew assembleRelease --rerun-tasks` → `app-release.apk` (~137 MB, universal).
+- `gradlew bundleRelease --rerun-tasks` → `app-release.aab` (~101 MB), manifest `1.2.0`.
+- Both artifacts are signed with the Android **debug** key
+  (SHA-1 `5e:8f:16:06:2e:a3:cd:2c:4a:0d:54:78:76:ba:a6:f3:8c:ab:f6:25`) →
+  **development / internal testing only. Not a Play upload.**
+- The Windows file-lock on `expo-modules-core/.../classes.jar` recurs between
+  consecutive `--rerun-tasks` builds. Fix: `gradlew --stop`, delete
+  `node_modules/expo-modules-core/android/build`, rebuild once. Do not
+  `clean assembleRelease` (RN codegen JNI race).
+- Device install (`adb install -r`, data preserved) + cold start without Metro:
+  Hermes and all native modules load, `expo-updates` reaches `EndStartup` with
+  no OTA (correct — the 1.2.0 OTA channel is empty, embedded bundle runs),
+  `ReactNativeJS: Running "main"`, no `FATAL` / native crash. UI verification
+  behind the biometric app-lock is a manual step for the maintainer.
