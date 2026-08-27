@@ -17,6 +17,7 @@
 - Mobile configuration may contain only public identifiers and publishable keys.
 - Provider client secrets, Supabase service-role keys, bank credentials, signing material and tokens stay server-side or outside Git.
 - Tink production access requires a provider agreement and server-side token/consent lifecycle. Sandbox/demo capability must never be presented as production connectivity.
+- Password screening uses only the free HIBP k-anonymity range API. No API key or additional secret is required; raw passwords and complete hashes must never be added to logs, analytics or support diagnostics.
 
 ## Android builds
 

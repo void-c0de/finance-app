@@ -37,6 +37,17 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 - RLS limits reads to the current user or Superuser where appropriate.
 - Admin actions create safe `admin_audit_log` entries without secrets.
 
+## Password security on the free tier
+
+- Supabase Auth remains the authentication provider.
+- New passwords must contain at least 12 characters and reach zxcvbn-ts score 3 or 4. Long passphrases are explicitly supported; arbitrary uppercase/number/symbol recipes are not required.
+- Before signup or password change, the app computes SHA-1 locally and queries the free HIBP Pwned Passwords range endpoint with only the first five hexadecimal hash characters.
+- The returned suffix list is compared locally. Raw passwords, full hashes and suffixes are never sent to HIBP, stored or logged.
+- HIBP requests use response padding. A temporary HIBP/network failure fails closed for signup and password changes with a retry message; existing sign-in remains available.
+- `validatePasswordSecurity` is the single entry point used by signup and password changes. Future authentication UI must use the same service.
+
+This protects every official app authentication flow. Supabase's paid leaked-password feature would additionally enforce policy against a malicious client calling Auth directly; the free-tier app cannot install that hosted Auth hook. This limitation is documented rather than hidden.
+
 ## Coupon semantics
 
 - Codes are normalized to uppercase and constrained to 4–32 safe characters.

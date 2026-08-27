@@ -3,6 +3,8 @@ import {
     getSupabaseClient,
 } from '@/services/cloud/cloudClient';
 
+import { validatePasswordSecurity } from '@/security/passwordSecurity';
+
 /**
  * Persönliche Konto-Verwaltung.
  *
@@ -167,7 +169,7 @@ function translateAuthError(
       'at least',
     )
   ) {
-    return 'Das Passwort erfüllt die Anforderungen nicht (mindestens 8 Zeichen).';
+    return 'Das Passwort erfüllt die Sicherheitsanforderungen nicht.';
   }
 
   return message;
@@ -258,6 +260,16 @@ export async function signUpPersonalAccount(
     };
   }
 
+  const passwordSecurity =
+    await validatePasswordSecurity(password);
+
+  if (!passwordSecurity.ok) {
+    return {
+      ok: false,
+      message: passwordSecurity.message,
+    };
+  }
+
   try {
     const { data, error } =
       await supabase.auth.signUp({
@@ -307,6 +319,30 @@ export async function signUpPersonalAccount(
       message:
         'Registrierung fehlgeschlagen',
     };
+  }
+}
+
+/**
+ * Zentraler Passwortwechsel für künftige
+ * Recovery-/Kontoeinstellungen. Verwendet
+ * dieselbe Stärke- und HIBP-Prüfung wie die
+ * Registrierung.
+ */
+export async function changePersonalAccountPassword(
+  password: string,
+): Promise<AuthActionResult> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { ok: false, message: 'Cloud nicht konfiguriert' };
+
+  const passwordSecurity = await validatePasswordSecurity(password);
+  if (!passwordSecurity.ok) return { ok: false, message: passwordSecurity.message };
+
+  try {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { ok: false, message: translateAuthError(error.message) };
+    return { ok: true };
+  } catch {
+    return { ok: false, message: 'Passwort konnte nicht geändert werden.' };
   }
 }
 

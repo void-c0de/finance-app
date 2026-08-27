@@ -194,10 +194,12 @@ export default function CloudAccountScreen() {
 
     if (
       passwordInput.length <
-      8
+      (formMode === 'signUp' ? 12 : 1)
     ) {
       showError(
-        'Das Passwort muss mindestens 8 Zeichen lang sein.',
+        formMode === 'signUp'
+          ? 'Das Passwort muss mindestens 12 Zeichen lang sein.'
+          : 'Bitte gib dein Passwort ein.',
       );
 
       return null;
@@ -689,13 +691,15 @@ export default function CloudAccountScreen() {
                   setPasswordInput
                 }
 
-                placeholder="Passwort (min. 8 Zeichen)"
+                placeholder={formMode === 'signUp' ? 'Mindestens 12 Zeichen' : 'Passwort'}
 
                 secureTextEntry
 
                 autoCapitalize="none"
 
                 autoComplete="password"
+
+                helperText={formMode === 'signUp' ? 'Eine lange, einzigartige Passphrase ist besser als starre Symbolregeln. Sie wird lokal auf Stärke und bekannte Datenlecks geprüft.' : undefined}
 
                 returnKeyType="done"
 
