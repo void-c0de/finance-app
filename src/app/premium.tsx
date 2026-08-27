@@ -8,6 +8,7 @@ import { FinanceTextField } from '@/components/forms/FinanceTextField';
 import { FinanceKeyboardScreen } from '@/components/layout/FinanceKeyboardScreen';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { PREMIUM_PILLARS } from '@/services/entitlementCore';
+import { formatPriceLine, PREMIUM_PRICING } from '@/services/billingCore';
 import { redeemPremiumCoupon } from '@/services/productAccess';
 import { trackPremiumEvent } from '@/services/premiumTelemetry';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
@@ -127,6 +128,9 @@ export default function PremiumScreen() {
             <Text style={[typography.cardTitle, { color: colors.text }]}>Premium aktivieren</Text>
             <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xs }]}>
               Premium wird derzeit über Coupons oder die Administration freigeschaltet. Ein Kauf über Google Play folgt, sobald die Abrechnung serverseitig geprüft werden kann – bis dahin gibt es hier bewusst keinen Kauf-Button.
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.sm }]}>
+              {formatPriceLine(PREMIUM_PRICING)}
             </Text>
             <FinanceTextField
               containerStyle={{ marginTop: spacing.lg }}

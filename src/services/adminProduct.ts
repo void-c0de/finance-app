@@ -70,6 +70,34 @@ export async function revokePremiumFromUser(email: string): Promise<void> {
   if (error) throw error;
 }
 
+export type DeletionRequestRow = {
+  user_id: string;
+  kind: 'finance_data' | 'account';
+  status: 'pending' | 'cancelled' | 'completed';
+  requested_at: string;
+  grace_until: string;
+  finalized_at: string | null;
+  rows_deleted: number | null;
+};
+
+/** Operative Sicht auf Löschanträge – nur Metadaten, nie Finanzinhalte. */
+export async function listDeletionRequests(): Promise<DeletionRequestRow[]> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud nicht konfiguriert');
+  const { data, error } = await client.rpc('admin_list_deletion_requests');
+  if (error) throw error;
+  return (data ?? []) as DeletionRequestRow[];
+}
+
+/** Fällige Löschungen (Kulanzfenster abgelaufen) sofort ausführen. */
+export async function sweepDueDeletions(): Promise<{ requests: number; rowsDeleted: number }> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud nicht konfiguriert');
+  const { data, error } = await client.rpc('admin_finalize_due_deletions');
+  if (error) throw error;
+  return { requests: data?.requests ?? 0, rowsDeleted: data?.rowsDeleted ?? 0 };
+}
+
 export async function publishAppRelease(input: {
   version: string; buildNumber: number; runtimeVersion: string; title: string; summary: string;
   level: 'optional' | 'recommended' | 'required'; minimumNativeVersion: string | null; storeUrl: string | null;

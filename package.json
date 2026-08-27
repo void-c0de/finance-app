@@ -53,6 +53,8 @@
     "publish:ota": "node ./scripts/publish-ota.mjs",
     "android": "expo run:android",
     "release:android": "cd android && gradlew.bat assembleRelease --rerun-tasks",
+    "release:android:aab": "cd android && gradlew.bat bundleRelease --rerun-tasks",
+    "verify:release-signing": "node scripts/verify-release-signing.mjs",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",

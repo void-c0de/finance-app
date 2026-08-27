@@ -6,6 +6,7 @@ import {
   FINANCE_PURGE_ORDER,
   graceHoursRemaining,
   graceUntilFrom,
+  groupDeletionRequests,
   isDeletionDue,
   nextDeletionStep,
 } from '../src/services/dataLifecycleCore.ts';
@@ -39,6 +40,20 @@ const now = new Date('2026-08-27T12:00:00.000Z');
   const later = new Date(now.getTime() + 5 * 86_400_000);
   assert.equal(nextDeletionStep({ status: 'pending', kind: 'finance_data', graceUntil: grace }, later), 'ready_finance_purge');
   assert.equal(nextDeletionStep({ status: 'pending', kind: 'account', graceUntil: grace }, later), 'ready_account_edge_function');
+}
+
+// --- Admin-Panel: Gruppierung der Löschanträge --------------------
+{
+  const rows = [
+    { status: 'pending', grace_until: graceUntilFrom(new Date(now.getTime() - 5 * 86_400_000)) }, // fällig
+    { status: 'pending', grace_until: graceUntilFrom(now) }, // im Fenster
+    { status: 'completed', grace_until: graceUntilFrom(now) },
+    { status: 'cancelled', grace_until: graceUntilFrom(now) },
+  ];
+  const g = groupDeletionRequests(rows, now);
+  assert.equal(g.due.length, 1, 'genau ein fälliger Antrag');
+  assert.equal(g.pending.length, 1, 'genau ein Antrag im Kulanzfenster');
+  assert.equal(g.closed.length, 2, 'abgeschlossen + storniert');
 }
 
 // --- FK-sichere Reihenfolge: Kinder vor Eltern --------------------

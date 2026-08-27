@@ -23,13 +23,21 @@ export default function AdminScreen() {
           <Text style={[typography.cardTitle, { color: colors.text }]}>Superuser Control Center</Text>
           <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>Administrative Aktionen werden serverseitig autorisiert und revisionssicher protokolliert.</Text>
         </FinanceCard>
-        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>PRODUKTVERWALTUNG</Text>
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>PRODUKT &amp; ENTITLEMENTS</Text>
         <FinanceCard padded={false}>
           <SettingsRow title="Premium-Coupons" description="Codes erstellen, Nutzung prüfen und deaktivieren" value="›" onPress={() => router.push('/admin/coupons' as Href)} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <SettingsRow title="Release-Steuerung" description="Patch Notes und Mindestversionen veröffentlichen" value="›" onPress={() => router.push('/admin/releases' as Href)} />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <SettingsRow title="Nutzer-Entitlements" description="Premium gezielt gewähren oder entziehen" value="›" onPress={() => router.push('/admin/users' as Href)} />
+        </FinanceCard>
+
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>RELEASE</Text>
+        <FinanceCard padded={false}>
+          <SettingsRow title="Release-Steuerung" description="Patch Notes und Mindestversionen veröffentlichen" value="›" onPress={() => router.push('/admin/releases' as Href)} />
+        </FinanceCard>
+
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>BETRIEB</Text>
+        <FinanceCard padded={false}>
+          <SettingsRow title="Löschanträge" description="Fällige Cloud-/Konto-Löschungen prüfen und ausführen" value="›" onPress={() => router.push('/admin/deletions' as Href)} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <SettingsRow title="Diagnose" description="Sichere Betriebs- und Supportinformationen" value="›" onPress={() => router.push('/admin/diagnostics' as Href)} />
         </FinanceCard>

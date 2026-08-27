@@ -51,6 +51,24 @@ export function graceHoursRemaining(state: DeletionRequestState, now: Date = new
   return ms <= 0 ? 0 : Math.ceil(ms / 3_600_000);
 }
 
+export type AdminDeletionRow = {
+  status: 'pending' | 'cancelled' | 'completed';
+  grace_until: string;
+};
+
+/** Teilt Löschanträge in fällig / im Kulanzfenster / abgeschlossen. */
+export function groupDeletionRequests<T extends AdminDeletionRow>(
+  rows: readonly T[],
+  now: Date = new Date(),
+): { due: T[]; pending: T[]; closed: T[] } {
+  const nowMs = now.getTime();
+  return {
+    due: rows.filter((r) => r.status === 'pending' && Date.parse(r.grace_until) <= nowMs),
+    pending: rows.filter((r) => r.status === 'pending' && Date.parse(r.grace_until) > nowMs),
+    closed: rows.filter((r) => r.status !== 'pending'),
+  };
+}
+
 export type NextDeletionStep =
   | 'idle'
   | 'awaiting_grace'

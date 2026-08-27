@@ -59,3 +59,4 @@ example
 
 # local Supabase CLI link/cache
 /supabase/.temp/
+deno.lock

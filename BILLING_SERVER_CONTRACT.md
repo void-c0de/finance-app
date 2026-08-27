@@ -1,0 +1,86 @@
+# Billing server contract (readiness, not billing)
+
+The client never grants itself Premium. A purchase claim becomes an entitlement
+only after the **server** verifies it. This file defines the contract so the
+verification layer can be added later without touching the client's capability
+model.
+
+Status: **not implemented.** No billing library, no store products, no checkout.
+`billingCore.ts` holds the pure shapes and precedence rules; this is the server
+side that pairs with it.
+
+## Components
+
+```
+Client (Play Billing v8+ / RevenueCat)
+  └─ purchaseToken ──▶ Edge Function: verify-purchase
+                          ├─ Google Play Developer API  (purchases.subscriptionsv2.get)
+                          │   or RevenueCat REST v2
+                          ├─ validate: package, product, purchase state, expiry
+                          └─ upsert public.user_subscriptions (source='google_play')
+Google/RevenueCat RTDN / webhook ──▶ Edge Function: billing-webhook
+                          └─ renew / expire / revoke / refund → user_subscriptions
+Client ──▶ RPC get_my_product_access()  (unchanged, already authoritative)
+```
+
+## `user_subscriptions` already supports this
+
+The table (migration `20260826234500`) has `plan`, `status`
+(`active|trial|expired|cancelled|granted|inactive`), `source`
+(`none|coupon|admin|store|migration`; add `google_play`, `revenuecat` via a
+one-line CHECK migration), `premium_started_at`, `premium_expires_at`,
+`permanent`. `get_my_product_access()` reads it as-is. No client change.
+
+## Edge Function: `verify-purchase` (to build)
+
+Input (POST, `verify_jwt=true`): `{ platform, productId, purchaseToken }`.
+Steps:
+1. `jwtSub(token)` → caller id (same pattern as `finalize-account-deletion`).
+2. `isWellFormedPurchaseRequest` (from `billingCore`) — reject early.
+3. Call the store API with a **server-held service account** (see secrets below).
+4. Verify: package == `com.nocta_xz.financeapp`, product ∈ `PREMIUM_PRODUCTS`,
+   `purchaseState == purchased`, not `paused/on_hold`, `expiryTime` in future.
+5. `mergePurchaseExpiry(existingExpiry, ...)` — never shorten a running term.
+6. `upsert user_subscriptions` (`source='google_play'`, `status` from store).
+7. Return `get_my_product_access()`.
+
+Idempotent on `purchaseToken` (store one `linkedPurchaseToken` per user to
+detect upgrades/downgrades).
+
+## Edge Function: `billing-webhook` (to build)
+
+- Google: Pub/Sub push (Real-time developer notifications). Verify the message,
+  fetch the subscription, apply `SUBSCRIPTION_RENEWED/EXPIRED/REVOKED/CANCELED`.
+- RevenueCat: signed webhook → apply `INITIAL_PURCHASE/RENEWAL/CANCELLATION/EXPIRATION/BILLING_ISSUE`.
+- `verify_jwt=false` for this function; authenticate by the platform's own
+  signature/shared secret instead.
+
+## Secrets (server only — never Git, never client)
+
+| Name | Where | Used by |
+| --- | --- | --- |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Supabase Function secret | `verify-purchase`, `billing-webhook` |
+| `PLAY_RTDN_PUBSUB_VERIFICATION_TOKEN` | Supabase Function secret | `billing-webhook` |
+| (`REVENUECAT_WEBHOOK_SECRET`, `REVENUECAT_API_KEY`) | optional | RevenueCat path |
+
+`SUPABASE_SERVICE_ROLE_KEY` is already auto-provided to Edge Functions.
+
+## External blockers (all outside code)
+
+1. Google Play Console: create the app, a subscription with monthly + yearly
+   base plans, product IDs `premium.monthly` / `premium.yearly`
+   (must match `PREMIUM_PRODUCTS`).
+2. Google Cloud: a service account with "View financial data" + Play Developer
+   API access; download its JSON key → set as the Function secret.
+3. Enable Real-time developer notifications (Pub/Sub topic) in Play Console.
+4. Add a Play Billing Library **v8+** client (`expo-in-app-purchases` is
+   unmaintained — use a maintained RN Play Billing wrapper or a small native
+   module). **Do not add an older billing library** (v7 is blocked for new
+   submissions from 31 Aug 2026).
+
+## Client-side rule (enforced today)
+
+`resolveEntitlement` (billingCore): superuser wins; else the candidate with the
+latest expiry wins; `permanent` beats any date. So a store purchase, a coupon
+and an admin grant coexist deterministically and the longest one always wins.
+`scripts/test-billing-readiness.mjs` covers this.
