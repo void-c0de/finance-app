@@ -107,6 +107,47 @@ export type CloudSignInResult =
         string;
     };
 
+function shouldRefreshSession(
+  session: Session,
+  nowSeconds = Math.floor(Date.now() / 1000),
+): boolean {
+  if (
+    typeof session.expires_at === 'number' &&
+    session.expires_at <= nowSeconds + 60
+  ) {
+    return true;
+  }
+
+  try {
+    const payloadPart = session.access_token.split('.')[1];
+
+    if (!payloadPart) {
+      return false;
+    }
+
+    const normalizedBase64 = payloadPart
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const normalized = normalizedBase64.padEnd(
+      Math.ceil(normalizedBase64.length / 4) * 4,
+      '=',
+    );
+
+    const payload = JSON.parse(
+      globalThis.atob(normalized),
+    ) as { iat?: unknown };
+
+    return (
+      typeof payload.iat === 'number' &&
+      payload.iat > nowSeconds + 30
+    );
+  } catch {
+    // Ein nicht lesbarer JWT wird weiterhin von Supabase validiert.
+    return false;
+  }
+}
+
 /**
  * Stellt sicher, dass eine gültige
  * Cloud-Session existiert.
@@ -136,10 +177,24 @@ export async function ensureCloudSession(): Promise<CloudSignInResult> {
     } =
       await client.auth.getSession();
 
-    const existingSession:
+    let existingSession:
       | Session
       | null =
       sessionData.session;
+
+    if (
+      existingSession &&
+      shouldRefreshSession(existingSession)
+    ) {
+      const { data, error } =
+        await client.auth.refreshSession();
+
+      if (error) {
+        throw error;
+      }
+
+      existingSession = data.session;
+    }
 
     if (
       existingSession?.user?.id

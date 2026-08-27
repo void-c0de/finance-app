@@ -14,6 +14,8 @@ The app resolves access centrally through `ProductAccess` and `hasCapability`; s
 
 Premium is currently a real entitlement granted by coupon, administrator or the Superuser override. Paid recurring billing is deliberately not presented until a legitimate Play Billing/RevenueCat integration exists. A future billing provider must write into the same `user_subscriptions` model.
 
+Manual categorization of individual transactions remains a Standard capability. Premium users can turn a reviewed assignment into a reusable merchant rule for future transactions. Existing rules and manual assignments remain active after Premium expires; only creating and managing additional rules is locked. Financial history and user decisions are therefore never removed on downgrade.
+
 ## Server authority
 
 - `profiles.role` is the durable role. The legacy `is_superuser` value was used only to migrate the existing authorized account.

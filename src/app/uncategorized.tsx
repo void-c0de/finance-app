@@ -5,6 +5,7 @@ import {
 } from 'react';
 
 import {
+    type Href,
     router,
 } from 'expo-router';
 
@@ -70,6 +71,14 @@ import {
     useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import {
+    hasCapability,
+} from '@/services/entitlementCore';
+
+import {
+    useProductAccessStore,
+} from '@/stores/useProductAccessStore';
+
 export default function UncategorizedScreen() {
   const {
     colors,
@@ -111,6 +120,22 @@ export default function UncategorizedScreen() {
   ] =
     useState<string | null>(
       null,
+    );
+
+  const [
+    selectedCategoryId,
+    setSelectedCategoryId,
+  ] = useState<string | null>(null);
+
+  const access =
+    useProductAccessStore(
+      (state) => state.access,
+    );
+
+  const canCreateRules =
+    hasCapability(
+      access,
+      'advanced_category_rules',
     );
 
   /*
@@ -217,6 +242,7 @@ export default function UncategorizedScreen() {
       await performFinanceHaptic('success');
 
       setOpenTransactionId(null);
+      setSelectedCategoryId(null);
     } catch (error) {
       debugLog.error(
         'CAT',
@@ -514,6 +540,8 @@ export default function UncategorizedScreen() {
                           setOpenTransactionId(
                             transaction.id,
                           );
+
+                          setSelectedCategoryId(null);
                         }}
 
                         style={{
@@ -544,9 +572,11 @@ export default function UncategorizedScreen() {
                               accessibilityRole="button"
 
                               onPress={() => {
-                                void apply(
-                                  transaction.id,
+                                void performFinanceHaptic(
+                                  'selection',
+                                );
 
+                                setSelectedCategoryId(
                                   category.id,
                                 );
                               }}
@@ -564,6 +594,11 @@ export default function UncategorizedScreen() {
                                 {
                                   borderBottomColor:
                                     colors.border,
+
+                                  backgroundColor:
+                                    selectedCategoryId === category.id
+                                      ? colors.surfaceInteractive
+                                      : 'transparent',
                                 },
                               ]}
 
@@ -590,6 +625,76 @@ export default function UncategorizedScreen() {
                             </FinancePressable>
                           ),
                         )}
+
+                        {selectedCategoryId ? (
+                          <View
+                            style={{
+                              gap: spacing.sm,
+                              marginTop: spacing.md,
+                            }}
+                          >
+                            <Text
+                              style={[
+                                typography.caption,
+                                { color: colors.textSecondary },
+                              ]}
+                            >
+                              {categoryNameFor(selectedCategoryId)} ausgewählt
+                            </Text>
+
+                            <FinanceButton
+                              label="Nur diesen Umsatz"
+                              size="small"
+                              loading={busyId === transaction.id}
+                              onPress={() => {
+                                void apply(
+                                  transaction.id,
+                                  selectedCategoryId,
+                                );
+                              }}
+                            />
+
+                            {canCreateRules ? (
+                              <FinanceButton
+                                label="Für diesen Händler merken"
+                                size="small"
+                                variant="secondary"
+                                disabled={busyId === transaction.id}
+                                onPress={() => {
+                                  void apply(
+                                    transaction.id,
+                                    selectedCategoryId,
+                                    { alsoCreateRule: true },
+                                  );
+                                }}
+                              />
+                            ) : (
+                              <FinancePressable
+                                accessibilityRole="button"
+                                accessibilityLabel="Premium für automatische Händlerregeln ansehen"
+                                onPress={() => router.push('/premium' as Href)}
+                                intent="navigation"
+                                style={[
+                                  styles.premiumHint,
+                                  {
+                                    borderColor: colors.border,
+                                    borderRadius: radius.md,
+                                  },
+                                ]}
+                                contentStyle={styles.premiumHintContent}
+                              >
+                                <Text
+                                  style={[
+                                    typography.caption,
+                                    { color: colors.textSecondary },
+                                  ]}
+                                >
+                                  Premium merkt sich den Händler und kategorisiert künftige Umsätze automatisch.
+                                </Text>
+                              </FinancePressable>
+                            )}
+                          </View>
+                        ) : null}
 
                         <FinanceButton
                           label="Ohne Kategorie lassen"
@@ -731,5 +836,14 @@ const styles =
     categoryRowContent: {
       minHeight:
         42,
+    },
+
+    premiumHint: {
+      borderWidth: StyleSheet.hairlineWidth,
+    },
+
+    premiumHintContent: {
+      paddingHorizontal: 12,
+      paddingVertical: 10,
     },
   });
