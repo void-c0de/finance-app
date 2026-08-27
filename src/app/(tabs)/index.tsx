@@ -1331,316 +1331,6 @@ export default function HomeScreen() {
               },
             ]}
           >
-            Konten
-          </Text>
-
-          <FinancePressable
-            onPress={() =>
-              router.push(
-                '/bank-connections' as Href
-              )
-            }
-
-            intent="navigation" contentStyle={styles.textActionContent}
-          >
-            <Text
-              style={[
-                typography.smallMedium,
-
-                {
-                  color:
-                    colors.primary,
-                },
-              ]}
-            >
-              Verwalten
-            </Text>
-          </FinancePressable>
-        </View>
-
-        {accounts.length ===
-        0 ? (
-          <FinanceEmptyState
-            title="Noch kein Konto"
-
-            description="Füge eine Bankverbindung hinzu, um Salden und Umsätze zu sehen."
-
-            actionLabel="Bank verbinden"
-
-            onAction={() => {
-              router.push(
-                '/connect-bank' as Href
-              );
-            }}
-          />
-        ) : (
-          accounts.map(
-            (
-              account
-            ) => (
-              <FinancePressable
-                key={
-                  account.id
-                }
-
-                onPress={() =>
-                  openAccount(
-                    account
-                  )
-                }
-
-                intent="navigation"
-              >
-                <FinanceCard
-                  style={{
-                    marginBottom:
-                      spacing.sm,
-                  }}
-                >
-                  <View
-                    style={
-                      styles.accountRow
-                    }
-                  >
-                    <View
-                      style={[
-                        styles.accountIcon,
-
-                        {
-                          backgroundColor:
-                            colors.primarySoft,
-
-                          borderRadius:
-                            radius.lg,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.accountIconText,
-
-                          {
-                            color:
-                              colors.primary,
-                          },
-                        ]}
-                      >
-                        €
-                      </Text>
-                    </View>
-
-                    <View
-                      style={
-                        styles.accountText
-                      }
-                    >
-                      <Text
-                        style={[
-                          typography.bodyMedium,
-
-                          {
-                            color:
-                              colors.text,
-                          },
-                        ]}
-                      >
-                        {
-                          account.name
-                        }
-                      </Text>
-
-                      <Text
-                        style={[
-                          typography.caption,
-
-                          {
-                            color:
-                              colors.textSecondary,
-
-                            marginTop:
-                              spacing.xs,
-                          },
-                        ]}
-                      >
-                        {account.institutionName ??
-                          'Bankkonto'}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={
-                        styles.amountRight
-                      }
-                    >
-                      <MoneyText
-                        amountMinor={
-                          account.balanceMinor
-                        }
-
-                        currency={
-                          account.currency
-                        }
-
-                        size="m"
-                      />
-
-                      <Text
-                        style={[
-                          typography.caption,
-
-                          {
-                            color:
-                              colors.textMuted,
-
-                            marginTop:
-                              spacing.xs,
-                          },
-                        ]}
-                      >
-                        Details ›
-                      </Text>
-                    </View>
-                  </View>
-                </FinanceCard>
-              </FinancePressable>
-            )
-          )
-        )}
-
-        <View
-          style={[
-            styles.sectionRow,
-
-            {
-              marginTop:
-                spacing.xxxl,
-
-              marginBottom:
-                spacing.md,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              typography.sectionTitle,
-
-              {
-                color:
-                  colors.text,
-              },
-            ]}
-          >
-            Letzte Umsätze
-          </Text>
-
-          <FinancePressable
-            onPress={() =>
-              router.push(
-                '/transactions' as Href
-              )
-            }
-
-            intent="navigation" contentStyle={styles.textActionContent}
-          >
-            <Text
-              style={[
-                typography.smallMedium,
-
-                {
-                  color:
-                    colors.primary,
-                },
-              ]}
-            >
-              Alle
-            </Text>
-          </FinancePressable>
-        </View>
-
-        {recentTransactions.length ===
-        0 ? (
-          <FinanceEmptyState
-            title="Noch keine Umsätze"
-
-            description="Sobald Bankdaten synchronisiert wurden, erscheinen hier deine letzten Buchungen."
-          />
-        ) : (
-          <FinanceCard
-            padded={
-              false
-            }
-          >
-            {recentTransactions.map(
-              (
-                transaction,
-                index
-              ) => (
-                <View
-                  key={
-                    transaction.id
-                  }
-                >
-                  <TransactionRow
-                    transaction={
-                      transaction
-                    }
-
-                    accountName={
-                      accountNames.get(
-                        transaction.accountId
-                      )
-                    }
-
-                    onPress={() =>
-                      openTransaction(
-                        transaction
-                      )
-                    }
-                  />
-
-                  {index <
-                    recentTransactions.length -
-                      1 && (
-                    <View
-                      style={[
-                        styles.transactionDivider,
-
-                        {
-                          backgroundColor:
-                            colors.border,
-                        },
-                      ]}
-                    />
-                  )}
-                </View>
-              )
-            )}
-          </FinanceCard>
-        )}
-
-        <View
-          style={[
-            styles.sectionRow,
-
-            {
-              marginTop:
-                spacing.xxxl,
-
-              marginBottom:
-                spacing.md,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              typography.sectionTitle,
-
-              {
-                color:
-                  colors.text,
-              },
-            ]}
-          >
             Planung
           </Text>
 
@@ -1950,6 +1640,317 @@ export default function HomeScreen() {
             </View>
           </FinanceCard>
         ) : null}
+
+        <View
+          style={[
+            styles.sectionRow,
+
+            {
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.md,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              typography.sectionTitle,
+
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            Konten
+          </Text>
+
+          <FinancePressable
+            onPress={() =>
+              router.push(
+                '/bank-connections' as Href
+              )
+            }
+
+            intent="navigation" contentStyle={styles.textActionContent}
+          >
+            <Text
+              style={[
+                typography.smallMedium,
+
+                {
+                  color:
+                    colors.primary,
+                },
+              ]}
+            >
+              Verwalten
+            </Text>
+          </FinancePressable>
+        </View>
+
+        {accounts.length ===
+        0 ? (
+          <FinanceEmptyState
+            title="Noch kein Konto"
+
+            description="Füge eine Bankverbindung hinzu, um Salden und Umsätze zu sehen."
+
+            actionLabel="Bank verbinden"
+
+            onAction={() => {
+              router.push(
+                '/connect-bank' as Href
+              );
+            }}
+          />
+        ) : (
+          accounts.map(
+            (
+              account
+            ) => (
+              <FinancePressable
+                key={
+                  account.id
+                }
+
+                onPress={() =>
+                  openAccount(
+                    account
+                  )
+                }
+
+                intent="navigation"
+              >
+                <FinanceCard
+                  style={{
+                    marginBottom:
+                      spacing.sm,
+                  }}
+                >
+                  <View
+                    style={
+                      styles.accountRow
+                    }
+                  >
+                    <View
+                      style={[
+                        styles.accountIcon,
+
+                        {
+                          backgroundColor:
+                            colors.primarySoft,
+
+                          borderRadius:
+                            radius.lg,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.accountIconText,
+
+                          {
+                            color:
+                              colors.primary,
+                          },
+                        ]}
+                      >
+                        €
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.accountText
+                      }
+                    >
+                      <Text
+                        style={[
+                          typography.bodyMedium,
+
+                          {
+                            color:
+                              colors.text,
+                          },
+                        ]}
+                      >
+                        {
+                          account.name
+                        }
+                      </Text>
+
+                      <Text
+                        style={[
+                          typography.caption,
+
+                          {
+                            color:
+                              colors.textSecondary,
+
+                            marginTop:
+                              spacing.xs,
+                          },
+                        ]}
+                      >
+                        {account.institutionName ??
+                          'Bankkonto'}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={
+                        styles.amountRight
+                      }
+                    >
+                      <MoneyText
+                        amountMinor={
+                          account.balanceMinor
+                        }
+
+                        currency={
+                          account.currency
+                        }
+
+                        size="m"
+                      />
+
+                      <Text
+                        style={[
+                          typography.caption,
+
+                          {
+                            color:
+                              colors.textMuted,
+
+                            marginTop:
+                              spacing.xs,
+                          },
+                        ]}
+                      >
+                        Details ›
+                      </Text>
+                    </View>
+                  </View>
+                </FinanceCard>
+              </FinancePressable>
+            )
+          )
+        )}
+
+        <View
+          style={[
+            styles.sectionRow,
+
+            {
+              marginTop:
+                spacing.xxxl,
+
+              marginBottom:
+                spacing.md,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              typography.sectionTitle,
+
+              {
+                color:
+                  colors.text,
+              },
+            ]}
+          >
+            Letzte Umsätze
+          </Text>
+
+          <FinancePressable
+            onPress={() =>
+              router.push(
+                '/transactions' as Href
+              )
+            }
+
+            intent="navigation" contentStyle={styles.textActionContent}
+          >
+            <Text
+              style={[
+                typography.smallMedium,
+
+                {
+                  color:
+                    colors.primary,
+                },
+              ]}
+            >
+              Alle
+            </Text>
+          </FinancePressable>
+        </View>
+
+        {recentTransactions.length ===
+        0 ? (
+          <FinanceEmptyState
+            title="Noch keine Umsätze"
+
+            description="Sobald Bankdaten synchronisiert wurden, erscheinen hier deine letzten Buchungen."
+          />
+        ) : (
+          <FinanceCard
+            padded={
+              false
+            }
+          >
+            {recentTransactions.map(
+              (
+                transaction,
+                index
+              ) => (
+                <View
+                  key={
+                    transaction.id
+                  }
+                >
+                  <TransactionRow
+                    transaction={
+                      transaction
+                    }
+
+                    accountName={
+                      accountNames.get(
+                        transaction.accountId
+                      )
+                    }
+
+                    onPress={() =>
+                      openTransaction(
+                        transaction
+                      )
+                    }
+                  />
+
+                  {index <
+                    recentTransactions.length -
+                      1 && (
+                    <View
+                      style={[
+                        styles.transactionDivider,
+
+                        {
+                          backgroundColor:
+                            colors.border,
+                        },
+                      ]}
+                    />
+                  )}
+                </View>
+              )
+            )}
+          </FinanceCard>
+        )}
+
 
       </ScrollView>
     </SafeAreaView>
