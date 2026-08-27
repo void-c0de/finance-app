@@ -62,6 +62,10 @@ import {
     useProductAccessStore,
 } from '@/stores/useProductAccessStore';
 
+import {
+    PREMIUM_GATE_COPY,
+} from '@/services/entitlementCore';
+
 import type {
     CategoryRule,
 } from '@/types/finance';
@@ -239,10 +243,11 @@ export default function CategoryRulesScreen() {
         </View>
         <View style={{ padding: spacing.xl }}>
           <FinanceCard variant="highlight">
-            <Text style={[typography.caption, { color: colors.primary }]}>PREMIUM-AUTOMATISIERUNG</Text>
-            <Text style={[typography.cardTitle, { color: colors.text, marginTop: spacing.sm }]}>Wiederkehrende Zuordnungen automatisch erledigen</Text>
-            <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>Manuelle Kategorien bleiben Standard. Premium ergänzt eigene Händler- und Beschreibungsregeln.</Text>
-            <FinanceButton label="Premium ansehen" onPress={() => router.push('/premium' as Href)} style={{ marginTop: spacing.lg }} />
+            <Text style={[typography.caption, { color: colors.primary }]}>PREMIUM · AUTOMATISIEREN</Text>
+            <Text style={[typography.cardTitle, { color: colors.text, marginTop: spacing.sm }]}>{PREMIUM_GATE_COPY.category_rules.title}</Text>
+            <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>{PREMIUM_GATE_COPY.category_rules.body}</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.md }]}>Deine manuellen Kategorien und bereits gespeicherten Regeln bleiben immer aktiv – auch wenn Premium einmal endet.</Text>
+            <FinanceButton label={PREMIUM_GATE_COPY.category_rules.cta} onPress={() => router.push('/premium' as Href)} style={{ marginTop: spacing.lg }} />
           </FinanceCard>
         </View>
       </SafeAreaView>

@@ -68,7 +68,8 @@ import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
-import { hasCapability } from '@/services/entitlementCore';
+import { hasCapability, quotaState, type PremiumGateContext } from '@/services/entitlementCore';
+import { PremiumSheet } from '@/components/premium/PremiumSheet';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
 export default function GoalNewScreen() {
@@ -88,8 +89,15 @@ export default function GoalNewScreen() {
     );
 
   const accounts = useFinanceStore((state) => state.accounts);
+  const goals = useFinanceStore((state) => state.goals);
   const access = useProductAccessStore((state) => state.access);
   const canUseAdvancedTracking = hasCapability(access, 'advanced_planning');
+  const manualGoalQuota = quotaState(
+    access,
+    'activeManualGoals',
+    goals.filter((goal) => goal.trackingMode === 'manual').length,
+  );
+  const [premiumGate, setPremiumGate] = useState<PremiumGateContext | null>(null);
   const [trackingMode, setTrackingMode] = useState<'manual' | 'account_balance'>('manual');
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
@@ -204,7 +212,12 @@ export default function GoalNewScreen() {
     if (trackingMode === 'account_balance' && !canUseAdvancedTracking) {
       setTrackingMode('manual');
       setSelectedAccountId(null);
-      setDialog({ title: 'Premium erforderlich', message: 'Konto-verknüpfte Sparziele sind eine Premium-Funktion. Dein manueller Entwurf bleibt erhalten.', confirmLabel: 'Verstanden' });
+      setPremiumGate('account_linked_goal');
+      return;
+    }
+
+    if (trackingMode === 'manual' && manualGoalQuota.reached) {
+      setPremiumGate('goals_quota');
       return;
     }
 
@@ -441,12 +454,12 @@ export default function GoalNewScreen() {
             style={{ flex: 1 }}
           />
           <FinanceButton
-            label="Mit Konto"
+            label={canUseAdvancedTracking ? 'Mit Konto' : 'Mit Konto · Premium'}
             size="small"
             variant={trackingMode === 'account_balance' ? 'primary' : 'secondary'}
             onPress={() => {
               if (canUseAdvancedTracking) setTrackingMode('account_balance');
-              else router.push('/premium' as never);
+              else setPremiumGate('account_linked_goal');
             }}
             style={{ flex: 1 }}
           />
@@ -606,6 +619,16 @@ export default function GoalNewScreen() {
 
         onClose={() =>
           setDialog(null)
+        }
+      />
+
+      <PremiumSheet
+        context={premiumGate}
+        onClose={() => setPremiumGate(null)}
+        personalNote={
+          premiumGate === 'goals_quota'
+            ? `Du nutzt bereits deine ${manualGoalQuota.limit} Standard-Sparziele. Deine bestehenden Sparziele bleiben erhalten.`
+            : undefined
         }
       />
     </SafeAreaView>

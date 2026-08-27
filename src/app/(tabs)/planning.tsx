@@ -93,6 +93,19 @@ import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import {
+  useProductAccessStore,
+} from '@/stores/useProductAccessStore';
+
+import {
+  quotaState,
+  type PremiumGateContext,
+} from '@/services/entitlementCore';
+
+import {
+  PremiumSheet,
+} from '@/components/premium/PremiumSheet';
+
 function createSuggestedBudgetMinor(
   spendingMinor:
     number
@@ -238,6 +251,28 @@ export default function PlanningScreen() {
     isCreateOpen,
     setIsCreateOpen,
   ] = useState(false);
+
+  const [
+    premiumGate,
+    setPremiumGate,
+  ] = useState<PremiumGateContext | null>(null);
+
+  const access =
+    useProductAccessStore((state) => state.access);
+
+  const budgetQuota =
+    quotaState(
+      access,
+      'activeBudgets',
+      budgets.filter((budget) => budget.period === 'monthly').length,
+    );
+
+  const manualGoalQuota =
+    quotaState(
+      access,
+      'activeManualGoals',
+      goals.filter((goal) => goal.trackingMode === 'manual').length,
+    );
 
   useFocusEffect(
     useCallback(
@@ -853,11 +888,15 @@ export default function PlanningScreen() {
 
               {
                 color:
-                  colors.textMuted,
+                  budgetQuota.reached && !budgetQuota.unlimited
+                    ? colors.primary
+                    : colors.textMuted,
               },
             ]}
           >
-            {budgets.length}
+            {budgetQuota.unlimited
+              ? budgets.length
+              : `${budgetQuota.used} / ${budgetQuota.limit}`}
           </Text>
         </View>
 
@@ -1646,11 +1685,15 @@ export default function PlanningScreen() {
 
               {
                 color:
-                  colors.textMuted,
+                  manualGoalQuota.reached && !manualGoalQuota.unlimited
+                    ? colors.primary
+                    : colors.textMuted,
               },
             ]}
           >
-            {goals.length}
+            {manualGoalQuota.unlimited
+              ? goals.length
+              : `${manualGoalQuota.used} / ${manualGoalQuota.limit}`}
           </Text>
         </View>
 
@@ -1802,11 +1845,19 @@ export default function PlanningScreen() {
         )}
 
         <FinanceButton
-          label="Sparziel hinzufügen"
+          label={
+            manualGoalQuota.unlimited
+              ? 'Sparziel hinzufügen'
+              : `Sparziel hinzufügen · ${manualGoalQuota.used}/${manualGoalQuota.limit}`
+          }
 
           variant="secondary"
 
           onPress={() => {
+            if (manualGoalQuota.reached) {
+              setPremiumGate('goals_quota');
+              return;
+            }
             router.push(
               '/goal-new' as Href,
             );
@@ -2017,18 +2068,34 @@ export default function PlanningScreen() {
             <Text style={[typography.title, { color: colors.text }]}>Was möchtest du planen?</Text>
             <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg }]}>Nur vollständig nutzbare Planungstypen werden hier angeboten.</Text>
             <FinanceButton
-              label="Sparziel"
+              label={
+                manualGoalQuota.unlimited
+                  ? 'Sparziel'
+                  : `Sparziel · ${manualGoalQuota.used}/${manualGoalQuota.limit}`
+              }
               onPress={() => {
                 setIsCreateOpen(false);
+                if (manualGoalQuota.reached) {
+                  setPremiumGate('goals_quota');
+                  return;
+                }
                 router.push('/goal-new' as Href);
               }}
               style={{ width: '100%' }}
             />
             <FinanceButton
-              label="Monatsbudget"
+              label={
+                budgetQuota.unlimited
+                  ? 'Monatsbudget'
+                  : `Monatsbudget · ${budgetQuota.used}/${budgetQuota.limit}`
+              }
               variant="secondary"
               onPress={() => {
                 setIsCreateOpen(false);
+                if (budgetQuota.reached) {
+                  setPremiumGate('budgets_quota');
+                  return;
+                }
                 router.push('/budget-new' as Href);
               }}
               style={{ width: '100%', marginTop: spacing.sm }}
@@ -2042,6 +2109,18 @@ export default function PlanningScreen() {
           </View>
         </FinancePressable>
       </Modal>
+
+      <PremiumSheet
+        context={premiumGate}
+        onClose={() => setPremiumGate(null)}
+        personalNote={
+          premiumGate === 'budgets_quota'
+            ? `Du nutzt bereits deine ${budgetQuota.limit} Standard-Budgets. Deine bestehenden Budgets bleiben natürlich erhalten.`
+            : premiumGate === 'goals_quota'
+              ? `Du nutzt bereits deine ${manualGoalQuota.limit} Standard-Sparziele. Deine bestehenden Sparziele bleiben natürlich erhalten.`
+              : undefined
+        }
+      />
 
       <FinanceDialog
         visible={

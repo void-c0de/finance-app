@@ -13,7 +13,10 @@ import { decimalToMinorUnits } from '@/core/money';
 import { upsertMonthlyCategoryBudget } from '@/db/repositories/budgets';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { performFinanceHaptic } from '@/services/haptics';
+import { quotaState, type PremiumGateContext } from '@/services/entitlementCore';
+import { PremiumSheet } from '@/components/premium/PremiumSheet';
 import { useFinanceStore } from '@/stores/useFinanceStore';
+import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
 export default function BudgetNewScreen() {
   const { colors, spacing, typography } = useFinanceTheme();
@@ -24,10 +27,17 @@ export default function BudgetNewScreen() {
     () => categories.filter((category) => !category.isIncomeCategory),
     [categories],
   );
+  const access = useProductAccessStore((state) => state.access);
+  const budgetQuota = quotaState(
+    access,
+    'activeBudgets',
+    budgets.filter((budget) => budget.period === 'monthly').length,
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [dialog, setDialog] = useState<FinanceDialogConfig | null>(null);
+  const [premiumGate, setPremiumGate] = useState<PremiumGateContext | null>(null);
   const amountRef = useRef<TextInput | null>(null);
 
   async function saveBudget() {
@@ -42,6 +52,14 @@ export default function BudgetNewScreen() {
     const amountMinor = decimalToMinorUnits(amount.trim().replace(',', '.') || '0');
     if (amountMinor <= 0) {
       setDialog({ title: 'Budgetbetrag fehlt', message: 'Bitte gib ein monatliches Limit größer als 0 Euro ein.', confirmLabel: 'Verstanden' });
+      return;
+    }
+
+    const isNewBudget = !budgets.some(
+      (budget) => budget.categoryId === category.id && budget.period === 'monthly',
+    );
+    if (isNewBudget && budgetQuota.reached) {
+      setPremiumGate('budgets_quota');
       return;
     }
 
@@ -112,6 +130,11 @@ export default function BudgetNewScreen() {
         <FinanceButton label="Monatsbudget speichern" loading={isSaving} disabled={isSaving || expenseCategories.length === 0} onPress={() => { void saveBudget(); }} style={{ width: '100%', marginTop: spacing.xl }} />
       </FinanceKeyboardScreen>
       <FinanceDialog visible={dialog !== null} config={dialog} onClose={() => setDialog(null)} />
+      <PremiumSheet
+        context={premiumGate}
+        onClose={() => setPremiumGate(null)}
+        personalNote={`Du nutzt bereits deine ${budgetQuota.limit} Standard-Budgets. Deine bestehenden Budgets bleiben erhalten.`}
+      />
     </SafeAreaView>
   );
 }
