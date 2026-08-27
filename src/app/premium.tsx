@@ -7,29 +7,12 @@ import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { FinanceTextField } from '@/components/forms/FinanceTextField';
 import { FinanceKeyboardScreen } from '@/components/layout/FinanceKeyboardScreen';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
+import { PREMIUM_PILLARS } from '@/services/entitlementCore';
 import { redeemPremiumCoupon } from '@/services/productAccess';
+import { trackPremiumEvent } from '@/services/premiumTelemetry';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
-const standardBenefits = [
-  'Konten, Umsätze und sichere Cloud-Synchronisierung',
-  'Manuelle Kategorien und Händlerkorrekturen',
-  'Manuelle Sparziele und intelligentes Dashboard',
-  'Echte Monatsbudgets mit Ausgabenfortschritt',
-  'Erkannte Abos, Rechnungen und wiederkehrendes Einkommen – inkl. Korrektur',
-  'Gebundene Fixkosten und nächste fällige Zahlung',
-  'Umsätze als CSV exportieren',
-];
-
-const premiumBenefits = [
-  'Automatische Händlerregeln',
-  'Konto-verknüpfte und automatische Sparziele',
-  '30-/60-/90-Tage-Cashflow-Prognose auf Basis deiner Fixkosten',
-  'Analysen: Monatsvergleich, Kategorie-Trends, Abo-Preisänderungen',
-  'Hinweis auf ausgebliebene wiederkehrende Zahlungen',
-  'Erweiterte Exporte (Budgets, Sparziele, Abos als CSV)',
-];
-
-const sourceLabels = {
+const SOURCE_LABELS: Record<string, string | null> = {
   coupon: 'Coupon',
   admin: 'Freigabe durch Administration',
   google_play: 'Google Play',
@@ -38,16 +21,19 @@ const sourceLabels = {
   migration: 'Bestehende Freigabe',
   superuser: 'Superuser-Rolle',
   none: null,
-} as const;
+};
 
 export default function PremiumScreen() {
-  const { colors, spacing, typography } = useFinanceTheme();
+  const { colors, spacing, radius, typography } = useFinanceTheme();
   const { access, isLoading, refresh, setAccess } = useProductAccessStore();
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    trackPremiumEvent('premium_center_opened');
+    void refresh();
+  }, [refresh]);
 
   async function redeem() {
     if (busy) return;
@@ -58,52 +44,134 @@ export default function PremiumScreen() {
       setAccess(result.access);
       setCode('');
       setMessage('Premium wurde erfolgreich aktiviert.');
-    } else setMessage(result.message);
+    } else {
+      setMessage(result.message);
+    }
     setBusy(false);
   }
 
-  const status = access.isSuperuser
-    ? 'Superuser · Premium dauerhaft freigeschaltet'
+  const statusTitle = access.isSuperuser
+    ? 'Superuser'
     : access.isPremium
-      ? `Premium aktiv${access.premiumExpiresAt ? ` bis ${new Date(access.premiumExpiresAt).toLocaleDateString('de-DE')}` : ''}`
+      ? 'Premium aktiv'
       : 'Standard';
 
+  const statusDetail = access.isSuperuser
+    ? 'Alle Premium-Funktionen sind über deine Rolle dauerhaft freigeschaltet.'
+    : access.isPremium
+      ? access.premiumExpiresAt
+        ? `Aktiv bis ${new Date(access.premiumExpiresAt).toLocaleDateString('de-DE')}. Deine Konfiguration bleibt auch danach gespeichert.`
+        : 'Aktiv – ohne festes Ablaufdatum.'
+      : 'Der kostenlose Tarif ist voll nutzbar. Premium erweitert – es sperrt nichts Wesentliches aus.';
+
   return (
-    <FinanceKeyboardScreen backgroundColor={colors.background} contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-      <View style={styles.header}>
-        <FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} />
-        <Text style={[typography.title, { color: colors.text }]}>Abos & Premium</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      <FinanceCard variant="highlight" style={{ marginTop: spacing.xl }}>
+    <FinanceKeyboardScreen
+      backgroundColor={colors.background}
+      contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}
+      header={
+        <View style={styles.header}>
+          <FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} />
+          <Text style={[typography.title, { color: colors.text }]}>Abos & Premium</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      }
+    >
+      <FinanceCard variant="highlight" style={{ marginTop: spacing.md }}>
         <Text style={[typography.caption, { color: colors.primary }]}>DEIN PLAN</Text>
-        <Text style={[typography.cardTitle, { color: colors.text, marginTop: spacing.sm }]}>{isLoading ? 'Wird geprüft…' : status}</Text>
-        <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>Kernfunktionen, Konten, Umsätze, Sicherheit und Basisplanung bleiben im Standard-Tarif vollständig nutzbar.</Text>
-        {sourceLabels[access.source] ? <Text style={[typography.small, { color: colors.textMuted, marginTop: spacing.sm }]}>Freigabe: {sourceLabels[access.source]}</Text> : null}
+        <Text style={[typography.cardTitle, { color: colors.text, marginTop: spacing.sm }]}>
+          {isLoading ? 'Wird geprüft…' : statusTitle}
+        </Text>
+        <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+          {statusDetail}
+        </Text>
+        {SOURCE_LABELS[access.source] ? (
+          <Text style={[typography.small, { color: colors.textMuted, marginTop: spacing.sm }]}>
+            Freigabe: {SOURCE_LABELS[access.source]}
+          </Text>
+        ) : null}
       </FinanceCard>
 
-      <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>STANDARD</Text>
-      <FinanceCard>
-        {standardBenefits.map((benefit) => <Text key={benefit} style={[typography.body, { color: colors.text, marginBottom: spacing.md }]}>✓ {benefit}</Text>)}
-      </FinanceCard>
+      <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl, marginBottom: spacing.sm }]}>
+        WAS PREMIUM FÜR DICH MACHT
+      </Text>
 
-      <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xl, marginBottom: spacing.sm }]}>PREMIUM · ALLES AUS STANDARD PLUS</Text>
+      {PREMIUM_PILLARS.map((pillar) => (
+        <FinanceCard key={pillar.id} style={{ marginBottom: spacing.sm }}>
+          <Text style={[typography.sectionTitle, { color: colors.text }]}>{pillar.title}</Text>
+          <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xxs }]}>
+            {pillar.subtitle}
+          </Text>
+          <View style={{ marginTop: spacing.md, gap: spacing.xs }}>
+            {pillar.points.map((point) => (
+              <View key={point} style={styles.pointRow}>
+                <View style={[styles.dot, { backgroundColor: colors.primary, borderRadius: radius.round }]} />
+                <Text style={[typography.body, { color: colors.text, flex: 1 }]}>{point}</Text>
+              </View>
+            ))}
+          </View>
+        </FinanceCard>
+      ))}
+
+      <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxl, marginBottom: spacing.sm }]}>
+        IMMER KOSTENLOS
+      </Text>
       <FinanceCard>
-        {premiumBenefits.map((benefit) => <Text key={benefit} style={[typography.body, { color: colors.text, marginBottom: spacing.md }]}>✓ {benefit}</Text>)}
-        <Text style={[typography.small, { color: colors.textMuted }]}>Bezahlte Premium-Abos folgen später. Aktuell erfolgt die Freigabe ausschließlich über Coupons oder die Administration.</Text>
+        <Text style={[typography.body, { color: colors.text }]}>
+          Konten & Umsätze · manuelle Kategorien und Korrekturen · Basis-Dashboard und Attention Center · zwei Budgets · zwei manuelle Sparziele · erkannte Abos und die nächste Zahlung · Umsätze-CSV · alle Sicherheitsfunktionen · System-, Hell-, Dunkel- und AMOLED-Design.
+        </Text>
       </FinanceCard>
 
       {!access.isSuperuser ? (
-        <FinanceCard style={{ marginTop: spacing.xl }}>
-          <Text style={[typography.cardTitle, { color: colors.text, marginBottom: spacing.md }]}>Coupon einlösen</Text>
-          <FinanceTextField label="Premium-Coupon" value={code} autoCapitalize="characters" autoCorrect={false} maxLength={32} placeholder="WELCOME30" onChangeText={(value) => setCode(value.toUpperCase().replace(/\s/g, ''))} />
-          {message ? <Text style={[typography.small, { color: message.includes('erfolgreich') ? colors.positive : colors.negative, marginTop: spacing.sm }]}>{message}</Text> : null}
-          <FinanceButton label="Coupon einlösen" loading={busy} disabled={code.length < 4} onPress={() => { void redeem(); }} style={{ marginTop: spacing.lg }} />
-        </FinanceCard>
+        <>
+          <FinanceCard style={{ marginTop: spacing.xxl }}>
+            <Text style={[typography.cardTitle, { color: colors.text }]}>Premium aktivieren</Text>
+            <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xs }]}>
+              Premium wird derzeit über Coupons oder die Administration freigeschaltet. Ein Kauf über Google Play folgt, sobald die Abrechnung serverseitig geprüft werden kann – bis dahin gibt es hier bewusst keinen Kauf-Button.
+            </Text>
+            <FinanceTextField
+              containerStyle={{ marginTop: spacing.lg }}
+              label="Premium-Coupon"
+              value={code}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={32}
+              placeholder="WELCOME30"
+              onChangeText={(value) => setCode(value.toUpperCase().replace(/\s/g, ''))}
+            />
+            {message ? (
+              <Text
+                style={[
+                  typography.small,
+                  {
+                    color: message.includes('erfolgreich') ? colors.positive : colors.negative,
+                    marginTop: spacing.sm,
+                  },
+                ]}
+              >
+                {message}
+              </Text>
+            ) : null}
+            <FinanceButton
+              label="Coupon einlösen"
+              loading={busy}
+              disabled={code.length < 4}
+              onPress={() => { void redeem(); }}
+              style={{ marginTop: spacing.lg }}
+            />
+          </FinanceCard>
+
+          <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.lg }]}>
+            Wenn Premium endet, wird nichts gelöscht: Budgets, Sparziele, Regeln, Wiederkehr-Korrekturen und dein Design bleiben gespeichert und werden wieder aktiv, sobald Premium zurückkehrt.
+          </Text>
+        </>
       ) : null}
     </FinanceKeyboardScreen>
   );
 }
 
-const styles = StyleSheet.create({ header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, headerSpacer: { width: 44 } });
+const styles = StyleSheet.create({
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerSpacer: { width: 44 },
+  pointRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  dot: { width: 5, height: 5, marginTop: 8 },
+});

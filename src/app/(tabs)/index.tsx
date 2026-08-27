@@ -80,8 +80,21 @@ import {
 } from '@/services/attentionCore';
 
 import {
+  buildMonthlyComparison,
+} from '@/services/analyticsCore';
+
+import {
   hasCapability,
+  type PremiumGateContext,
 } from '@/services/entitlementCore';
+
+import {
+  PremiumPreviewCard,
+} from '@/components/premium/PremiumPreviewCard';
+
+import {
+  PremiumSheet,
+} from '@/components/premium/PremiumSheet';
 
 import {
   useProductAccessStore,
@@ -425,6 +438,37 @@ export default function HomeScreen() {
     forecastHorizon,
     setForecastHorizon,
   ] = useState<30 | 60 | 90>(30);
+
+  const [
+    premiumGate,
+    setPremiumGate,
+  ] = useState<PremiumGateContext | null>(null);
+
+  const analyticsPreview =
+    useMemo(() => {
+      if (canForecast) return null;
+      const comparison = buildMonthlyComparison({ transactions, categories });
+      if (!comparison.hasEnoughData) return null;
+      const previousMonth = new Date(
+        `${comparison.previousKey}-01T00:00:00Z`,
+      ).toLocaleDateString('de-DE', { month: 'long' });
+      if (comparison.topIncrease) {
+        return {
+          title: `Deine größten Veränderungen gegenüber ${previousMonth}`,
+          teaser: `${comparison.topIncrease.name} ist die auffälligste Veränderung – mit Premium siehst du alle Kategorien und Beträge.`,
+        };
+      }
+      const richtung =
+        comparison.expenses.direction === 'up'
+          ? 'gestiegen'
+          : comparison.expenses.direction === 'down'
+            ? 'gesunken'
+            : 'kaum verändert';
+      return {
+        title: 'Vormonat vergleichen',
+        teaser: `Deine Ausgaben sind gegenüber ${previousMonth} ${richtung}. Mit Premium siehst du, um wie viel und wo.`,
+      };
+    }, [canForecast, transactions, categories]);
 
   const forecast =
     useMemo(
@@ -1112,6 +1156,15 @@ export default function HomeScreen() {
               </Text>
             </FinancePressable>
           </FinanceCard>
+        ) : analyticsPreview ? (
+          <PremiumPreviewCard
+            style={{ marginTop: spacing.md }}
+            eyebrow="Analysen"
+            title={analyticsPreview.title}
+            teaser={analyticsPreview.teaser}
+            context="analytics"
+            onOpen={setPremiumGate}
+          />
         ) : null}
 
         <View
@@ -1953,6 +2006,11 @@ export default function HomeScreen() {
 
 
       </ScrollView>
+
+      <PremiumSheet
+        context={premiumGate}
+        onClose={() => setPremiumGate(null)}
+      />
     </SafeAreaView>
   );
 }

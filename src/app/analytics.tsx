@@ -82,32 +82,76 @@ export default function AnalyticsScreen() {
     [recurringItems, latestBookedDate],
   );
 
-  if (!canAnalyze) {
-    return (
-      <SafeAreaView edges={['top']} style={[styles.flex, { backgroundColor: colors.background }]}>
-        <HeaderBar title="Analysen" />
-        <View style={{ padding: spacing.lg }}>
-          <FinanceCard variant="highlight">
-            <Text style={[typography.cardTitle, { color: colors.text }]}>Analysen sind Premium</Text>
-            <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>
-              Monatsvergleich, Kategorie-Trends, Abo-Preisänderungen und Hinweise auf ausgebliebene Zahlungen.
-              Deine aktuellen Zahlen – Budgets, Fixkosten, nächste Zahlung – bleiben im Standard-Tarif auf Dashboard und Planung sichtbar.
-            </Text>
-            <FinanceButton
-              label="Premium ansehen"
-              onPress={() => router.push('/premium' as Href)}
-              style={{ marginTop: spacing.xl }}
-            />
-          </FinanceCard>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const monthName = (key: string) => {
     const [year, month] = key.split('-').map((part) => Number.parseInt(part, 10));
     return new Date(year, month - 1, 1).toLocaleDateString('de-DE', { month: 'long' });
   };
+
+  if (!canAnalyze) {
+    const topCategory = trendReport.trends[0] ?? null;
+    return (
+      <SafeAreaView edges={['top']} style={[styles.flex, { backgroundColor: colors.background }]}>
+        <HeaderBar title="Analysen" />
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxxl }}>
+          <Text style={[typography.body, { color: colors.textSecondary, marginBottom: spacing.md }]}>
+            Deine aktuellen Zahlen – Budgets, Fixkosten, nächste Zahlung – bleiben auf Dashboard und Planung sichtbar. Diese Auswertungen zeigen zusätzlich den Verlauf.
+          </Text>
+
+          <FinanceCard>
+            <View style={styles.rowBetween}>
+              <Text style={[typography.caption, { color: colors.textMuted }]}>VORMONAT VERGLEICHEN</Text>
+              <Text style={[typography.caption, { color: colors.primary }]}>Premium</Text>
+            </View>
+            <Text style={[typography.bodyMedium, { color: colors.text, marginTop: spacing.md }]}>
+              {comparison.hasEnoughData
+                ? `Deine Ausgaben sind gegenüber ${monthName(comparison.previousKey)} ${
+                    comparison.expenses.direction === 'up'
+                      ? 'gestiegen'
+                      : comparison.expenses.direction === 'down'
+                        ? 'gesunken'
+                        : 'kaum verändert'
+                  }.`
+                : 'Sobald zwei Monate mit Umsätzen vorliegen, entsteht hier ein Vergleich.'}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xxs }]}>
+              Mit Premium siehst du Einnahmen, Ausgaben und Cashflow als Betrag und Prozent – plus die größten Kategorie-Veränderungen.
+            </Text>
+          </FinanceCard>
+
+          {topCategory ? (
+            <FinanceCard style={{ marginTop: spacing.md }}>
+              <View style={styles.rowBetween}>
+                <Text style={[typography.caption, { color: colors.textMuted }]}>KATEGORIE-TRENDS</Text>
+                <Text style={[typography.caption, { color: colors.primary }]}>Premium</Text>
+              </View>
+              <Text style={[typography.bodyMedium, { color: colors.text, marginTop: spacing.md }]}>
+                {topCategory.name} ist aktuell deine größte Ausgabenkategorie.
+              </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xxs }]}>
+                Mit Premium siehst du den 6-Monats-Verlauf je Kategorie und ob eine Kategorie steigt oder fällt.
+              </Text>
+            </FinanceCard>
+          ) : null}
+
+          <FinanceCard style={{ marginTop: spacing.md }}>
+            <View style={styles.rowBetween}>
+              <Text style={[typography.caption, { color: colors.textMuted }]}>ABOS & CASHFLOW</Text>
+              <Text style={[typography.caption, { color: colors.primary }]}>Premium</Text>
+            </View>
+            <Text style={[typography.bodyMedium, { color: colors.text, marginTop: spacing.md }]}>
+              Abo-Preisänderungen, ausgebliebene Zahlungen und die 30-/60-/90-Tage-Cashflow-Prognose.
+            </Text>
+          </FinanceCard>
+
+          <FinanceButton
+            label="Premium ansehen"
+            onPress={() => router.push('/premium' as Href)}
+            style={{ marginTop: spacing.xl }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   const deltaLine = (label: string, delta: typeof comparison.expenses) => {
     const percent = delta.deltaPercent === null ? null : Math.round(delta.deltaPercent * 100);
