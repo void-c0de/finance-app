@@ -270,6 +270,18 @@ export default function MoreScreen() {
               />
             </>
           ) : null}
+
+          {__DEV__ || productAccess.isSuperuser ? (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                title="Demo-Daten"
+                description="Synthetischer Datensatz für Screenshots und QA"
+                icon={<Text style={[styles.rowGlyph, { color: colors.info }]}>▦</Text>}
+                onPress={() => router.push('/demo' as Href)}
+              />
+            </>
+          ) : null}
         </FinanceCard>
 
         <Text
