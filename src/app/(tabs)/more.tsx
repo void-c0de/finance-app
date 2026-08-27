@@ -787,7 +787,7 @@ export default function MoreScreen() {
           <SettingsRow
             title="Daten & Datenschutz"
 
-            description="Lokale Finanzdaten und zukünftigen Cloud-Sync verwalten"
+            description="Backup, Import, Cloud-Sync, lokaler Reset und Löschung"
 
             icon={
               <Text
@@ -803,6 +803,10 @@ export default function MoreScreen() {
                 ◈
               </Text>
             }
+
+            onPress={() => {
+              router.push('/data-privacy' as Href);
+            }}
           />
 
           <View
