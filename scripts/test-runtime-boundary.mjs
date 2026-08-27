@@ -22,9 +22,12 @@ assert.match(appVersion, SEMVER, 'app.json expo.version muss dreistelliges SemVe
 assert.match(manifest.runtimeVersion, SEMVER, 'Manifest runtimeVersion muss dreistelliges SemVer sein');
 
 // Diese native Generation ist ausdrücklich freigegeben.
-assert.equal(appVersion, '1.4.0', 'Dieser Meilenstein liefert nativ 1.4.0 aus (expo-document-picker = native Grenze)');
-assert.equal(appJson.expo.android.versionCode, 5, 'Android versionCode 5 gehört zu 1.4.0');
+// 1.5.0 = Release-Candidate: native Manifest-Härtung (SYSTEM_ALERT_WINDOW entfernt,
+// allowBackup=false, korrektes App-Label) – nicht per OTA an 1.4.0 auslieferbar.
+assert.equal(appVersion, '1.5.0', 'Dieser Meilenstein liefert nativ 1.5.0 aus (RC-Manifest-Härtung = native Grenze)');
+assert.equal(appJson.expo.android.versionCode, 6, 'Android versionCode 6 gehört zu 1.5.0');
 assert.equal(appJson.expo.runtimeVersion?.policy, 'appVersion', 'Runtime folgt weiterhin der App-Version');
+assert.equal(appJson.expo.name, 'Finance App', 'App-Label ist der Produktname, kein Platzhalter');
 
 // Das veröffentlichte OTA-Manifest darf keine Runtime bewerben, die neuer als der
 // aktuelle native Build ist (eine solche Runtime existiert auf keinem Gerät).
@@ -49,12 +52,12 @@ for (const asset of manifest.assets ?? []) {
   );
 }
 
-// Versionslogik: ein älteres Gerät muss ein erzwungenes 1.4.0-Minimum als
-// nativen Pflicht-Upgrade erkennen, ein 1.4.0-Gerät nicht.
-assert.equal(requiresNativeUpgrade('1.3.0', '1.4.0'), true);
-assert.equal(requiresNativeUpgrade('1.4.0', '1.4.0'), false);
-assert.equal(requiresNativeUpgrade('1.4.0', null), false);
-assert.equal(compareVersions(appVersion, '1.3.0') > 0, true, 'Native Generation ist gegenüber 1.3.0 vorgerückt');
+// Versionslogik: ein älteres Gerät muss ein erzwungenes 1.5.0-Minimum als
+// nativen Pflicht-Upgrade erkennen, ein 1.5.0-Gerät nicht.
+assert.equal(requiresNativeUpgrade('1.4.0', '1.5.0'), true);
+assert.equal(requiresNativeUpgrade('1.5.0', '1.5.0'), false);
+assert.equal(requiresNativeUpgrade('1.5.0', null), false);
+assert.equal(compareVersions(appVersion, '1.4.0') > 0, true, 'Native Generation ist gegenüber 1.4.0 vorgerückt');
 
 console.log(
   `Runtime boundary: OK (App ${appVersion} / versionCode ${appJson.expo.android.versionCode}, Manifest-Runtime ${manifest.runtimeVersion})`,

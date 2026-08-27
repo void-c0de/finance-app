@@ -91,10 +91,21 @@ const now = new Date('2026-08-27T12:00:00.000Z');
 // --- Edge Function: löscht nur den Aufrufer ------------------------
 {
   const fn = readFileSync('supabase/functions/finalize-account-deletion/index.ts', 'utf8');
-  assert.match(fn, /auth\.getUser\(\)/, 'Aufrufer wird aus dem eigenen Token bestimmt');
+  // Identität kommt ausschließlich aus dem (plattform-verifizierten) JWT.
+  assert.match(fn, /jwtSub\(token\)/, 'Aufrufer-ID aus dem eigenen JWT');
+  assert.match(fn, /const callerId = jwtSub\(token\)/, 'callerId ist die JWT-sub');
   assert.match(fn, /admin\.auth\.admin\.deleteUser\(callerId\)/, 'löscht callerId, kein Body-Argument');
-  assert.ok(!/req\.json\(\)/.test(fn) || !/deleteUser\(\s*body/.test(fn), 'kein Opfer-User-Argument aus dem Body');
+  // Kein Request-Body, kein Ziel-User-Parameter irgendwo.
+  assert.ok(!/req\.json\(\)/.test(fn), 'liest keinen Request-Body');
+  assert.ok(!/deleteUser\((?!callerId\))/.test(fn), 'deleteUser wird nur mit callerId aufgerufen');
   assert.match(fn, /finalize_my_due_deletion/, 'Fälligkeit/Umfang kommt aus der RPC');
+  // Server-Credential kommt aus der Laufzeitumgebung, nie aus einem Literal.
+  assert.match(fn, /Deno\.env\.get\('SUPABASE_SERVICE_ROLE_KEY'\)/, 'Service-Key aus der Edge-Umgebung');
+  assert.ok(!/sb_secret_[A-Za-z0-9]/.test(fn), 'kein Secret-Literal im Function-Code');
+  assert.ok(!/eyJ[A-Za-z0-9_-]{20,}/.test(fn), 'kein JWT-Literal im Function-Code');
+  // Idempotenz: eine bereits abgeschlossene Löschung wird sauber abgewiesen.
+  assert.match(fn, /not_due/, 'nicht fälliger / abgeschlossener Zustand → 409');
+  assert.match(fn, /method_not_allowed/, 'nur POST');
 }
 
 console.log('Data lifecycle: grace window, purge order & migration guards passed');

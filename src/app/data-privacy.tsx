@@ -22,7 +22,7 @@ import {
   type DeletionStatus,
 } from '@/services/dataLifecycle';
 import { graceHoursRemaining, isDeletionDue } from '@/services/dataLifecycleCore';
-import { getPersonalAccountInfo } from '@/services/cloud/authService';
+import { getPersonalAccountInfo, signOutPersonalAccount } from '@/services/cloud/authService';
 import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 import { useFinanceStore } from '@/stores/useFinanceStore';
 
@@ -187,12 +187,20 @@ export default function DataPrivacyScreen() {
     setBusy('finalize');
     try {
       const result = await finalizeAccountDeletion();
-      await reload();
-      setDialog(
-        result.ok
-          ? { title: 'Konto gelöscht', message: 'Dein Konto und die Cloud-Daten wurden entfernt.', confirmLabel: 'OK' }
-          : { title: 'Nicht abgeschlossen', message: result.message, confirmLabel: 'OK' },
-      );
+      if (result.ok) {
+        // Konto ist serverseitig weg – lokale Daten entfernen und abmelden.
+        await wipeLocalFinanceData();
+        await signOutPersonalAccount().catch(() => undefined);
+        await refreshFinanceData();
+        setDialog({
+          title: 'Konto gelöscht',
+          message: 'Dein Konto und alle Cloud-Daten wurden entfernt. Die lokalen Daten auf diesem Gerät sind ebenfalls gelöscht.',
+          confirmLabel: 'OK',
+        });
+      } else {
+        await reload();
+        setDialog({ title: 'Nicht abgeschlossen', message: result.message, confirmLabel: 'OK' });
+      }
     } finally {
       setBusy(null);
     }

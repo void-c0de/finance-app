@@ -105,5 +105,32 @@ BEGIN
 END;
 $$;
 
+-- === account request: sync-time call refuses, edge-function call finalises ===
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', current_setting('test.user_one'), true); END; $$;
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM public.request_data_deletion('account'); END; $$;
+
+RESET ROLE;
+UPDATE public.finance_deletion_requests
+SET grace_until = now() - interval '1 minute'
+WHERE user_id = current_setting('test.user_one')::uuid;
+
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', current_setting('test.user_one'), true); END; $$;
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE v_result jsonb;
+BEGIN
+  -- default call (as used opportunistically at sync time) must NOT finalise an account request
+  v_result := public.finalize_my_due_deletion();
+  IF (v_result->>'finalized')::boolean THEN RAISE EXCEPTION 'sync-time call finalised an account request'; END IF;
+  IF v_result->>'reason' <> 'needs_account_edge_function' THEN RAISE EXCEPTION 'wrong reason: %', v_result; END IF;
+
+  -- the edge function calls it with p_allow_account => true
+  v_result := public.finalize_my_due_deletion(true);
+  IF NOT (v_result->>'finalized')::boolean THEN RAISE EXCEPTION 'edge-function call did not finalise: %', v_result; END IF;
+  IF NOT (v_result->>'authUserDeletionPending')::boolean THEN RAISE EXCEPTION 'authUserDeletionPending not set for account'; END IF;
+END;
+$$;
+
 RESET ROLE;
 ROLLBACK;
