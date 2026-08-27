@@ -10,6 +10,11 @@ import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { getRecentDebugLogs } from '@/core/debugLog';
 import { getDatabase } from '@/db/database';
 import { getBankConnectionHealth } from '@/services/bankConnectionHealth';
+import { buildFinanceInsights } from '@/services/financeInsights';
+import {
+  detectCommitmentPriceChanges,
+  detectMissedRecurring,
+} from '@/services/recurringInsightsCore';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 import { useFinanceStore } from '@/stores/useFinanceStore';
@@ -19,10 +24,28 @@ export default function AdminDiagnosticsScreen() {
   const { colors, spacing, typography } = useFinanceTheme();
   const { access, isLoading, refresh } = useProductAccessStore();
   const accounts = useFinanceStore((state) => state.accounts);
+  const transactions = useFinanceStore((state) => state.transactions);
+  const categories = useFinanceStore((state) => state.categories);
+  const budgets = useFinanceStore((state) => state.budgets);
   const lastLoadedAt = useFinanceStore((state) => state.lastLoadedAt);
   const recurringOverrides = useFinanceStore((state) => state.recurringOverrides);
   const bankConnections = useFinanceStore((state) => state.bankConnections);
   const cloud = useCloudSyncStore();
+
+  const recurringDiag = useMemo(() => {
+    const items = buildFinanceInsights({ transactions, categories, budgets, recurringOverrides }).recurringItems;
+    let latest: string | null = null;
+    for (const transaction of transactions) {
+      if (transaction.bookingStatus === 'pending') continue;
+      const date = transaction.bookingDate.slice(0, 10);
+      if (!latest || date > latest) latest = date;
+    }
+    return {
+      series: items.length,
+      priceChanges: detectCommitmentPriceChanges(items).length,
+      missed: detectMissedRecurring({ items, latestBookedDate: latest }).length,
+    };
+  }, [transactions, categories, budgets, recurringOverrides]);
   const [schemaVersion, setSchemaVersion] = useState<number | null>(null);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -55,6 +78,7 @@ export default function AdminDiagnosticsScreen() {
     ['Konten', `${accounts.length} · ${accounts.filter((account) => account.lastSyncedAt).length} mit Sync-Stand`],
     ['Bankverbindungen', `${bankConnections.length} · ${attentionConnections} brauchen Aktion`],
     ['Wiederkehrend-Korrekturen', `${recurringOverrides.size} · davon ${mutedSeries} stumm`],
+    ['Wiederkehrende Serien', `${recurringDiag.series} · ${recurringDiag.priceChanges} Preisänderungen · ${recurringDiag.missed} ausgeblieben`],
     ['Interne Fehlercodes', recentCodes.length ? recentCodes.join(' · ') : 'keine in dieser Sitzung'],
   ];
 
