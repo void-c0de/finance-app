@@ -65,6 +65,29 @@ BEGIN
     IF SQLERRM <> 'admin_required' THEN RAISE; END IF;
   END;
 
+  -- non-superuser cannot run the admin debug-log prune
+  BEGIN
+    PERFORM public.admin_prune_debug_logs(14);
+    RAISE EXCEPTION 'non-superuser ran admin_prune_debug_logs';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM <> 'admin_required' THEN RAISE; END IF;
+  END;
+
+  -- prune_my_debug_logs is self-scoped: seed old + fresh rows, prune keeps the fresh one
+  INSERT INTO public.app_debug_logs (owner_id, ts, level, tag, message, created_at)
+  VALUES
+    (current_setting('test.user_two')::uuid, now(), 'error', 'T', 'old', now() - interval '30 days'),
+    (current_setting('test.user_two')::uuid, now(), 'error', 'T', 'fresh', now());
+  PERFORM public.prune_my_debug_logs(14);
+  IF EXISTS (
+    SELECT 1 FROM public.app_debug_logs
+    WHERE owner_id = current_setting('test.user_two')::uuid AND message = 'old'
+  ) THEN RAISE EXCEPTION 'prune kept a 30-day-old debug row'; END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM public.app_debug_logs
+    WHERE owner_id = current_setting('test.user_two')::uuid AND message = 'fresh'
+  ) THEN RAISE EXCEPTION 'prune removed a fresh debug row'; END IF;
+
   IF EXISTS (SELECT 1 FROM public.admin_list_deletion_requests()) THEN
     RAISE EXCEPTION 'non-superuser listed deletion requests';
   END IF;

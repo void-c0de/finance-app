@@ -1200,6 +1200,14 @@ async function uploadDebugPayload(
   }
 
   try {
+    // Lazy retention: eigene Protokolle > 14 Tage / > 500 Zeilen entfernen,
+    // bevor die neue Charge geschrieben wird (keine bezahlte Cron nötig).
+    try {
+      await supabase.rpc('prune_my_debug_logs', { p_keep_days: 14 });
+    } catch {
+      /* Best effort – ältere Server ohne die Funktion ignorieren */
+    }
+
     const { error } =
       await supabase
         .from('app_debug_logs')

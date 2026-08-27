@@ -94,6 +94,19 @@ const now = new Date('2026-08-27T12:00:00.000Z');
   // Sweep + Liste sind Superuser-geschützt.
   assert.match(sql, /IF NOT public\.is_superuser\(\) THEN RAISE EXCEPTION 'admin_required'/);
 
+  // Debug-Log-Retention: self-scoped Prune + Superuser-Sweep.
+  const retention = readFileSync('supabase/migrations/20260828120000_debug_log_retention.sql', 'utf8')
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('--'))
+    .join('\n');
+  assert.match(retention, /prune_my_debug_logs\(p_keep_days integer DEFAULT 14\)/);
+  assert.match(retention, /v_user_id uuid := auth\.uid\(\)/);
+  assert.match(retention, /WHERE owner_id = v_user_id/);
+  assert.ok(!/prune_my_debug_logs\([^)]*uuid/.test(retention), 'kein uuid-Argument im Nutzer-Prune');
+  assert.match(retention, /least\(greatest\(coalesce\(p_keep_days, 14\), 1\), 90\)/, 'Keep-Days sind [1,90] geklemmt');
+  assert.match(retention, /admin_prune_debug_logs[\s\S]*is_superuser\(\) THEN RAISE EXCEPTION 'admin_required'/);
+  assert.match(retention, /REVOKE ALL ON FUNCTION public\.prune_my_debug_logs\(integer\) FROM PUBLIC, anon/);
+
   // Fälligkeit wird serverseitig geprüft (kein Löschen im Kulanzfenster).
   assert.match(sql, /IF v_row\.grace_until > now\(\) THEN/);
 

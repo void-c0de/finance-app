@@ -98,6 +98,39 @@ export async function sweepDueDeletions(): Promise<{ requests: number; rowsDelet
   return { requests: data?.requests ?? 0, rowsDeleted: data?.rowsDeleted ?? 0 };
 }
 
+export type AuditLogRow = {
+  id: number;
+  actor_user_id: string;
+  action: string;
+  target_user_id: string | null;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+/** Operatives Audit-Protokoll – nur sichere Metadaten, keine Finanzinhalte. */
+export async function listAuditLog(limit = 100, actionPrefix?: string): Promise<AuditLogRow[]> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud nicht konfiguriert');
+  let query = client
+    .from('admin_audit_log')
+    .select('id,actor_user_id,action,target_user_id,entity_id,metadata,created_at')
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 300));
+  if (actionPrefix) query = query.like('action', `${actionPrefix}%`);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as AuditLogRow[];
+}
+
+export async function pruneDebugLogs(keepDays = 14): Promise<number> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud nicht konfiguriert');
+  const { data, error } = await client.rpc('admin_prune_debug_logs', { p_keep_days: keepDays });
+  if (error) throw error;
+  return typeof data === 'number' ? data : 0;
+}
+
 export async function publishAppRelease(input: {
   version: string; buildNumber: number; runtimeVersion: string; title: string; summary: string;
   level: 'optional' | 'recommended' | 'required'; minimumNativeVersion: string | null; storeUrl: string | null;

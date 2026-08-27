@@ -39,6 +39,8 @@ export default function AdminScreen() {
         <FinanceCard padded={false}>
           <SettingsRow title="Löschanträge" description="Fällige Cloud-/Konto-Löschungen prüfen und ausführen" value="›" onPress={() => router.push('/admin/deletions' as Href)} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <SettingsRow title="Audit-Protokoll" description="Operative Ereignisse, nur sichere Metadaten" value="›" onPress={() => router.push('/admin/audit' as Href)} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <SettingsRow title="Diagnose" description="Sichere Betriebs- und Supportinformationen" value="›" onPress={() => router.push('/admin/diagnostics' as Href)} />
         </FinanceCard>
       </ScrollView>
