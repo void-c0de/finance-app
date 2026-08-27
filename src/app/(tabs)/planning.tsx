@@ -81,6 +81,10 @@ import {
 } from '@/services/financeInsights';
 
 import {
+  RECURRING_KIND_LABEL,
+} from '@/services/recurringInsightsCore';
+
+import {
   performFinanceHaptic,
 } from '@/services/haptics';
 
@@ -1607,7 +1611,7 @@ export default function PlanningScreen() {
                     { color: colors.text },
                   ]}
                 >
-                  {item.title} · {item.nextDate}
+                  {item.title} · {RECURRING_KIND_LABEL[item.kind]}
                 </Text>
 
                 <Text
@@ -1622,6 +1626,9 @@ export default function PlanningScreen() {
                   ]}
                 >
                   {formatMinorUnits(item.amountMinor, item.currency)}
+                  {' · fällig '}
+                  {item.nextDate}
+                  {item.confidence === 'low' ? ' · unbestätigt' : ''}
                   {item.driftPercent
                     ? ` · Preis ${item.driftPercent > 0 ? '+' : ''}${Math.round(item.driftPercent * 100)} %`
                     : ''}

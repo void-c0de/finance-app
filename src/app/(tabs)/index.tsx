@@ -61,10 +61,16 @@ import {
 } from '@/core/finance';
 
 import {
-  buildBudgetProgress,
-  buildMonthlyCategorySpending,
   summarizeBudgetProgress,
 } from '@/services/budgetInsightsCore';
+
+import {
+  buildFinanceInsights,
+} from '@/services/financeInsights';
+
+import {
+  RECURRING_KIND_LABEL,
+} from '@/services/recurringInsightsCore';
 
 import {
   useFinanceTheme,
@@ -275,26 +281,37 @@ export default function HomeScreen() {
       ]
     );
 
+  const insights =
+    useMemo(
+      () =>
+        buildFinanceInsights({
+          transactions,
+          categories,
+          budgets,
+        }),
+
+      [
+        transactions,
+        categories,
+        budgets,
+      ]
+    );
+
   const budgetSummary =
     useMemo(
       () =>
         summarizeBudgetProgress(
-          buildBudgetProgress({
-            budgets,
-            categories,
-            spendingByCategory:
-              buildMonthlyCategorySpending(
-                transactions
-              ),
-          })
+          insights.budgetInsights
         ),
 
       [
-        budgets,
-        categories,
-        transactions,
+        insights.budgetInsights,
       ]
     );
+
+  const nextRecurring =
+    insights.upcomingRecurring[0] ??
+    null;
 
   const currentMonth =
     useMemo(
@@ -1501,26 +1518,203 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              ABOS
+              FIXKOSTEN
             </Text>
+
+            <MoneyText
+              amountMinor={
+                insights.recurringSummary
+                  .monthlyCommittedMinor
+              }
+              currency="EUR"
+              size="s"
+              forceSign={null}
+              style={{
+                marginTop:
+                  spacing.lg,
+              }}
+            />
 
             <Text
               style={[
-                typography.title,
+                typography.caption,
 
                 {
                   color:
-                    colors.text,
+                    colors.textSecondary,
 
                   marginTop:
-                    spacing.lg,
+                    spacing.xs,
                 },
               ]}
             >
-              0 €
+              {insights.recurringSummary
+                .subscriptionCount +
+              insights.recurringSummary
+                .billCount +
+              insights.recurringSummary
+                .uncertainCount}{' '}
+              wiederkehrend · mtl.
             </Text>
           </FinanceCard>
         </View>
+
+        {nextRecurring ? (
+          <FinanceCard
+            style={{
+              marginTop:
+                spacing.md,
+            }}
+          >
+            <Text
+              style={[
+                typography.caption,
+                {
+                  color:
+                    colors.textMuted,
+                },
+              ]}
+            >
+              NÄCHSTE WIEDERKEHRENDE ZAHLUNG
+            </Text>
+
+            <View
+              style={[
+                styles.header,
+                {
+                  marginTop:
+                    spacing.md,
+                },
+              ]}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  paddingRight:
+                    spacing.md,
+                }}
+              >
+                <Text
+                  style={[
+                    typography.bodyMedium,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {nextRecurring.title}
+                </Text>
+
+                <Text
+                  style={[
+                    typography.caption,
+                    {
+                      color:
+                        colors.textSecondary,
+                      marginTop:
+                        spacing.xxs,
+                    },
+                  ]}
+                >
+                  {RECURRING_KIND_LABEL[
+                    nextRecurring.kind
+                  ]}
+                  {' · fällig '}
+                  {new Date(
+                    `${nextRecurring.nextDate}T00:00:00.000Z`
+                  ).toLocaleDateString(
+                    'de-DE',
+                    {
+                      day: '2-digit',
+                      month: '2-digit',
+                    }
+                  )}
+                  {nextRecurring.confidence ===
+                  'low'
+                    ? ' · unbestätigt'
+                    : ''}
+                </Text>
+              </View>
+
+              <MoneyText
+                amountMinor={
+                  nextRecurring.amountMinor
+                }
+                currency={
+                  nextRecurring.currency
+                }
+                size="s"
+                forceSign="negative"
+              />
+            </View>
+          </FinanceCard>
+        ) : null}
+
+        {insights.uncategorizedExpenseCount >
+        0 ? (
+          <FinancePressable
+            accessibilityRole="button"
+            accessibilityLabel={`${insights.uncategorizedExpenseCount} unkategorisierte Ausgaben prüfen`}
+            onPress={() =>
+              router.push(
+                '/uncategorized' as Href
+              )
+            }
+            intent="navigation"
+            style={{
+              marginTop:
+                spacing.md,
+            }}
+          >
+            <FinanceCard>
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color:
+                      colors.textMuted,
+                  },
+                ]}
+              >
+                ZU PRÜFEN
+              </Text>
+
+              <Text
+                style={[
+                  typography.bodyMedium,
+                  {
+                    color:
+                      colors.text,
+                    marginTop:
+                      spacing.md,
+                  },
+                ]}
+              >
+                {insights.uncategorizedExpenseCount}{' '}
+                {insights.uncategorizedExpenseCount ===
+                1
+                  ? 'Ausgabe ohne Kategorie'
+                  : 'Ausgaben ohne Kategorie'}
+              </Text>
+
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color:
+                      colors.textSecondary,
+                    marginTop:
+                      spacing.xxs,
+                  },
+                ]}
+              >
+                Kategorisieren verbessert Budgets und Auswertungen.
+              </Text>
+            </FinanceCard>
+          </FinancePressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
