@@ -43,6 +43,8 @@ export type AttentionInput = {
     status: BankConnectionStatus;
   }[];
   cloudSyncFailed: boolean;
+  /** Serien, deren erwartete Zahlung überfällig ist (nur bei frischen Bankdaten). */
+  missedRecurring?: readonly { seriesKey: string; title: string }[];
 };
 
 const CONNECTION_ATTENTION: Partial<
@@ -104,6 +106,16 @@ export function buildAttentionItems(input: AttentionInput): AttentionItem[] {
       detail: 'Sieh dir die betroffenen Kategorien in der Planung an.',
       route: '/(tabs)/planning',
       count: input.overBudgetCount,
+    });
+  }
+
+  for (const entry of input.missedRecurring ?? []) {
+    items.push({
+      id: `missed:${entry.seriesKey}`,
+      priority: 'review',
+      title: `${entry.title}: erwartete Zahlung bisher nicht erkannt`,
+      detail: 'Keine Aussage über eine Kündigung – prüfe die Serie in den Analysen.',
+      route: '/analytics',
     });
   }
 

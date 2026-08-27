@@ -290,6 +290,29 @@ export default function MoreScreen() {
 
         <FinanceCard padded={false}>
           <SettingsRow
+            title="Analysen"
+            description={
+              productAccess.isPremium
+                ? 'Monatsvergleich, Trends, Abo-Preise, ausgebliebene Zahlungen'
+                : 'Vergleiche und Trends – mit Premium'
+            }
+            value={productAccess.isPremium ? undefined : 'PREMIUM'}
+            icon={<Text style={[styles.rowGlyph, { color: colors.primary }]}>◱</Text>}
+            onPress={() => router.push('/analytics' as Href)}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <SettingsRow
+            title="Daten exportieren"
+            description="Umsätze als CSV · Budgets, Sparziele und Abos mit Premium"
+            icon={<Text style={[styles.rowGlyph, { color: colors.primary }]}>⇩</Text>}
+            onPress={() => router.push('/export' as Href)}
+          />
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <SettingsRow
             title="Abos & Premium"
             description={
               productAccess.isSuperuser

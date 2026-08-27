@@ -71,6 +71,7 @@ import {
 
 import {
   buildCashflowForecast,
+  detectMissedRecurring,
   RECURRING_KIND_LABEL,
 } from '@/services/recurringInsightsCore';
 
@@ -361,6 +362,30 @@ export default function HomeScreen() {
       'premium_analytics',
     );
 
+  const latestBookedDate =
+    useMemo(
+      () => {
+        let latest: string | null = null;
+        for (const transaction of transactions) {
+          if (transaction.bookingStatus === 'pending') continue;
+          const date = transaction.bookingDate.slice(0, 10);
+          if (!latest || date > latest) latest = date;
+        }
+        return latest;
+      },
+      [transactions]
+    );
+
+  const missedRecurring =
+    useMemo(
+      () =>
+        detectMissedRecurring({
+          items: insights.recurringItems,
+          latestBookedDate,
+        }),
+      [insights.recurringItems, latestBookedDate]
+    );
+
   const attentionItems =
     useMemo(
       () =>
@@ -379,6 +404,11 @@ export default function HomeScreen() {
             })),
           cloudSyncFailed:
             cloudStatus === 'error',
+          missedRecurring:
+            missedRecurring.map((entry) => ({
+              seriesKey: entry.seriesKey,
+              title: entry.title,
+            })),
         }),
 
       [
@@ -387,6 +417,7 @@ export default function HomeScreen() {
         budgetSummary.overBudgetCount,
         bankConnections,
         cloudStatus,
+        missedRecurring,
       ]
     );
 
@@ -1068,6 +1099,18 @@ export default function HomeScreen() {
             >
               Nur bekannte wiederkehrende Zahlungen. Kein garantierter Monatsendstand – künftige freie Ausgaben sind nicht eingerechnet.
             </Text>
+
+            <FinancePressable
+              accessibilityRole="button"
+              accessibilityLabel="Alle Analysen ansehen"
+              onPress={() => router.push('/analytics' as Href)}
+              intent="navigation"
+              contentStyle={{ paddingTop: spacing.md }}
+            >
+              <Text style={[typography.smallMedium, { color: colors.primary }]}>
+                Monatsvergleich, Trends & Preisänderungen ansehen →
+              </Text>
+            </FinancePressable>
           </FinanceCard>
         ) : null}
 

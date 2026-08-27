@@ -41,6 +41,21 @@ for (let i = 1; i < priorities.length; i += 1) {
   assert.ok(order[priorities[i - 1]] <= order[priorities[i]], 'nach Priorität sortiert');
 }
 
+// missed recurring becomes a review item that deep-links to analytics
+const withMissed = buildAttentionItems({
+  uncategorizedExpenseCount: 0,
+  uncertainRecurringCount: 0,
+  overBudgetCount: 0,
+  bankConnections: [],
+  cloudSyncFailed: false,
+  missedRecurring: [{ seriesKey: 'k1', title: 'Spotify' }],
+});
+assert.equal(withMissed.length, 1);
+assert.equal(withMissed[0].priority, 'review');
+assert.equal(withMissed[0].route, '/analytics');
+assert.ok(withMissed[0].title.includes('Spotify'));
+assert.ok(withMissed[0].detail.toLowerCase().includes('kündigung'));
+
 // transient state never escalates
 const transientOnly = buildAttentionItems({
   uncategorizedExpenseCount: 0,

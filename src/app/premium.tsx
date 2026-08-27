@@ -17,13 +17,16 @@ const standardBenefits = [
   'Echte Monatsbudgets mit Ausgabenfortschritt',
   'Erkannte Abos, Rechnungen und wiederkehrendes Einkommen – inkl. Korrektur',
   'Gebundene Fixkosten und nächste fällige Zahlung',
+  'Umsätze als CSV exportieren',
 ];
 
 const premiumBenefits = [
   'Automatische Händlerregeln',
   'Konto-verknüpfte und automatische Sparziele',
   '30-/60-/90-Tage-Cashflow-Prognose auf Basis deiner Fixkosten',
-  'Tiefere Auswertungen und historische Vergleiche',
+  'Analysen: Monatsvergleich, Kategorie-Trends, Abo-Preisänderungen',
+  'Hinweis auf ausgebliebene wiederkehrende Zahlungen',
+  'Erweiterte Exporte (Budgets, Sparziele, Abos als CSV)',
 ];
 
 const sourceLabels = {
