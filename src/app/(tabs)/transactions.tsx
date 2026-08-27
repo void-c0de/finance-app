@@ -63,6 +63,8 @@ import {
   sortTransactionsNewestFirst,
 } from '@/core/finance';
 
+import { baseCurrencyTransactions } from '@/services/currencyScope';
+
 import {
   formatMinorUnits,
 } from '@/core/money';
@@ -280,8 +282,10 @@ export default function TransactionsScreen() {
   const monthTransactions =
     useMemo(
       () =>
-        filterTransactionsForMonth(
-          transactions
+        baseCurrencyTransactions(
+          filterTransactionsForMonth(
+            transactions
+          )
         ),
 
       [

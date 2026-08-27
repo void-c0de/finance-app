@@ -104,4 +104,36 @@ const funTrend = report.trends.find((entry) => entry.categoryId === 'fun');
 assert.equal(funTrend.slope, 'stable', 'fun konstant');
 assert.ok(foodTrend.sharePercent > 0 && foodTrend.sharePercent <= 1);
 
+// --- month range: 3 / 12 / 24 -------------------------------------------
+assert.equal(buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 3 }).monthKeys.length, 3);
+assert.equal(buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 12 }).monthKeys.length, 12);
+assert.equal(buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 24 }).monthKeys.length, 24);
+// clamped
+assert.equal(buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 999 }).monthKeys.length, 24);
+assert.equal(buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 1 }).monthKeys.length, 2);
+
+// --- 12-month range with only 6 months of data: empty months are 0, no NaN ---
+const r12 = buildCategoryTrends({ transactions: trendTx, categories, referenceDate: reference, months: 12 });
+const f12 = r12.trends.find((e) => e.categoryId === 'food');
+assert.equal(f12.points.length, 12);
+assert.equal(f12.points[0].amountMinor, 0, 'Monat ohne Aktivität = 0');
+assert.ok(Number.isFinite(f12.averageMinor) && !Number.isNaN(f12.averageMinor), 'kein NaN im Schnitt');
+assert.ok(['rising', 'falling', 'stable'].includes(f12.slope));
+
+// --- deleted / unknown category: name fallback, keine Ausnahme ---------
+const orphanTx = [tx({ id: 'o1', bookingDate: '2026-08-05', amountMinor: 9_000, categoryId: 'ghost-cat' })];
+const orphanReport = buildCategoryTrends({ transactions: orphanTx, categories, referenceDate: reference, months: 3 });
+const orphan = orphanReport.trends.find((e) => e.categoryId === 'ghost-cat');
+assert.ok(orphan, 'unbekannte Kategorie erscheint trotzdem');
+assert.equal(orphan.name, 'Kategorie', 'Name-Fallback für gelöschte Kategorie');
+
+// --- sehr große Beträge: keine Überläufe / kein Fließkomma-Drift -------
+const bigTx = [
+  tx({ id: 'b1', bookingDate: '2026-07-10', amountMinor: 900_000_000_00, categoryId: 'food' }),
+  tx({ id: 'b2', bookingDate: '2026-08-10', amountMinor: 950_000_000_00, categoryId: 'food' }),
+];
+const bigCmp = buildMonthlyComparison({ transactions: bigTx, categories, referenceDate: reference });
+assert.equal(bigCmp.expenses.deltaMinor, 5_000_000_000);
+assert.ok(Number.isSafeInteger(bigCmp.expenses.currentMinor));
+
 console.log('Analytics 2.0: all tests passed');

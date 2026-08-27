@@ -1,5 +1,5 @@
 import { type Href, router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -52,13 +52,16 @@ export default function AnalyticsScreen() {
   const access = useProductAccessStore((state) => state.access);
   const canAnalyze = hasCapability(access, 'premium_analytics');
 
+  const RANGES = [3, 6, 12, 24] as const;
+  const [rangeMonths, setRangeMonths] = useState<(typeof RANGES)[number]>(6);
+
   const comparison = useMemo(
     () => buildMonthlyComparison({ transactions, categories }),
     [transactions, categories],
   );
   const trendReport = useMemo(
-    () => buildCategoryTrends({ transactions, categories, months: 6 }),
-    [transactions, categories],
+    () => buildCategoryTrends({ transactions, categories, months: rangeMonths }),
+    [transactions, categories, rangeMonths],
   );
   const recurringItems = useMemo(
     () => buildFinanceInsights({ transactions, categories, budgets, recurringOverrides }).recurringItems,
@@ -258,8 +261,32 @@ export default function AnalyticsScreen() {
           </FinanceCard>
         ) : null}
 
-        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxxl }]}>
-          KATEGORIE-TRENDS · {trendReport.monthKeys.length} MONATE
+        <View style={[styles.rowBetween, { marginTop: spacing.xxxl }]}>
+          <Text style={[typography.caption, { color: colors.textMuted }]}>KATEGORIE-TRENDS</Text>
+          <View style={{ flexDirection: 'row', gap: spacing.xxs }}>
+            {RANGES.map((months) => (
+              <FinancePressable
+                key={months}
+                accessibilityRole="button"
+                accessibilityLabel={`Zeitraum ${months} Monate`}
+                onPress={() => setRangeMonths(months)}
+                intent="navigation"
+                style={{
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: 4,
+                  borderRadius: radius.sm,
+                  backgroundColor: rangeMonths === months ? colors.primarySoft : colors.surfaceInteractive,
+                }}
+              >
+                <Text style={[typography.caption, { color: rangeMonths === months ? colors.primary : colors.textSecondary }]}>
+                  {months}M
+                </Text>
+              </FinancePressable>
+            ))}
+          </View>
+        </View>
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxs }]}>
+          {trendReport.monthKeys.length} Monate · {monthName(trendReport.monthKeys[0]).toUpperCase()} – {monthName(trendReport.monthKeys[trendReport.monthKeys.length - 1]).toUpperCase()}
         </Text>
         {trendReport.trends.slice(0, 8).map((trend) => {
           const peak = Math.max(1, ...trend.points.map((point) => point.amountMinor));

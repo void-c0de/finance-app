@@ -62,6 +62,12 @@ import {
 } from '@/core/finance';
 
 import {
+  baseCurrencyTransactions,
+  foreignCurrencyNote,
+  foreignCurrencySummary,
+} from '@/services/currencyScope';
+
+import {
   summarizeBudgetProgress,
 } from '@/services/budgetInsightsCore';
 
@@ -245,12 +251,26 @@ export default function HomeScreen() {
   const monthTransactions =
     useMemo(
       () =>
-        filterTransactionsForMonth(
-          transactions
+        baseCurrencyTransactions(
+          filterTransactionsForMonth(
+            transactions
+          )
         ),
 
       [
         transactions,
+      ]
+    );
+
+  const foreignCurrency =
+    useMemo(
+      () =>
+        foreignCurrencySummary(
+          accounts
+        ),
+
+      [
+        accounts,
       ]
     );
 
@@ -992,6 +1012,17 @@ export default function HomeScreen() {
             </FinancePressable>
           </View>
         </FinanceCard>
+
+        {foreignCurrency.hasForeign ? (
+          <Text
+            style={[
+              typography.caption,
+              { color: colors.textMuted, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+            ]}
+          >
+            {foreignCurrencyNote(foreignCurrency)}
+          </Text>
+        ) : null}
 
         {attentionItems.length > 0 ? (
           <FinanceCard style={{ marginTop: spacing.md }}>

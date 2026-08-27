@@ -89,7 +89,8 @@
     "test:billing-readiness": "node --experimental-strip-types scripts/test-billing-readiness.mjs",
     "test:data-lifecycle": "node --experimental-strip-types scripts/test-data-lifecycle.mjs",
     "test:android-permissions": "node scripts/test-android-permissions.mjs",
-    "test:demo-data": "node --experimental-strip-types scripts/test-demo-data.mjs"
+    "test:demo-data": "node --experimental-strip-types scripts/test-demo-data.mjs",
+    "test:currency-scope": "node --experimental-strip-types scripts/test-currency-scope.mjs"
   },
   "private": true
 }

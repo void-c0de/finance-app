@@ -10,6 +10,10 @@ import {
 } from '@/core/money';
 
 import {
+    baseCurrencyTransactions,
+} from '@/services/currencyScope';
+
+import {
     normalizeMerchantName,
 } from '@/services/merchantNormalization';
 
@@ -162,11 +166,15 @@ export function buildFinanceInsights(
   }
 ): FinanceInsights {
   const monthTransactions =
-    filterTransactionsForMonth(
-      input.transactions,
+    // Summen nur in der Basiswährung – Fremdwährungsumsätze verfälschen sonst
+    // Einnahmen/Ausgaben/Cashflow.
+    baseCurrencyTransactions(
+      filterTransactionsForMonth(
+        input.transactions,
 
-      input.referenceDate ??
-        new Date()
+        input.referenceDate ??
+          new Date()
+      )
     );
 
   const incomeMinor =
