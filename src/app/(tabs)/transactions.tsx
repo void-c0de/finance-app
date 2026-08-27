@@ -6,6 +6,7 @@ import {
 
 import {
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -118,6 +119,11 @@ export default function TransactionsScreen() {
     setQuery,
   ] =
     useState('');
+
+  // Fensterung: nie tausende Zeilen auf einmal rendern (kein FlatList hier,
+  // weil Kopf/Suche/Zusammenfassung im selben ScrollView leben).
+  const PAGE_SIZE = 40;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const accounts =
     useFinanceStore(
@@ -256,7 +262,7 @@ export default function TransactionsScreen() {
       ]
     );
 
-  const visibleTransactions =
+  const filteredTransactions =
     useMemo(
       () => {
         if (
@@ -278,6 +284,17 @@ export default function TransactionsScreen() {
         searchResults,
       ]
     );
+
+  const visibleTransactions = useMemo(
+    () => filteredTransactions.slice(0, visibleCount),
+    [filteredTransactions, visibleCount],
+  );
+  const hasMore = filteredTransactions.length > visibleTransactions.length;
+
+  // Bei Filter-/Suchwechsel zurück auf die erste Seite.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filter, normalizedQuery]);
 
   const monthTransactions =
     useMemo(
@@ -918,6 +935,21 @@ export default function TransactionsScreen() {
             )}
           </FinanceCard>
         )}
+
+        {hasMore ? (
+          <FinancePressable
+            accessibilityRole="button"
+            accessibilityLabel="Weitere Umsätze anzeigen"
+            onPress={() => setVisibleCount((count) => count + PAGE_SIZE * 2)}
+            intent="navigation"
+            contentStyle={{ paddingVertical: spacing.lg, alignItems: 'center' }}
+          >
+            <Text style={[typography.smallMedium, { color: colors.primary }]}>
+              Weitere {Math.min(PAGE_SIZE * 2, filteredTransactions.length - visibleTransactions.length)} anzeigen
+              {`  ·  ${visibleTransactions.length} / ${filteredTransactions.length}`}
+            </Text>
+          </FinancePressable>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
