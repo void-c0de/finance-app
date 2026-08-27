@@ -123,6 +123,27 @@ export async function listAuditLog(limit = 100, actionPrefix?: string): Promise<
   return (data ?? []) as AuditLogRow[];
 }
 
+export type BillingSubscriptionRow = {
+  id: string;
+  user_id: string;
+  provider: 'google_play' | 'revenuecat';
+  product_id: string;
+  status: string;
+  auto_renewing: boolean;
+  current_period_end: string | null;
+  verified_at: string | null;
+  updated_at: string;
+};
+
+/** Verifizierte Store-Abos – nur Metadaten, kein Kauf-Token. */
+export async function listBillingSubscriptions(): Promise<BillingSubscriptionRow[]> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Cloud nicht konfiguriert');
+  const { data, error } = await client.rpc('admin_list_billing_subscriptions');
+  if (error) throw error;
+  return (data ?? []) as BillingSubscriptionRow[];
+}
+
 export async function pruneDebugLogs(keepDays = 14): Promise<number> {
   const client = getSupabaseClient();
   if (!client) throw new Error('Cloud nicht konfiguriert');

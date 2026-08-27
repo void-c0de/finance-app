@@ -5,9 +5,47 @@ only after the **server** verifies it. This file defines the contract so the
 verification layer can be added later without touching the client's capability
 model.
 
-Status: **not implemented.** No billing library, no store products, no checkout.
-`billingCore.ts` holds the pure shapes and precedence rules; this is the server
-side that pairs with it.
+Status (2026-08-28): **server architecture built and deployed; store calls stubbed
+pending credentials.** No billing library, no store products, no checkout yet.
+`billingCore.ts` holds the pure shapes and precedence rules; the server side below
+is now real code.
+
+### Built and live
+
+- **Migration `20260828140000`**: `user_subscriptions.source` now allows
+  `google_play` / `revenuecat`. New `billing_subscriptions` table stores provider
+  state — **purchase tokens only as SHA-256** (`UNIQUE(provider, token_sha256)`
+  for idempotency), never in the clear. `apply_verified_subscription(...)`
+  (SECURITY DEFINER, service-role only, not a client API) is the single merge
+  point → `user_subscriptions` → `get_my_product_access`. Deterministic
+  precedence: a store term never shortens a longer coupon/admin term; `permanent`
+  wins; superuser untouched. Audited as `billing.verified` (no token in metadata).
+  `admin_list_billing_subscriptions()` for the superuser (metadata only).
+- **Edge Function `verify-purchase`** (deployed, `verify_jwt=true`): JWT identity,
+  product whitelist, token-shape check, then `verifyWithGooglePlay()` — an
+  **isolated** function that returns `not_configured` (HTTP 501) until
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME` are set. On a
+  real verification it calls `apply_verified_subscription` and returns a fresh
+  access snapshot. Live-tested: unauth→401, bad product→400, valid shape→501.
+- **Edge Function `billing-webhook`** (deployed, `verify_jwt=false`): Google
+  RTDN (Pub/Sub push token) or RevenueCat (shared secret) auth; RTDN
+  `notificationType` → status map incl. `revoked` / `expired`; calls
+  `apply_verified_subscription`. Returns `not_configured` (200 ack) until a
+  secret is set. Live-tested.
+- **Client** `src/services/billing.ts`: `verifyPurchase(input)` → invokes the
+  Edge Function, normalises the returned access, **never grants Premium locally**.
+- Tests: `scripts/test-billing-server.mjs` (static guards) +
+  `supabase/tests/billing.sql` (rollback-only: precedence, idempotency,
+  non-superuser denial).
+
+### Still needed (external)
+
+1. Fill in `verifyWithGooglePlay()` (the OAuth2 service-account token + the
+   `purchases.subscriptionsv2.tokens.get` call) — the shape and the DB write are
+   done, only the ~30 lines that talk to Google remain.
+2. Add a **v8+** Play Billing client (see below).
+3. Play Console products + Google Cloud service account + Pub/Sub topic + the
+   Function secrets.
 
 ## Components
 
