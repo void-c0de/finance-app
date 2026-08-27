@@ -48,34 +48,43 @@ jobs:
         run: |
           set -eo pipefail
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
-          # pick the app scheme, not EASClient / Pods
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const all=JSON.parse(s).workspace.schemes;console.log(all.find(x=>!/^EASClient$|^Pods/.test(x))||all[0]);})")
+          # the app scheme is the one whose name matches a *.xcodeproj (not EASClient / Pods)
+          PROJ=$(ls -d *.xcodeproj | head -1); APPSCHEME="${PROJ%.xcodeproj}"
+          SCHEMES=$(xcodebuild -workspace "$WORKSPACE" -list -json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).workspace.schemes.join(' ')))")
+          echo "Available schemes: $SCHEMES"
+          case " $SCHEMES " in *" $APPSCHEME "*) SCHEME="$APPSCHEME";; *) SCHEME=$(echo $SCHEMES | tr ' ' '\n' | grep -v -E '^(EASClient|Pods.*)$' | head -1);; esac
           echo "Workspace=$WORKSPACE Scheme=$SCHEME"
+          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGN_ENTITLEMENTS="" \
-            EXPANDED_CODE_SIGN_IDENTITY="" \
+            EXPANDED_CODE_SIGN_IDENTITY="-" \
             clean build
 
       - name: Package unsigned IPA
         working-directory: ios
         run: |
           set -eo pipefail
-          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app | head -1)
+          echo "--- everything built ---"
+          find build/Build/Products -maxdepth 2 -name "*.app" -print
+          APP=$(find build/Build/Products -maxdepth 2 -name "*.app" -type d | grep -v "\.app/" | head -1)
+          if [ -z "$APP" ]; then echo "no .app produced"; ls -R build/Build/Products | head -60; exit 1; fi
           echo "App bundle: $APP"
           rm -rf Payload FinanceApp-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
-          zip -qr FinanceApp-unsigned.ipa Payload
-          unzip -l FinanceApp-unsigned.ipa | head -20
+          zip -qry FinanceApp-unsigned.ipa Payload
+          unzip -l FinanceApp-unsigned.ipa | tail -15
+          echo "IPA size: $(du -h FinanceApp-unsigned.ipa | cut -f1)"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
