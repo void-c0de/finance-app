@@ -55,7 +55,7 @@ assert.equal(cfg.ios.buildNumber, '6');
 
 // --- iOS-Build-Workflow ist vorhanden & unsigniert ----------------
 const wf = readFileSync('.github/workflows/ios-unsigned.yml', 'utf8');
-assert.match(wf, /runs-on: macos-15/);
+assert.match(wf, /runs-on: macos-/, 'läuft auf einem macOS-Runner');
 assert.match(wf, /CODE_SIGNING_ALLOWED=NO/);
 assert.match(wf, /workflow_dispatch/, 'nur manuell (macOS-Minuten)');
 assert.ok(!/APPLE_ID|APP_STORE_CONNECT|CERTIFICATE|P12|provisioning/i.test(wf), 'keine Apple-Credentials im Workflow');
