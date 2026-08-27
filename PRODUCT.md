@@ -1,24 +1,85 @@
 # Product access and administration
 
-## Plans and capabilities
+## Product philosophy
 
-The app resolves access centrally through `ProductAccess` and `hasCapability`; screens must not authorize by email or by an ad-hoc local boolean.
+The free tier is a genuinely good entry-level finance app. Premium is the
+version that **automates, analyses, personalises and scales** for people who
+actively manage their money. Premium *enhances*; it does not hold the user's own
+financial truth hostage.
 
-| Capability | Standard | Premium | Superuser |
-| --- | --- | --- | --- |
-| Accounts, transactions, balances, sync and security | Yes | Yes | Yes |
-| Manual categories and basic planning/goals | Yes | Yes | Yes |
-| Advanced category-rule automation | Preview | Yes | Yes |
-| Advanced planning, analytics and exports | No | Yes | Yes |
-| Coupon, entitlement and release administration | No | No | Yes |
+The executable source of truth is `PRODUCT_CAPABILITIES` and `PRODUCT_QUOTAS` in
+`src/services/entitlementCore.ts`. Every screen calls `hasCapability` /
+`quotaState`; nothing authorises by email, plan label or an ad-hoc local
+boolean.
 
-The executable source of truth is `PRODUCT_CAPABILITIES` in `src/services/entitlementCore.ts`. Product surfaces call `hasCapability`; they do not infer authorization from plan labels.
+### Standard
 
-Standard keeps every part of the user's own financial truth: accounts, transactions, manual categorization, the intelligent dashboard, the attention center, real monthly budgets, manual savings goals, and **recurring-payment intelligence** — classification, the committed fixed-cost total, the next due payment, and persistent manual corrections. Premium (`premium_analytics`, `advanced_planning`, `advanced_category_rules`, `advanced_exports`) enhances rather than unlocks: reusable merchant rules, account-linked / rule-based savings goals, the forward 30/60/90-day cashflow forecast and deeper comparisons, and exports. Superuser inherits every Premium capability from the role. A capability is never authorized client-side only, and never by a hardcoded identity.
+| Area | Standard scope |
+| --- | --- |
+| Banking | Connected accounts, transactions, balances, background sync |
+| Transactions | Full history, search, **manual categorization and corrections** |
+| Dashboard | Current-month income / expenses / cashflow, balances, attention center |
+| Budgets | Up to **2** active budgets |
+| Savings goals | Up to **2** active manual goals |
+| Recurring | Detected recurring items, the committed fixed-cost total, the next expected payment, **and persistent manual corrections** |
+| Analytics | Current-month summary and category breakdown |
+| Export | Transactions CSV |
+| Themes | System, Light, Dark, AMOLED — free forever |
+| Security | Everything: SQLCipher, biometric lock, HIBP, zxcvbn, redaction, RLS |
+| Sync / recovery | Full cloud sync and new-device recovery |
 
-Premium is currently a real entitlement granted by coupon, administrator or the Superuser override. Paid recurring billing is deliberately not presented until a legitimate Play Billing/RevenueCat integration exists. A future billing provider must write into the same `user_subscriptions` model.
+### Premium (`premium_analytics`, `advanced_planning`, `advanced_category_rules`, `advanced_exports`, `full_finance_export`, `premium_themes`)
 
-Manual categorization of individual transactions remains a Standard capability. Premium users can turn a reviewed assignment into a reusable merchant rule for future transactions. Existing rules and manual assignments remain active after Premium expires; only creating and managing additional rules is locked. Financial history and user decisions are therefore never removed on downgrade.
+| Pillar | Premium value |
+| --- | --- |
+| **Automatisieren** | Reusable merchant/category rules; account-linked and transaction-rule savings automation |
+| **Verstehen** | Month-over-month comparison, multi-month category & commitment trends, abo price-change detection, missed-payment intelligence, 30/60/90-day cashflow forecast |
+| **Planen** | Unlimited budgets and savings goals; advanced automated planning |
+| **Personalisieren** | Six Premium themes (Ozean, Smaragd, Rosé, Violett, Graphit, Mitternacht) |
+| **Daten** | Budgets / savings / recurring CSV; a versioned full finance-backup JSON |
+
+Superuser inherits every Premium capability from the role and never needs an
+artificial expiry. Superuser *operational* functionality (admin, coupons,
+entitlements, releases, diagnostics) is never behind a Premium check.
+
+### Quotas — one source of truth
+
+`PRODUCT_QUOTAS` holds `{ standard, premium }` limits (`Infinity` = unlimited).
+`quotaState(access, key, used)` returns `{ limit, used, remaining, reached,
+unlimited, grandfathered }`. Screens show `used / limit` early (never a silent
+disabled button) and open a contextual `PremiumSheet` at the limit. The shape is
+deliberately remote-config-ready; nothing hardcodes a number in a component.
+
+### Grandfathering existing users
+
+A Standard user who already has **more** budgets or goals than the new limit
+keeps every one of them — `quotaState` reports `grandfathered: true`. Existing
+objects stay fully accessible and editable; only creating *additional*
+premium-limited objects needs Premium. No object is ever chosen for deletion.
+
+### Premium expiry — nothing is deleted
+
+| Capability | On expiry |
+| --- | --- |
+| Merchant rules | Stay stored **and keep applying**; the rules screen stays usable for viewing / toggling / deleting; new rules need Premium |
+| Account-linked / rule savings goals | Configuration and progress persist; the goal keeps recomputing |
+| Advanced analytics | Underlying transaction data stays; the `/analytics` screen locks to the preview |
+| Advanced / full export | Data stays; the export actions lock |
+| Premium themes | The preference is **kept**; the app falls back to the user's last free theme and restores the Premium theme automatically when Premium returns |
+
+Financial history and user decisions are never removed on downgrade.
+
+### Monetization ethics (actually enforced)
+
+- **Contextual, not spammy.** Premium surfaces appear only where a real limit is hit or a feature is opened. The persistent `Mehr → Abos & Premium` is the one deliberate destination. `test-product-access` asserts no gate copy contains urgency/scarcity/shaming wording.
+- **Value before price.** `PREMIUM_GATE_COPY` and `PREMIUM_PILLARS` lead with what Premium *does* for this user. There is no price-first messaging and no purchase button until Play billing can be verified server-side.
+- **Personalised previews use real local data only** (e.g. "your largest change vs. last month is <category>"), and never reveal the full paid result.
+- **No dark patterns:** no fake countdowns, discounts, scarcity, confirm-shaming, hidden cancellation, misleading financial warnings, fake savings numbers, fake AI, preselected purchases or hard-to-dismiss upsells.
+- **Security is never an upsell.** Every security and privacy feature is Standard.
+
+A future billing provider (`google_play` / `revenuecat`) must verify the receipt
+server-side and write the same central entitlement; the client never grants
+itself Premium.
 
 ## Savings-goal tracking
 
@@ -31,8 +92,8 @@ account balance and the contribution ledger are never summed:
 | `transaction_rule` | `starting_amount + Σ active contributions` (auto-created, idempotent on `source_transaction_id`) | Premium |
 | `account_balance` | active linked account `balance_minor`, clamped at 0 | Premium |
 
-- Standard users can create manual goals, add corrections and see progress on the dashboard.
-- Premium users can additionally link a goal to a real imported account or configure transaction automation.
+- Standard users can create up to two active manual goals (`activeManualGoals` quota), add corrections and see progress on the dashboard. Existing goals above a new limit are grandfathered.
+- Premium users get unlimited goals and can additionally link a goal to a real imported account or configure transaction automation.
 - In `account_balance` mode the active linked account balance is the only authoritative progress value. Manual and automatic contribution rows are ignored for progress (the goal detail screen also hides the contribution actions), so no money is ever double-counted.
 - **Own-transfer savings ("Notgroschen on Sparkonto"):** this is deliberately solved by `account_balance` authority, not a second ledger. A Giro→Sparkonto transfer is flagged `isInternalTransfer` and excluded from spending and income analytics; the Sparkonto balance rises by exactly the transferred amount, and an `account_balance` goal linked to that account follows the balance. Re-import or reconnect is idempotent because the balance — not a derived event — is the source. Transfer-triggered contribution rows are intentionally not created.
 - `transaction_rule` matches only booked, non-transfer **incoming** transactions by keyword; a self-transfer never creates a rule contribution.
@@ -95,6 +156,19 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 - `attentionCore` is one pure, deterministic model over the independent "needs attention" concepts: bank-connection health, over-budget categories, a failed cloud sync, uncategorized expenses and uncertain recurring candidates.
 - Items are prioritized `critical` → `action_required` → `review` → `informational`. Transient harmless states (`temporarily_unavailable`) never escalate past `informational`; a `revoked` bank connection is `critical`.
 - The dashboard surfaces the top three near the top of the feed with a priority-coloured accent; each item deep-links to its recovery screen. Connection health never hides or deletes historical transactions.
+- Action-critical alerts (bank revoked / consent expired / reconnect, over-budget, failed sync, uncategorized) are **always Standard** — safety is never paywalled. Deeper financial attention (abo price changes, long-term pressure) is Premium and never blocks a critical alert.
+
+## Themes
+
+- Palettes live in `src/theme/finance-theme.ts` as complete semantic-token maps; `FINANCE_THEMES` carries the metadata (`tier`, label, description, preview). Components read tokens only — no `theme === 'x'` branching.
+- Free forever: **System, Hell, Dunkel, AMOLED**. AMOLED and accessibility are never behind Premium.
+- Premium: **Ozean, Smaragd, Rosé, Violett, Graphit, Mitternacht** — genuinely distinct dark palettes, not just an accent swap. Finance colours (`positive` green, `negative` red, `warning` amber) stay stable and readable in every theme; `test-themes` enforces this plus WCAG contrast (main text ≥ 7:1, secondary ≥ 3:1).
+- Dedicated `Mehr → Themes` screen (`/themes`) with per-theme miniature previews. A Standard user tapping a Premium theme gets a contextual `PremiumSheet`.
+- `useThemeStore` keeps the real preference *and* `lastFreeTheme`. `useFinanceTheme` renders `lastFreeTheme` when a Premium theme is selected without Premium and restores the Premium theme automatically when the entitlement returns — the preference is never deleted.
+
+## Local product metrics
+
+- `premiumTelemetry` is an **in-memory-only** anonymous event counter model (`premium_preview_opened`, `premium_gate_opened`, `theme_premium_tapped`, …). Nothing is uploaded and no personal behaviour leaves the device. It exists so a future privacy-reviewed telemetry layer has a defined event vocabulary; today it is only the model.
 
 ## Offline and sync guarantees
 

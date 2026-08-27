@@ -198,3 +198,38 @@ upload key or EAS-managed credential is still required before Play upload.
   no OTA (correct — the 1.2.0 OTA channel is empty, embedded bundle runs),
   `ReactNativeJS: Running "main"`, no `FATAL` / native crash. UI verification
   behind the biometric app-lock is a manual step for the maintainer.
+
+## 1.3.0 / versionCode 4 — native boundary (2026-08-27)
+
+Deliberate native generation. It adds two native modules — **`expo-sharing`
+(~57.0.16)** and **`expo-file-system` (~57.0.6, promoted to a direct
+dependency)** — so real files can be written and shared. That is a true native
+compatibility change, so:
+
+- `expo.version` → `1.3.0`, `android.versionCode` → `4`, `package.json` → `1.3.0`.
+- `runtimeVersion.policy` stays `appVersion`; the runtime is therefore `1.3.0`.
+- The premium/themes/quota product rework, the Premium Center, the contextual
+  gates and the analytics/dashboard previews are pure JS/TS and would have been
+  OTA-safe for `1.2.0`, but they ship together with the native file-export in
+  the `1.3.0` binary.
+- A `1.2.0` device must **not** receive `1.3.0` JS: the `expo-updates` edge
+  function enforces exact `expo-runtime-version` matching, and
+  `npm run test:runtime-boundary` now asserts `appVersion === 1.3.0` /
+  `versionCode === 4` and that `requiresNativeUpgrade('1.2.0', '1.3.0')` is
+  true. Publishing an `app_releases` row with `minimum_native_version = "1.3.0"`
+  shows the blocking upgrade prompt on `1.2.0`.
+- The `1.3.0` OTA channel starts empty; `1.3.0` devices run the embedded bundle
+  until a `1.3.0` OTA is published from a JS build made against the `1.3.0`
+  binary.
+
+Prepared German patch notes for 1.3.0:
+
+- Premium neu gedacht: fünf klare Vorteile – Automatisieren, Verstehen, Planen, Personalisieren, Daten
+- Sechs Premium-Designs (Ozean, Smaragd, Rosé, Violett, Graphit, Mitternacht); System/Hell/Dunkel/AMOLED bleiben kostenlos
+- Neuer Bildschirm „Mehr → Themes" mit Vorschau
+- Standard: bis zu zwei Budgets und zwei Sparziele; bestehende bleiben erhalten
+- Daten exportieren als echte Datei (CSV) inklusive vollständigem Backup (Premium)
+- Kontextuelle Premium-Hinweise mit echtem Bezug zu deinen Daten – ohne aufdringliche Werbung
+
+Signing is unchanged: without `FINANCE_UPLOAD_*` the release build is
+debug-signed (development artifact only).

@@ -125,27 +125,48 @@ portability (export, restore) is real now.
   admin grants already deliver the product value. No fake "coming soon" UI
   beyond the one honest line on the Premium screen.
 
+## Freemium model
+
+- **DONE** Stronger freemium (see PRODUCT.md). Standard: 2 budgets, 2 manual
+  goals, current-month analytics, transactions CSV, four free themes.
+  Premium: unlimited budgets/goals, merchant & savings automation, full
+  analytics + forecast, advanced + full-backup export, six Premium themes.
+- **DONE** `PRODUCT_QUOTAS` + `quotaState` (one source of truth,
+  remote-config-ready), `PREMIUM_PILLARS` + `PREMIUM_GATE_COPY` (centralized,
+  no dark-pattern wording — enforced by `test-product-access`).
+- **DONE** Contextual gates: `PremiumSheet`, `PremiumPreviewCard`,
+  `PremiumBadge`; wired into planning quick-create, budget-new, goal-new,
+  themes, uncategorized, export and the dashboard (one preview card only).
+- **DONE** Grandfathering + expiry: existing objects above a new limit are
+  kept; no Premium capability deletes user data on expiry (rules keep
+  applying, goals keep recomputing, themes fall back and restore).
+- **DONE** `premiumTelemetry` — in-memory-only anonymous event model, no upload.
+
 ## Theming
 
-- Palettes (`system` / `light` / `dark` / `amoled`) are token maps in
-  `src/theme/finance-theme.ts` selected by `useThemeStore`; screens read
-  semantic tokens only. Adding a preset = adding one token map + one enum
-  value; no screen changes. Accessibility-oriented basics (light/dark/AMOLED)
-  are and stay free. Premium accent presets are a possible later addition and
-  need no architectural work. Not building a theme marketplace.
+- **DONE** Six Premium palettes (Ozean, Smaragd, Rosé, Violett, Graphit,
+  Mitternacht) as full semantic-token maps; free System/Hell/Dunkel/AMOLED
+  unchanged. `useThemeStore` keeps the preference + `lastFreeTheme`;
+  `useFinanceTheme` falls back and auto-restores. Dedicated `/themes` screen
+  under `Mehr → Themes` with miniature previews. `test-themes` enforces token
+  completeness, finance-colour stability and WCAG contrast.
+- **NEXT** Premium accent-only sub-presets; not a marketplace.
 
 ## Release
 
-- **DONE** 1.2.0 / versionCode 3 native metadata; runtime-boundary test guards
-  against advertising a newer bundle to an older runtime.
-- **PARTIAL** Native artifacts — 1.2.0 / versionCode 3 APK (~137 MB) and AAB
-  (~101 MB) build locally and cold-start clean on device; both debug-signed,
-  so development/internal only.
+- **DONE** 1.3.0 / versionCode 4 native boundary (adds `expo-sharing` +
+  `expo-file-system`); runtime-boundary and release-config tests updated.
+- **PARTIAL** Native artifacts — debug-signed APK/AAB build locally and
+  cold-start clean on device; development/internal only.
 - **BLOCKED** Play upload — needs a protected upload key (`FINANCE_UPLOAD_*`) or
   EAS-managed credentials, held by the maintainer, never committed.
 
 ## Not started
 
-- Paid billing (Google Play Billing / RevenueCat receipt verification).
+- Paid billing (Google Play Billing / RevenueCat receipt verification). The
+  entitlement model and Premium Center are architecture-ready; the client never
+  grants itself Premium.
+- Backup **import / restore** (export is done; a safe, tested import flow is a
+  separate milestone).
 - iOS.
 - Multi-currency goals and budgets.
