@@ -13,13 +13,17 @@ import { useProductAccessStore } from '@/stores/useProductAccessStore';
 const standardBenefits = [
   'Konten, Umsätze und sichere Cloud-Synchronisierung',
   'Manuelle Kategorien und Händlerkorrekturen',
-  'Manuelle Sparziele und Basis-Dashboard',
+  'Manuelle Sparziele und intelligentes Dashboard',
+  'Echte Monatsbudgets mit Ausgabenfortschritt',
+  'Erkannte Abos, Rechnungen und wiederkehrendes Einkommen – inkl. Korrektur',
+  'Gebundene Fixkosten und nächste fällige Zahlung',
 ];
 
 const premiumBenefits = [
   'Automatische Händlerregeln',
   'Konto-verknüpfte und automatische Sparziele',
-  'Erweiterte Prognosen und Analysen',
+  '30-/60-/90-Tage-Cashflow-Prognose auf Basis deiner Fixkosten',
+  'Tiefere Auswertungen und historische Vergleiche',
 ];
 
 const sourceLabels = {

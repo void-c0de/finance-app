@@ -7,6 +7,7 @@ import {
 import {
   useCallback,
   useMemo,
+  useState,
 } from 'react';
 
 import {
@@ -389,6 +390,11 @@ export default function HomeScreen() {
       ]
     );
 
+  const [
+    forecastHorizon,
+    setForecastHorizon,
+  ] = useState<30 | 60 | 90>(30);
+
   const forecast =
     useMemo(
       () =>
@@ -398,12 +404,13 @@ export default function HomeScreen() {
                 totalBalanceMinor,
               recurringItems:
                 insights.recurringItems,
-              horizonDays: 30,
+              horizonDays: forecastHorizon,
             })
           : null,
 
       [
         canForecast,
+        forecastHorizon,
         totalBalanceMinor,
         insights.recurringItems,
       ]
@@ -986,7 +993,7 @@ export default function HomeScreen() {
                   { color: colors.textMuted },
                 ]}
               >
-                PROGNOSE · 30 TAGE
+                CASHFLOW-PROGNOSE
               </Text>
               <Text
                 style={[
@@ -996,6 +1003,34 @@ export default function HomeScreen() {
               >
                 Premium
               </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm }}>
+              {([30, 60, 90] as const).map((horizon) => (
+                <FinancePressable
+                  key={horizon}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Prognose ${horizon} Tage`}
+                  accessibilityState={{ selected: forecastHorizon === horizon }}
+                  onPress={() => setForecastHorizon(horizon)}
+                  intent="navigation"
+                  contentStyle={{ paddingVertical: spacing.xs, paddingHorizontal: spacing.md }}
+                  style={{
+                    borderRadius: radius.round,
+                    backgroundColor:
+                      forecastHorizon === horizon ? colors.primary : colors.surfaceInteractive,
+                  }}
+                >
+                  <Text
+                    style={[
+                      typography.caption,
+                      { color: forecastHorizon === horizon ? colors.background : colors.textSecondary },
+                    ]}
+                  >
+                    {horizon} Tage
+                  </Text>
+                </FinancePressable>
+              ))}
             </View>
 
             <MoneyText

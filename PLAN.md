@@ -29,14 +29,26 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 - **DONE** Recurring-payment intelligence: detection + confidence-aware
   classification (subscription / bill / income / uncertain), monthly committed
   cost, next-due projection, price-drift. Dashboard + planning surfaces.
+- **DONE** Persisted recurring-series domain model (`recurring_series` /
+  `finance_recurring_series`, owner-scoped RLS, deterministic key = id):
+  confirm / re-type / mute corrections survive restart, offline, sync and
+  new-device recovery; a muted series is suppressed everywhere.
+- **DONE** Financial commitments engine (confirmed / likely / uncertain
+  buckets; income kept separate) and a conservative, certainty-labelled
+  cashflow forecast core.
+- **DONE** Attention center (`attentionCore`): one prioritized model over bank
+  health, over-budget, failed sync, uncategorized, uncertain recurring.
+  Dashboard "Braucht Aufmerksamkeit" card with deep links.
+- **DONE** Premium forward forecast: 30/60/90-day cashflow card gated on
+  `premium_analytics`; Standard keeps every recurring number.
 - **DONE** Savings goals: one authoritative progress source per mode; account
   balance is the only truth for `account_balance` goals (no double count for
   own-transfers); shared display helpers; full lifecycle regression tests.
-- **PARTIAL** Dashboard intelligence — balance, cashflow, budgets, savings,
-  recurring, uncategorized review are live. NEXT: bank-attention card,
-  progressive disclosure pass.
-- **NEXT** Premium-only recurring depth (multi-month forecast, subscription
-  export) behind `premium_analytics`; basic visibility stays free.
+- **DONE** Dashboard 2.0 — attention card near the top, premium forecast card,
+  fixed-cost / next-payment / budget / savings cards; the standalone
+  "Zu prüfen" card folded into the attention center.
+- **NEXT** Subscription/commitment trend history and CSV export behind
+  `advanced_exports`.
 
 ## Banking
 
@@ -55,8 +67,10 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
   categories, rules, connections; reconnect is idempotent (tombstone revive).
 - **DONE** New-device pull rebuilds accounts, transactions, categories, rules,
   budgets, goals, contributions and entitlements from the cloud.
-- **PARTIAL** Systematic offline-merge test matrix — merge core and pending
-  reconciliation are covered; a full per-entity offline simulation is NEXT.
+- **DONE** Offline-merge proof matrix (`test-offline-matrix.mjs`): two-device +
+  server simulation over the real primitives covering every create/update/
+  delete/reconnect/merge scenario, plus a parent-before-child table-order guard
+  for recovery.
 
 ## Release
 

@@ -9,6 +9,7 @@ import { FinanceCard } from '@/components/finance/FinanceCard';
 import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { getRecentDebugLogs } from '@/core/debugLog';
 import { getDatabase } from '@/db/database';
+import { getBankConnectionHealth } from '@/services/bankConnectionHealth';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 import { useFinanceStore } from '@/stores/useFinanceStore';
@@ -19,6 +20,8 @@ export default function AdminDiagnosticsScreen() {
   const { access, isLoading, refresh } = useProductAccessStore();
   const accounts = useFinanceStore((state) => state.accounts);
   const lastLoadedAt = useFinanceStore((state) => state.lastLoadedAt);
+  const recurringOverrides = useFinanceStore((state) => state.recurringOverrides);
+  const bankConnections = useFinanceStore((state) => state.bankConnections);
   const cloud = useCloudSyncStore();
   const [schemaVersion, setSchemaVersion] = useState<number | null>(null);
 
@@ -37,6 +40,11 @@ export default function AdminDiagnosticsScreen() {
   if (isLoading) return <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} />;
   if (!access.isSuperuser) return <Redirect href="/(tabs)/more" />;
 
+  const mutedSeries = Array.from(recurringOverrides.values()).filter((entry) => entry.muted).length;
+  const attentionConnections = bankConnections.filter(
+    (connection) => getBankConnectionHealth(connection).userActionRequired,
+  ).length;
+
   const rows = [
     ['App-Version', Constants.expoConfig?.version ?? 'unbekannt'],
     ['Android-Build', String(Constants.expoConfig?.android?.versionCode ?? 'unbekannt')],
@@ -45,6 +53,8 @@ export default function AdminDiagnosticsScreen() {
     ['Letzter Cloud-Sync', cloud.lastSyncedAt ? new Date(cloud.lastSyncedAt).toLocaleString('de-DE') : 'noch nicht in dieser Sitzung'],
     ['Lokaler Datenstand', lastLoadedAt ? new Date(lastLoadedAt).toLocaleString('de-DE') : 'noch nicht geladen'],
     ['Konten', `${accounts.length} · ${accounts.filter((account) => account.lastSyncedAt).length} mit Sync-Stand`],
+    ['Bankverbindungen', `${bankConnections.length} · ${attentionConnections} brauchen Aktion`],
+    ['Wiederkehrend-Korrekturen', `${recurringOverrides.size} · davon ${mutedSeries} stumm`],
     ['Interne Fehlercodes', recentCodes.length ? recentCodes.join(' · ') : 'keine in dieser Sitzung'],
   ];
 

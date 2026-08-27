@@ -141,6 +141,26 @@ Prepared German patch notes for 1.2.0:
 - Dashboard beantwortet klarer „Was passiert mit meinem Geld?" (Budgetrest, unkategorisierte Umsätze, wiederkehrende Kosten)
 - Schnellerer Planungs-Start und echte Monatsbudgets aus 1.1.x bleiben erhalten
 
+### Financial-intelligence milestone — OTA-compatible with runtime 1.2.0 (2026-08-27)
+
+The recurring-series domain model, commitments engine, conservative cashflow
+forecast, attention center and dashboard 2.0 change only JavaScript/TypeScript
+and add a **local** SQLite migration (schema v13, `recurring_series`) plus one
+**forward** Supabase migration (`20260827120000_add_recurring_series.sql`,
+owner-scoped RLS, applied to the linked project; `supabase db lint` clean).
+
+- No native module, config plugin or native configuration changed. `expo-sqlite`
+  is unchanged; the on-device migration runner applies v13 on first launch.
+- Therefore this milestone is deliverable as an **OTA update to runtime 1.2.0**
+  after validation — no `1.3.0` and no `versionCode 4`.
+- The new sync table is additive; older installs simply ignore
+  `finance_recurring_series` until they run this JavaScript.
+- Prepared OTA patch-note copy:
+  - Wiederkehrende Zahlungen bestätigen, umbenennen oder als „keine Wiederkehr" markieren – bleibt erhalten
+  - „Braucht Aufmerksamkeit" bündelt Bank-, Budget- und Kategorisierungshinweise
+  - Premium: 30-/60-/90-Tage-Cashflow-Prognose aus deinen Fixkosten
+  - Gebundene Fixkosten sauber getrennt von unbestätigten Kandidaten
+
 Signing status for 1.2.0 is unchanged: without `FINANCE_UPLOAD_*` the release
 build falls back to the debug keystore (development artifact only). A protected
 upload key or EAS-managed credential is still required before Play upload.
