@@ -96,7 +96,7 @@ export function hasCapability(access: ProductAccess, capability: ProductCapabili
 
 export function canConfigureGoalTracking(
   access: ProductAccess,
-  mode: 'manual' | 'transaction_rule' | 'account_balance' | 'hybrid',
+  mode: 'manual' | 'transaction_rule' | 'account_balance',
 ): boolean {
   return mode === 'manual' || hasCapability(access, 'advanced_planning');
 }

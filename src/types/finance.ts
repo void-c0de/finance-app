@@ -147,8 +147,7 @@ export interface Budget {
 export type SavingsGoalTrackingMode =
   | 'manual'
   | 'transaction_rule'
-  | 'account_balance'
-  | 'hybrid';
+  | 'account_balance';
 
 export type SavingsGoalStatus =
   | 'active'

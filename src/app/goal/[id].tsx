@@ -49,6 +49,11 @@ import {
 } from '@/db/repositories/savingsGoals';
 
 import {
+  goalProgressBarPercent,
+  goalProgressPercent,
+} from '@/services/goalProgressCore';
+
+import {
   FinanceCard,
 } from '@/components/finance/FinanceCard';
 
@@ -613,28 +618,17 @@ export default function GoalDetailScreen() {
     ? accounts.find((account) => account.id === goal.linkedAccountId) ?? null
     : null;
 
-  const progress =
-    goal.targetAmountMinor >
-    0
-      ? Math.max(
-            0,
-
-            goal.currentAmountMinor /
-              goal.targetAmountMinor,
-          )
-      : 0;
-
   const progressPercent =
-    Math.round(
-      progress *
-        100
+    goalProgressPercent(
+      goal.currentAmountMinor,
+      goal.targetAmountMinor,
     );
 
   const progressWidth =
-    `${Math.min(100, Math.max(
-      2,
-      progressPercent
-    ))}%` as `${number}%`;
+    `${goalProgressBarPercent(
+      goal.currentAmountMinor,
+      goal.targetAmountMinor,
+    )}%` as `${number}%`;
 
   function HeaderBar() {
     return (
@@ -786,8 +780,8 @@ export default function GoalDetailScreen() {
                     progressWidth,
 
                   backgroundColor:
-                    progress >=
-                    1
+                    progressPercent >=
+                    100
                       ? colors.positive
 
                       : colors.primary,

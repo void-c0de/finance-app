@@ -20,11 +20,22 @@ Manual categorization of individual transactions remains a Standard capability. 
 
 ## Savings-goal tracking
 
+There is exactly one authoritative progress source per tracking mode. The
+account balance and the contribution ledger are never summed:
+
+| Mode | Authoritative progress | Availability |
+| --- | --- | --- |
+| `manual` | `starting_amount + Σ active contributions` | Standard |
+| `transaction_rule` | `starting_amount + Σ active contributions` (auto-created, idempotent on `source_transaction_id`) | Premium |
+| `account_balance` | active linked account `balance_minor`, clamped at 0 | Premium |
+
 - Standard users can create manual goals, add corrections and see progress on the dashboard.
 - Premium users can additionally link a goal to a real imported account or configure transaction automation.
-- In `account_balance` mode the active linked account balance is the only authoritative progress value. Manual contribution rows are not added on top.
-- If a linked account is unavailable or tombstoned, the last known amount remains visible and the configuration is not silently changed.
-- Negative linked balances resolve to zero savings progress; balances above the target remain numerically visible above 100% while the progress bar stays bounded.
+- In `account_balance` mode the active linked account balance is the only authoritative progress value. Manual and automatic contribution rows are ignored for progress (the goal detail screen also hides the contribution actions), so no money is ever double-counted.
+- **Own-transfer savings ("Notgroschen on Sparkonto"):** this is deliberately solved by `account_balance` authority, not a second ledger. A Giro→Sparkonto transfer is flagged `isInternalTransfer` and excluded from spending and income analytics; the Sparkonto balance rises by exactly the transferred amount, and an `account_balance` goal linked to that account follows the balance. Re-import or reconnect is idempotent because the balance — not a derived event — is the source. Transfer-triggered contribution rows are intentionally not created.
+- `transaction_rule` matches only booked, non-transfer **incoming** transactions by keyword; a self-transfer never creates a rule contribution.
+- If a linked account is unavailable or tombstoned, the last known amount remains visible (`source: 'last_known'`) and the configuration is not silently changed.
+- Negative linked balances resolve to zero savings progress; balances above the target remain numerically visible above 100% while the progress bar stays bounded. `goalProgressPercent` / `goalProgressBarPercent` are the single shared display helpers used by dashboard, planning and goal detail.
 - Advanced configurations remain stored after a downgrade. Existing financial history is never destroyed; creating or changing Premium automation requires Premium.
 - Superuser inherits every Premium capability from the role and never needs an artificial subscription expiry.
 
@@ -39,6 +50,14 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 - Progress is intentionally allowed above 100%; the bar remains visually bounded while the percentage and negative remaining amount preserve the real over-budget state.
 - Removing a budget creates a tombstone instead of hard-deleting synchronized state.
 - The dashboard budget card summarizes all monthly budgets: total remaining this month, or the number of exceeded budgets when spending is over. It reuses the same derived spending, so it never disagrees with the Planning detail view.
+
+## Recurring payments and subscriptions
+
+- `recurringInsightsCore` is a single pure leaf module: it detects, groups and classifies recurring transactions and is the only source of recurring numbers for dashboard and planning.
+- Every recurring group is classified as `subscription`, `bill`, `income` or `uncertain`, each with a `high` / `medium` / `low` confidence and a cadence. Data that is only "regular and stable" but has no recognisable name stays `uncertain` — it is never reported as a certain subscription.
+- Internal transfers and pending transactions are always excluded; a self-transfer is never a subscription.
+- A future manual correction (`manualKindByKey`) always overrides the heuristic. Basic visibility of confidently detected recurring items stays a Standard capability; advanced forecasting is Premium (`premium_analytics`).
+- The dashboard shows the monthly committed recurring spend and the next due recurring payment (with an "unbestätigt" hint for low confidence). Planning lists the upcoming recurring expenses with their classification and price-drift.
 
 ## Server authority
 

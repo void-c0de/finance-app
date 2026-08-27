@@ -73,6 +73,10 @@ import {
 } from '@/services/recurringInsightsCore';
 
 import {
+  goalProgressPercent,
+} from '@/services/goalProgressCore';
+
+import {
   useFinanceTheme,
 } from '@/hooks/use-finance-theme';
 
@@ -1497,7 +1501,7 @@ export default function HomeScreen() {
                   forceSign={null}
                 />
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xs }]}>
-                  {Math.round(Math.max(0, goals[0].currentAmountMinor / goals[0].targetAmountMinor) * 100)} % erreicht
+                  {goalProgressPercent(goals[0].currentAmountMinor, goals[0].targetAmountMinor)} % erreicht
                 </Text>
               </>
             ) : null}

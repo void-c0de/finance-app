@@ -26,7 +26,8 @@ assert.equal(canConfigureGoalTracking(premium, 'account_balance'), true);
 const expired = normalizeProductAccess({ isPremium: true, premiumExpiresAt: '2026-08-01T00:00:00Z', source: 'coupon' }, now);
 assert.equal(expired.isPremium, false);
 const admin = normalizeProductAccess({ role: 'superuser' }, now);
-assert.equal(canConfigureGoalTracking(admin, 'hybrid'), true);
+assert.equal(canConfigureGoalTracking(admin, 'transaction_rule'), true);
+assert.equal(canConfigureGoalTracking(admin, 'manual'), true);
 assert.equal(hasCapability(admin, 'coupon_admin'), true);
 assert.equal(hasCapability(admin, 'premium_analytics'), true);
 for (const capability of PRODUCT_CAPABILITIES) {

@@ -85,6 +85,11 @@ import {
 } from '@/services/recurringInsightsCore';
 
 import {
+  goalProgressBarPercent,
+  goalProgressPercent,
+} from '@/services/goalProgressCore';
+
+import {
   performFinanceHaptic,
 } from '@/services/haptics';
 
@@ -1765,28 +1770,17 @@ export default function PlanningScreen() {
           (
             goal,
           ) => {
-            const progress =
-              goal.targetAmountMinor >
-              0
-                ? Math.max(
-                      0,
-
-                      goal.currentAmountMinor /
-                        goal.targetAmountMinor,
-                    )
-                : 0;
-
             const progressPercent =
-              Math.round(
-                progress *
-                  100
+              goalProgressPercent(
+                goal.currentAmountMinor,
+                goal.targetAmountMinor,
               );
 
             const progressWidth =
-              `${Math.min(100, Math.max(
-                2,
-                progressPercent
-              ))}%` as `${number}%`;
+              `${goalProgressBarPercent(
+                goal.currentAmountMinor,
+                goal.targetAmountMinor,
+              )}%` as `${number}%`;
 
             return (
               <FinancePressable
@@ -1904,8 +1898,8 @@ export default function PlanningScreen() {
                             progressWidth,
 
                           backgroundColor:
-                            progress >=
-                            1
+                            progressPercent >=
+                            100
                               ? colors.positive
 
                               : colors.primary,
