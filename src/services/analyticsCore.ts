@@ -24,12 +24,22 @@ export function shiftMonthKey(key: MonthKey, deltaMonths: number): MonthKey {
   return `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
+function isUsable(transaction: Transaction): boolean {
+  return (
+    !!transaction &&
+    typeof transaction === 'object' &&
+    typeof transaction.bookingDate === 'string' &&
+    Number.isFinite(transaction.amountMinor)
+  );
+}
+
 function inMonth(transaction: Transaction, key: MonthKey): boolean {
-  return transaction.bookingDate.startsWith(key);
+  return isUsable(transaction) && transaction.bookingDate.startsWith(key);
 }
 
 function countableExpense(transaction: Transaction): boolean {
   return (
+    isUsable(transaction) &&
     transaction.direction === 'expense' &&
     transaction.bookingStatus !== 'pending' &&
     !transaction.isInternalTransfer
@@ -38,6 +48,7 @@ function countableExpense(transaction: Transaction): boolean {
 
 function countableIncome(transaction: Transaction): boolean {
   return (
+    isUsable(transaction) &&
     transaction.direction === 'income' &&
     transaction.bookingStatus !== 'pending' &&
     !transaction.isInternalTransfer

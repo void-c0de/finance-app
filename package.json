@@ -94,7 +94,8 @@
     "test:billing-server": "node scripts/test-billing-server.mjs",
     "test:ios-config": "node scripts/test-ios-config.mjs",
     "test:perf-scale": "node --experimental-strip-types scripts/test-perf-scale.mjs",
-    "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs"
+    "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs",
+    "test:resilience": "node --experimental-strip-types scripts/test-resilience.mjs"
   },
   "private": true
 }
