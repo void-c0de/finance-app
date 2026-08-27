@@ -12,6 +12,7 @@ import {
 
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -231,6 +232,11 @@ export default function PlanningScreen() {
     useState<FinanceDialogConfig | null>(
       null,
     );
+
+  const [
+    isCreateOpen,
+    setIsCreateOpen,
+  ] = useState(false);
 
   useFocusEffect(
     useCallback(
@@ -676,7 +682,34 @@ export default function PlanningScreen() {
             </Text>
           </View>
 
-          <FinancePressable
+          <View
+            style={[
+              styles.headerActions,
+              { gap: spacing.sm },
+            ]}
+          >
+            <FinancePressable
+              accessibilityRole="button"
+              accessibilityLabel="Planung erstellen"
+              onPress={() => {
+                void performFinanceHaptic('selection');
+                setIsCreateOpen(true);
+              }}
+              intent="important"
+              style={[
+                styles.refreshButton,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                  borderRadius: radius.round,
+                },
+              ]}
+              contentStyle={styles.refreshContent}
+            >
+              <Text style={[styles.createIcon, { color: colors.background }]}>+</Text>
+            </FinancePressable>
+
+            <FinancePressable
             accessibilityRole="button"
 
             accessibilityLabel="Planung aktualisieren"
@@ -735,7 +768,8 @@ export default function PlanningScreen() {
                 ↻
               </Text>
             )}
-          </FinancePressable>
+            </FinancePressable>
+          </View>
         </View>
         <FinanceCard
           style={{
@@ -860,7 +894,7 @@ export default function PlanningScreen() {
                 },
               ]}
             >
-              Lokal gespeichert · monatlich
+              Offline verfügbar · monatlich
             </Text>
           </View>
 
@@ -889,10 +923,10 @@ export default function PlanningScreen() {
               );
 
             const progressWidth =
-              `${Math.max(
+              `${Math.min(100, Math.max(
                 2,
                 progressPercent
-              )}%` as `${number}%`;
+              ))}%` as `${number}%`;
 
             return (
               <FinanceCard
@@ -1727,16 +1761,12 @@ export default function PlanningScreen() {
             const progress =
               goal.targetAmountMinor >
               0
-                ? Math.min(
-                    1,
-
-                    Math.max(
+                ? Math.max(
                       0,
 
                       goal.currentAmountMinor /
                         goal.targetAmountMinor,
-                    ),
-                  )
+                    )
                 : 0;
 
             const progressPercent =
@@ -1746,10 +1776,10 @@ export default function PlanningScreen() {
               );
 
             const progressWidth =
-              `${Math.max(
+              `${Math.min(100, Math.max(
                 2,
                 progressPercent
-              )}%` as `${number}%`;
+              ))}%` as `${number}%`;
 
             return (
               <FinancePressable
@@ -1883,15 +1913,9 @@ export default function PlanningScreen() {
         )}
 
         <FinanceButton
-          label="Neues Sparziel"
+          label="Sparziel hinzufügen"
 
-          variant={
-            goals.length ===
-            0
-              ? 'primary'
-
-              : 'secondary'
-          }
+          variant="secondary"
 
           onPress={() => {
             router.push(
@@ -2075,6 +2099,61 @@ export default function PlanningScreen() {
         </View>
       </ScrollView>
 
+      <Modal
+        visible={isCreateOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setIsCreateOpen(false)}
+      >
+        <FinancePressable
+          accessibilityRole="button"
+          accessibilityLabel="Erstellen schließen"
+          onPress={() => setIsCreateOpen(false)}
+          intent="navigation"
+          style={[styles.createScrim, { backgroundColor: colors.scrim }]}
+        >
+          <View
+            onStartShouldSetResponder={() => true}
+            style={[
+              styles.createSheet,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderRadius: radius.xl,
+                padding: spacing.lg,
+              },
+            ]}
+          >
+            <Text style={[typography.title, { color: colors.text }]}>Was möchtest du planen?</Text>
+            <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg }]}>Nur vollständig nutzbare Planungstypen werden hier angeboten.</Text>
+            <FinanceButton
+              label="Sparziel"
+              onPress={() => {
+                setIsCreateOpen(false);
+                router.push('/goal-new' as Href);
+              }}
+              style={{ width: '100%' }}
+            />
+            <FinanceButton
+              label="Monatsbudget"
+              variant="secondary"
+              onPress={() => {
+                setIsCreateOpen(false);
+                router.push('/budget-new' as Href);
+              }}
+              style={{ width: '100%', marginTop: spacing.sm }}
+            />
+            <FinanceButton
+              label="Abbrechen"
+              variant="ghost"
+              onPress={() => setIsCreateOpen(false)}
+              style={{ width: '100%', marginTop: spacing.sm }}
+            />
+          </View>
+        </FinancePressable>
+      </Modal>
+
       <FinanceDialog
         visible={
           dialog !==
@@ -2201,6 +2280,31 @@ const styles =
     headerText: {
       flex:
         1,
+    },
+
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+
+    createIcon: {
+      fontSize: 28,
+      lineHeight: 30,
+      fontWeight: '500',
+    },
+
+    createScrim: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      padding: 16,
+    },
+
+    createSheet: {
+      width: '100%',
+      maxWidth: 480,
+      alignSelf: 'center',
+      borderWidth: StyleSheet.hairlineWidth,
+      marginBottom: 12,
     },
 
     eyebrow: {

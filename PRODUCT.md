@@ -24,10 +24,21 @@ Manual categorization of individual transactions remains a Standard capability. 
 - Premium users can additionally link a goal to a real imported account or configure transaction automation.
 - In `account_balance` mode the active linked account balance is the only authoritative progress value. Manual contribution rows are not added on top.
 - If a linked account is unavailable or tombstoned, the last known amount remains visible and the configuration is not silently changed.
+- Negative linked balances resolve to zero savings progress; balances above the target remain numerically visible above 100% while the progress bar stays bounded.
 - Advanced configurations remain stored after a downgrade. Existing financial history is never destroyed; creating or changing Premium automation requires Premium.
 - Superuser inherits every Premium capability from the role and never needs an artificial subscription expiry.
 
 Future paid sources (`google_play`, `revenuecat`) are supported by the client model but are not sold or simulated. Their eventual server ingestion must validate store receipts before writing the same entitlement model.
+
+## Planning and monthly budgets
+
+- The Planning header owns one extensible quick-create entry point. It currently exposes only complete flows: savings goals and monthly category budgets.
+- A monthly budget is stored offline first and synchronized through the existing `finance_budgets` tombstone/LWW path.
+- Spending is derived from the same monthly finance truth used by dashboard and planning insights: booked expenses in the selected category. Pending transactions and detected own-account transfers are excluded.
+- Manual category corrections and merchant rules automatically affect the derived budget because no parallel spending ledger is stored.
+- Progress is intentionally allowed above 100%; the bar remains visually bounded while the percentage and negative remaining amount preserve the real over-budget state.
+- Removing a budget creates a tombstone instead of hard-deleting synchronized state.
+- The dashboard budget card summarizes all monthly budgets: total remaining this month, or the number of exceeded budgets when spending is over. It reuses the same derived spending, so it never disagrees with the Planning detail view.
 
 ## Server authority
 

@@ -63,6 +63,7 @@
     "test:entitlements": "node --experimental-strip-types scripts/test-entitlements.mjs",
     "test:release-policy": "node --experimental-strip-types scripts/test-release-core.mjs",
     "test:goal-progress": "node --experimental-strip-types scripts/test-goal-progress.mjs",
+    "test:budgets": "node --experimental-strip-types scripts/test-budget-insights.mjs",
     "test:password-security": "node --experimental-strip-types scripts/test-password-security.mjs"
   },
   "private": true

@@ -226,8 +226,10 @@ export async function deleteBudget(
 
   await db.runAsync(
     `
-      DELETE FROM budgets
-      WHERE id = ?;
+      UPDATE budgets
+      SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+      WHERE id = ?
+        AND deleted_at IS NULL;
     `,
 
     id

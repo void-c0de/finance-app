@@ -39,7 +39,8 @@
           "useSQLCipher": true
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withFinanceUploadSigning"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -30,4 +30,18 @@ const unavailable = resolveGoalProgress({
 });
 assert.deepEqual(unavailable, { amountMinor: 75000, source: 'last_known', linkedAccountAvailable: false });
 
+const negativeBalance = resolveGoalProgress({
+  trackingMode: 'account_balance', startingAmountMinor: 0,
+  contributionAmountsMinor: [], linkedAccountBalanceMinor: -15000,
+  lastKnownAmountMinor: 75000,
+});
+assert.equal(negativeBalance.amountMinor, 0, 'Ein überzogenes Konto erzeugt keinen negativen Sparfortschritt');
+
+const aboveTarget = resolveGoalProgress({
+  trackingMode: 'account_balance', startingAmountMinor: 0,
+  contributionAmountsMinor: [], linkedAccountBalanceMinor: 350000,
+  lastKnownAmountMinor: 300000,
+});
+assert.equal(aboveTarget.amountMinor, 350000, 'Fortschritt oberhalb des Zielbetrags bleibt erhalten');
+
 console.log('Savings goal progress modes: OK');

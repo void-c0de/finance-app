@@ -61,6 +61,12 @@ import {
 } from '@/core/finance';
 
 import {
+  buildBudgetProgress,
+  buildMonthlyCategorySpending,
+  summarizeBudgetProgress,
+} from '@/services/budgetInsightsCore';
+
+import {
   useFinanceTheme,
 } from '@/hooks/use-finance-theme';
 
@@ -130,6 +136,12 @@ export default function HomeScreen() {
     useFinanceStore(
       (state) =>
         state.goals
+    );
+
+  const categories =
+    useFinanceStore(
+      (state) =>
+        state.categories
     );
 
   const isLoading =
@@ -260,6 +272,27 @@ export default function HomeScreen() {
 
       [
         monthTransactions,
+      ]
+    );
+
+  const budgetSummary =
+    useMemo(
+      () =>
+        summarizeBudgetProgress(
+          buildBudgetProgress({
+            budgets,
+            categories,
+            spendingByCategory:
+              buildMonthlyCategorySpending(
+                transactions
+              ),
+          })
+        ),
+
+      [
+        budgets,
+        categories,
+        transactions,
       ]
     );
 
@@ -1347,21 +1380,61 @@ export default function HomeScreen() {
               BUDGETS
             </Text>
 
-            <Text
-              style={[
-                typography.title,
+            {budgetSummary.count ===
+            0 ? (
+              <Text
+                style={[
+                  typography.title,
 
-                {
-                  color:
-                    colors.text,
+                  {
+                    color:
+                      colors.text,
 
-                  marginTop:
-                    spacing.lg,
-                },
-              ]}
-            >
-              {budgets.length}
-            </Text>
+                    marginTop:
+                      spacing.lg,
+                  },
+                ]}
+              >
+                0
+              </Text>
+            ) : (
+              <>
+                <MoneyText
+                  amountMinor={Math.abs(
+                    budgetSummary.totalRemainingMinor
+                  )}
+                  currency="EUR"
+                  size="s"
+                  forceSign={null}
+                  style={{
+                    marginTop:
+                      spacing.lg,
+                  }}
+                />
+
+                <Text
+                  style={[
+                    typography.caption,
+
+                    {
+                      color:
+                        budgetSummary.totalRemainingMinor <
+                        0
+                          ? colors.negative
+                          : colors.textSecondary,
+
+                      marginTop:
+                        spacing.xs,
+                    },
+                  ]}
+                >
+                  {budgetSummary.totalRemainingMinor >=
+                  0
+                    ? 'übrig diesen Monat'
+                    : `${budgetSummary.overBudgetCount} über Budget`}
+                </Text>
+              </>
+            )}
           </FinanceCard>
 
           <FinanceCard
@@ -1407,7 +1480,7 @@ export default function HomeScreen() {
                   forceSign={null}
                 />
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xs }]}>
-                  {Math.round(Math.min(1, Math.max(0, goals[0].currentAmountMinor / goals[0].targetAmountMinor)) * 100)} % erreicht
+                  {Math.round(Math.max(0, goals[0].currentAmountMinor / goals[0].targetAmountMinor) * 100)} % erreicht
                 </Text>
               </>
             ) : null}

@@ -616,16 +616,12 @@ export default function GoalDetailScreen() {
   const progress =
     goal.targetAmountMinor >
     0
-      ? Math.min(
-          1,
-
-          Math.max(
+      ? Math.max(
             0,
 
             goal.currentAmountMinor /
               goal.targetAmountMinor,
-          ),
-        )
+          )
       : 0;
 
   const progressPercent =
@@ -635,10 +631,10 @@ export default function GoalDetailScreen() {
     );
 
   const progressWidth =
-    `${Math.max(
+    `${Math.min(100, Math.max(
       2,
       progressPercent
-    )}%` as `${number}%`;
+    ))}%` as `${number}%`;
 
   function HeaderBar() {
     return (

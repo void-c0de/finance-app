@@ -13,6 +13,8 @@ import {
     normalizeMerchantName,
 } from '@/services/merchantNormalization';
 
+import { buildBudgetProgress } from '@/services/budgetInsightsCore';
+
 import type {
     Budget,
     Category,
@@ -122,20 +124,6 @@ export type FinanceInsights = {
   topExpense:
     Transaction | null;
 };
-
-function clamp01(
-  value:
-    number
-): number {
-  return Math.max(
-    0,
-
-    Math.min(
-      1,
-      value
-    )
-  );
-}
 
 export function buildFinanceInsights(
   input: {
@@ -469,65 +457,11 @@ export function buildFinanceInsights(
       )
     );
 
-  const budgetInsights =
-    input.budgets
-      .filter(
-        (
-          budget
-        ) =>
-          budget.period ===
-          'monthly'
-      )
-      .map(
-        (
-          budget
-        ) => {
-          const spentMinor =
-            budget.categoryId
-              ? spendingByCategory.get(
-                  budget.categoryId
-                ) ??
-                0
-              : 0;
-
-          const categoryName =
-            budget.categoryId
-              ? categoryMap.get(
-                  budget.categoryId
-                )?.name ??
-                budget.name
-              : budget.name;
-
-          return {
-            budget,
-
-            categoryName,
-
-            spentMinor,
-
-            remainingMinor:
-              budget.amountMinor -
-              spentMinor,
-
-            progress:
-              budget.amountMinor >
-              0
-                ? clamp01(
-                    spentMinor /
-                      budget.amountMinor
-                  )
-                : 0,
-          };
-        }
-      )
-      .sort(
-        (
-          left,
-          right
-        ) =>
-          right.progress -
-          left.progress
-      );
+  const budgetInsights = buildBudgetProgress({
+    budgets: input.budgets,
+    categories: input.categories,
+    spendingByCategory,
+  });
 
   const classificationRate =
     totalExpenseCount >
