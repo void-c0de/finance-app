@@ -12,9 +12,22 @@ The app resolves access centrally through `ProductAccess` and `hasCapability`; s
 | Advanced planning, analytics and exports | No | Yes | Yes |
 | Coupon, entitlement and release administration | No | No | Yes |
 
+The executable source of truth is `PRODUCT_CAPABILITIES` in `src/services/entitlementCore.ts`. Product surfaces call `hasCapability`; they do not infer authorization from plan labels.
+
 Premium is currently a real entitlement granted by coupon, administrator or the Superuser override. Paid recurring billing is deliberately not presented until a legitimate Play Billing/RevenueCat integration exists. A future billing provider must write into the same `user_subscriptions` model.
 
 Manual categorization of individual transactions remains a Standard capability. Premium users can turn a reviewed assignment into a reusable merchant rule for future transactions. Existing rules and manual assignments remain active after Premium expires; only creating and managing additional rules is locked. Financial history and user decisions are therefore never removed on downgrade.
+
+## Savings-goal tracking
+
+- Standard users can create manual goals, add corrections and see progress on the dashboard.
+- Premium users can additionally link a goal to a real imported account or configure transaction automation.
+- In `account_balance` mode the active linked account balance is the only authoritative progress value. Manual contribution rows are not added on top.
+- If a linked account is unavailable or tombstoned, the last known amount remains visible and the configuration is not silently changed.
+- Advanced configurations remain stored after a downgrade. Existing financial history is never destroyed; creating or changing Premium automation requires Premium.
+- Superuser inherits every Premium capability from the role and never needs an artificial subscription expiry.
+
+Future paid sources (`google_play`, `revenuecat`) are supported by the client model but are not sold or simulated. Their eventual server ingestion must validate store receipts before writing the same entitlement model.
 
 ## Server authority
 
@@ -46,3 +59,5 @@ Manual categorization of individual transactions remains a Standard capability. 
 ## Verification
 
 `supabase/tests/product_entitlements.sql` is a rollback-only live integration test covering duplicate use, expiry, disabled coupons, maximum uses and Premium extension. It leaves no test rows behind.
+
+The same rollback suite also proves that a normal authenticated user cannot create coupons, grant Premium, publish releases, read the admin audit log, change their role or insert their own subscription. The real Superuser account is never downgraded for testing.

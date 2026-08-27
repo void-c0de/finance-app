@@ -76,6 +76,9 @@ import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import { hasCapability } from '@/services/entitlementCore';
+import { useProductAccessStore } from '@/stores/useProductAccessStore';
+
 export default function GoalEditScreen() {
   const {
     id,
@@ -106,6 +109,10 @@ export default function GoalEditScreen() {
         state.refreshFinanceData,
     );
 
+  const accounts = useFinanceStore((state) => state.accounts);
+  const access = useProductAccessStore((state) => state.access);
+  const canEditAdvancedTracking = hasCapability(access, 'advanced_planning');
+
   const [
     name,
     setName,
@@ -129,6 +136,9 @@ export default function GoalEditScreen() {
     setRuleKeyword,
   ] =
     useState('');
+
+  const [trackingMode, setTrackingMode] = useState<'manual' | 'transaction_rule' | 'account_balance'>('manual');
+  const [linkedAccountId, setLinkedAccountId] = useState<string | null>(null);
 
   const [
     isLoaded,
@@ -212,6 +222,13 @@ export default function GoalEditScreen() {
                 goal.ruleKeyword ??
                   '',
               );
+
+              setTrackingMode(
+                goal.trackingMode === 'account_balance' || goal.trackingMode === 'transaction_rule'
+                  ? goal.trackingMode
+                  : 'manual',
+              );
+              setLinkedAccountId(goal.linkedAccountId ?? null);
             }
 
             setIsLoaded(true);
@@ -318,6 +335,11 @@ export default function GoalEditScreen() {
       return;
     }
 
+    if (trackingMode === 'account_balance' && !linkedAccountId) {
+      Alert.alert('Konto auswählen', 'Bitte wähle ein verfügbares Konto.');
+      return;
+    }
+
     setIsBusy(true);
 
     try {
@@ -337,9 +359,12 @@ export default function GoalEditScreen() {
             null,
 
           ruleKeyword:
+            trackingMode === 'transaction_rule' ? ruleKeyword.trim() || null : null,
 
-            ruleKeyword.trim() ||
-            null,
+          trackingMode,
+
+          linkedAccountId:
+            trackingMode === 'account_balance' ? linkedAccountId : null,
         },
       );
 
@@ -644,6 +669,52 @@ export default function GoalEditScreen() {
           }
         />
 
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xl, marginBottom: spacing.sm }]}>TRACKING</Text>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {([
+            ['manual', 'Manuell'],
+            ['transaction_rule', 'Stichwort'],
+            ['account_balance', 'Mit Konto'],
+          ] as const).map(([mode, label]) => (
+            <FinanceButton
+              key={mode}
+              label={label}
+              size="small"
+              variant={trackingMode === mode ? 'primary' : 'secondary'}
+              disabled={!canEditAdvancedTracking && mode !== 'manual'}
+              onPress={() => {
+                if (mode === 'manual' || canEditAdvancedTracking) setTrackingMode(mode);
+              }}
+            />
+          ))}
+        </View>
+
+        {!canEditAdvancedTracking && trackingMode !== 'manual' ? (
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.sm }]}>Die bestehende Premium-Konfiguration bleibt gespeichert und schreibgeschützt. Manuelle Finanzdaten werden nicht gelöscht.</Text>
+        ) : null}
+
+        {trackingMode === 'account_balance' ? (
+          <View style={{ marginTop: spacing.md, gap: spacing.xs }}>
+            {accounts.map((account) => (
+              <FinancePressable
+                key={account.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: linkedAccountId === account.id }}
+                disabled={!canEditAdvancedTracking}
+                onPress={() => setLinkedAccountId(account.id)}
+                intent="navigation"
+                style={{ backgroundColor: linkedAccountId === account.id ? colors.surfaceInteractive : colors.surface, borderRadius: 12, borderWidth: 1, borderColor: linkedAccountId === account.id ? colors.primary : colors.border }}
+                contentStyle={{ padding: spacing.md }}
+              >
+                <Text style={[typography.bodyMedium, { color: colors.text }]}>{account.name}</Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xxs }]}>{account.institutionName ?? account.providerId}</Text>
+              </FinancePressable>
+            ))}
+            {linkedAccountId && !accounts.some((account) => account.id === linkedAccountId) ? <Text style={[typography.caption, { color: colors.negative }]}>Verknüpftes Konto nicht verfügbar</Text> : null}
+          </View>
+        ) : null}
+
         <FinanceTextField
           containerStyle={{
             marginTop:
@@ -696,7 +767,7 @@ export default function GoalEditScreen() {
           }}
         />
 
-        <FinanceTextField
+        {trackingMode === 'transaction_rule' ? <FinanceTextField
           containerStyle={{
             marginTop:
               spacing.lg,
@@ -723,7 +794,7 @@ export default function GoalEditScreen() {
           onSubmitEditing={() => {
             void saveChanges();
           }}
-        />
+        /> : null}
 
         <FinanceButton
           label="Änderungen speichern"

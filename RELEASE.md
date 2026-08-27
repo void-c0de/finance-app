@@ -40,4 +40,17 @@ The current local `release` build type is signed with the debug keystore and is 
 
 Before distributing any build, run TypeScript, lint, all domain tests, Expo Doctor, `npm run test:release-config`, a cold start without Metro, and a data-preserving update test.
 
+## 2026-08-27 milestone decision
+
+The Abos & Premium, account-linked goal, dashboard, error-boundary and diagnostics milestone changes JavaScript/TypeScript and reuses existing SQLite/Supabase columns. It adds no native module, config plugin or native configuration. It is therefore compatible with the existing `1.1.0` runtime and may be delivered as an OTA update to that runtime after validation. A native `1.2.0` should be reserved for the next native/config/signing boundary rather than created solely for semantic marketing.
+
+Prepared patch-note copy for the compatible milestone:
+
+- Abos & Premium als eigener Produktbereich
+- Konto-verknüpfte Sparziele ohne Doppelzählung
+- Echte Sparzielanzeige im Dashboard
+- Verbesserte Kategorisierung, Recovery und Support-Diagnose
+
+An AAB produced by `bundleRelease` is only a technical Play-delivery candidate while the release build uses the debug keystore. Public distribution requires a protected upload key or EAS-managed credentials. Keystores, aliases and passwords remain outside Git.
+
 Release metadata is published from **Mehr → Administration → Release-Steuerung**. This action is authorized server-side and audited. Paid billing and public store distribution remain separate milestones.

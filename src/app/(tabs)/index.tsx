@@ -1395,8 +1395,22 @@ export default function HomeScreen() {
                 },
               ]}
             >
-              {goals.length}
+              {goals[0]?.name ?? '0 Ziele'}
             </Text>
+
+            {goals[0] ? (
+              <>
+                <MoneyText
+                  amountMinor={goals[0].currentAmountMinor}
+                  currency={goals[0].currency}
+                  size="s"
+                  forceSign={null}
+                />
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xs }]}>
+                  {Math.round(Math.min(1, Math.max(0, goals[0].currentAmountMinor / goals[0].targetAmountMinor)) * 100)} % erreicht
+                </Text>
+              </>
+            ) : null}
           </FinanceCard>
 
           <FinanceCard

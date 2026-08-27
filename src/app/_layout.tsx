@@ -3,6 +3,7 @@ import {
   DefaultTheme,
   Stack,
   ThemeProvider,
+  type ErrorBoundaryProps,
 } from 'expo-router';
 
 import * as SplashScreen from 'expo-splash-screen';
@@ -22,12 +23,15 @@ import {
 
 import {
   AppState,
+  Pressable,
   StyleSheet,
   Text,
   View,
   type AppStateStatus,
   type LayoutChangeEvent,
 } from 'react-native';
+
+import { debugLog } from '@/core/debugLog';
 
 import {
   FinanceLogo,
@@ -92,6 +96,22 @@ const RELOCK_AFTER_MS =
 
 const INITIAL_WELCOME_MS =
   1_250;
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    debugLog.error('APP', 'APP-ROOT-001: Unbehandelter Darstellungsfehler', error);
+  }, [error]);
+
+  return (
+    <View style={styles.errorBoundary}>
+      <Text style={styles.errorTitle}>Etwas ist schiefgelaufen.</Text>
+      <Text style={styles.errorMessage}>Deine lokalen Finanzdaten wurden nicht gelöscht. Du kannst die Ansicht sicher erneut laden.</Text>
+      <Pressable accessibilityRole="button" onPress={() => { void retry(); }} style={styles.errorRetry}>
+        <Text style={styles.errorRetryText}>Erneut versuchen</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function wait(
   milliseconds:
@@ -742,5 +762,45 @@ const styles =
 
       textAlign:
         'center',
+    },
+
+    errorBoundary: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#101318',
+      paddingHorizontal: 32,
+    },
+
+    errorTitle: {
+      color: '#FFFFFF',
+      fontSize: 24,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+
+    errorMessage: {
+      color: '#C7CDD5',
+      fontSize: 16,
+      lineHeight: 23,
+      textAlign: 'center',
+      marginTop: 12,
+    },
+
+    errorRetry: {
+      minHeight: 48,
+      minWidth: 180,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 14,
+      backgroundColor: '#5B8CFF',
+      marginTop: 28,
+      paddingHorizontal: 20,
+    },
+
+    errorRetryText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
     },
   });

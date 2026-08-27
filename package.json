@@ -58,7 +58,8 @@
     "test:release-config": "node scripts/test-release-config.mjs",
     "test:bank-health": "node --experimental-strip-types scripts/test-bank-connection-health.mjs",
     "test:entitlements": "node --experimental-strip-types scripts/test-entitlements.mjs",
-    "test:release-policy": "node --experimental-strip-types scripts/test-release-core.mjs"
+    "test:release-policy": "node --experimental-strip-types scripts/test-release-core.mjs",
+    "test:goal-progress": "node --experimental-strip-types scripts/test-goal-progress.mjs"
   },
   "private": true
 }

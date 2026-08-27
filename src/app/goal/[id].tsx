@@ -129,6 +129,8 @@ export default function GoalDetailScreen() {
         state.refreshFinanceData,
     );
 
+  const accounts = useFinanceStore((state) => state.accounts);
+
   const [
     goal,
     setGoal,
@@ -208,7 +210,8 @@ export default function GoalDetailScreen() {
           );
 
           if (
-            loadedGoal
+            loadedGoal &&
+            loadedGoal.trackingMode !== 'account_balance'
           ) {
             const rows =
               await listContributions(
@@ -314,6 +317,10 @@ export default function GoalDetailScreen() {
   }
 
   async function saveManualDeposit() {
+    if (goal?.trackingMode === 'account_balance') {
+      setDialog({ title: 'Kontostand wird automatisch verfolgt', message: 'Bei diesem Ziel ist ausschließlich der verknüpfte Kontostand maßgeblich. Dadurch werden Einzahlungen nicht doppelt gezählt.', confirmLabel: 'Verstanden' });
+      return;
+    }
     const normalized =
       depositAmount.trim().replace(
         ',',
@@ -602,6 +609,10 @@ export default function GoalDetailScreen() {
         goal.currentAmountMinor,
     );
 
+  const linkedAccount = goal.linkedAccountId
+    ? accounts.find((account) => account.id === goal.linkedAccountId) ?? null
+    : null;
+
   const progress =
     goal.targetAmountMinor >
     0
@@ -879,6 +890,24 @@ export default function GoalDetailScreen() {
                 Automatisch · Stichwort „{goal.ruleKeyword}“
               </Text>
             ) : null}
+
+            {goal.trackingMode === 'account_balance' ? (
+              <View style={{ marginTop: spacing.sm }}>
+                <Text style={[typography.caption, { color: linkedAccount ? colors.primary : colors.negative }]}>
+                  {linkedAccount
+                    ? `Kontostand · ${linkedAccount.name}`
+                    : 'Verknüpftes Konto nicht verfügbar'}
+                </Text>
+                {linkedAccount ? (
+                  <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxs }]}>
+                    {linkedAccount.institutionName ?? linkedAccount.providerId}
+                    {linkedAccount.lastSyncedAt ? ` · Stand ${formatTimestamp(linkedAccount.lastSyncedAt)}` : ' · letzter lokaler Kontostand'}
+                  </Text>
+                ) : (
+                  <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xxs }]}>Der letzte bekannte Fortschritt bleibt erhalten. Ändere das Konto über „Bearbeiten“.</Text>
+                )}
+              </View>
+            ) : null}
           </View>
         </FinanceCard>
 
@@ -923,7 +952,7 @@ export default function GoalDetailScreen() {
                   variant="secondary"
 
                   disabled={
-                    isBusy
+                    isBusy || goal.trackingMode === 'account_balance'
                   }
 
                   onPress={() => {
@@ -1079,7 +1108,7 @@ export default function GoalDetailScreen() {
             }
 
             disabled={
-              isBusy
+              isBusy || goal.trackingMode === 'account_balance'
             }
 
             onPress={() => {
@@ -1112,7 +1141,7 @@ export default function GoalDetailScreen() {
             },
           ]}
         >
-          Beitrags-Historie
+          {goal.trackingMode === 'account_balance' ? 'Kontostand-Tracking' : 'Beitrags-Historie'}
 
           {contributions.length >
           0
@@ -1149,7 +1178,7 @@ export default function GoalDetailScreen() {
             <FinanceEmptyState
               title="Noch keine Beiträge"
 
-              description="Jede Einzahlung und Entnahme erscheint hier als eigener Eintrag."
+              description={goal.trackingMode === 'account_balance' ? 'Der Fortschritt wird ausschließlich aus dem letzten lokalen Kontostand abgeleitet.' : 'Jede Einzahlung und Entnahme erscheint hier als eigener Eintrag.'}
 
               style={{
                 margin:

@@ -202,9 +202,13 @@ function mapContributionRow(
 }
 
 /*
- * Fortschritt ist immer abgeleitet:
- * Startbetrag + Summe aktiver Beitraege.
- * Keine manuell pflegbare Phantom-Summe.
+ * Die Tracking-Art bestimmt die einzige
+ * autoritative Fortschrittsquelle.
+ * account_balance nutzt ausschließlich den
+ * aktiven verknüpften Kontostand; bei einem
+ * fehlenden/tombstoned Konto bleibt der letzte
+ * bekannte Wert erhalten. Alle anderen Modi
+ * nutzen Startbetrag + aktive Beiträge.
  */
 async function recomputeGoalProgress(
   db:
@@ -217,19 +221,18 @@ async function recomputeGoalProgress(
 
   await database.runAsync(`
     UPDATE savings_goals
-    SET current_amount_minor =
-      starting_amount_minor +
-      COALESCE(
-        (
-          SELECT SUM(amount_minor)
-          FROM goal_contributions
-          WHERE goal_contributions.goal_id = savings_goals.id
-            AND goal_contributions.deleted_at IS NULL
-        ),
-        0
-      )
-    WHERE deleted_at IS NULL
-      AND current_amount_minor <>
+    SET current_amount_minor = CASE
+      WHEN tracking_mode = 'account_balance' THEN
+        COALESCE(
+          (
+            SELECT MAX(0, accounts.balance_minor)
+            FROM accounts
+            WHERE accounts.id = savings_goals.linked_account_id
+              AND accounts.deleted_at IS NULL
+          ),
+          current_amount_minor
+        )
+      ELSE
         starting_amount_minor +
         COALESCE(
           (
@@ -239,7 +242,32 @@ async function recomputeGoalProgress(
               AND goal_contributions.deleted_at IS NULL
           ),
           0
-        );
+        )
+      END
+    WHERE deleted_at IS NULL
+      AND current_amount_minor <> CASE
+        WHEN tracking_mode = 'account_balance' THEN
+          COALESCE(
+            (
+              SELECT MAX(0, accounts.balance_minor)
+              FROM accounts
+              WHERE accounts.id = savings_goals.linked_account_id
+                AND accounts.deleted_at IS NULL
+            ),
+            current_amount_minor
+          )
+        ELSE
+          starting_amount_minor +
+          COALESCE(
+            (
+              SELECT SUM(amount_minor)
+              FROM goal_contributions
+              WHERE goal_contributions.goal_id = savings_goals.id
+                AND goal_contributions.deleted_at IS NULL
+            ),
+            0
+          )
+        END;
   `);
 }
 
@@ -299,6 +327,8 @@ export async function getGoalById(
   const db =
     await getDatabase();
 
+  await recomputeGoalProgress(db);
+
   const row =
     await db.getFirstAsync<GoalRow>(
       `
@@ -312,6 +342,7 @@ export async function getGoalById(
           currency,
           target_date,
           linked_account_id,
+          rule_keyword,
           tracking_mode,
           status,
           created_at,
@@ -352,6 +383,12 @@ export async function createGoal(
       string;
 
     currency?:
+      string;
+
+    trackingMode?:
+      SavingsGoalTrackingMode;
+
+    linkedAccountId?:
       string;
   }
 ): Promise<SavingsGoal> {
@@ -404,6 +441,7 @@ export async function createGoal(
         starting_amount_minor,
         currency,
         target_date,
+        linked_account_id,
         tracking_mode,
         status,
         created_at,
@@ -411,7 +449,7 @@ export async function createGoal(
       )
       VALUES (
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        'manual', 'active', ?, ?
+        ?, ?, 'active', ?, ?
       );
     `,
 
@@ -436,6 +474,12 @@ export async function createGoal(
 
     input.targetDate ??
       null,
+
+    input.linkedAccountId ??
+      null,
+
+    input.trackingMode ??
+      'manual',
 
     now,
 
@@ -482,6 +526,13 @@ export async function updateGoal(
      * den Modus auf 'manual' zurueck.
      */
     ruleKeyword?:
+      string |
+      null;
+
+    trackingMode?:
+      SavingsGoalTrackingMode;
+
+    linkedAccountId?:
       string |
       null;
   }
@@ -567,6 +618,26 @@ export async function updateGoal(
   }
 
   if (
+    fields.linkedAccountId !==
+    undefined
+  ) {
+    assignments.push('linked_account_id = ?');
+    values.push(fields.linkedAccountId);
+  }
+
+  if (
+    fields.trackingMode !==
+    undefined
+  ) {
+    assignments.push('tracking_mode = ?');
+    values.push(fields.trackingMode);
+
+    if (fields.trackingMode !== 'transaction_rule') {
+      assignments.push('rule_keyword = NULL');
+    }
+  }
+
+  if (
     fields.ruleKeyword !==
     undefined
   ) {
@@ -582,16 +653,10 @@ export async function updateGoal(
       keyword,
     );
 
-    assignments.push(
-      'tracking_mode = ?',
-    );
-
-    values.push(
-      keyword
-        ? 'transaction_rule'
-
-        : 'manual',
-    );
+    if (fields.trackingMode === undefined) {
+      assignments.push('tracking_mode = ?');
+      values.push(keyword ? 'transaction_rule' : 'manual');
+    }
   }
 
   if (
@@ -619,6 +684,8 @@ export async function updateGoal(
 
     id,
   );
+
+  await recomputeGoalProgress(db);
 }
 
 /**

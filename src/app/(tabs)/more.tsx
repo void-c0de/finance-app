@@ -290,7 +290,7 @@ export default function MoreScreen() {
 
         <FinanceCard padded={false}>
           <SettingsRow
-            title="Premium"
+            title="Abos & Premium"
             description={
               productAccess.isSuperuser
                 ? 'Superuser · alle Premium-Funktionen freigeschaltet'

@@ -74,4 +74,54 @@ BEGIN
 END;
 $$;
 
+-- A normal authenticated user must never cross the server authority boundary.
+DO $$
+DECLARE v_admin_rpc_denied boolean := false;
+DECLARE v_audit_count integer;
+BEGIN
+  BEGIN
+    PERFORM public.admin_create_coupon('TEST_FORBIDDEN', 7, 1, NULL, 'must not exist', false);
+  EXCEPTION WHEN OTHERS THEN
+    v_admin_rpc_denied := true;
+  END;
+  IF NOT v_admin_rpc_denied THEN RAISE EXCEPTION 'normal_user_created_coupon'; END IF;
+
+  v_admin_rpc_denied := false;
+  BEGIN
+    PERFORM public.admin_grant_premium('nobody@example.invalid', 7, false);
+  EXCEPTION WHEN OTHERS THEN
+    v_admin_rpc_denied := true;
+  END;
+  IF NOT v_admin_rpc_denied THEN RAISE EXCEPTION 'normal_user_granted_premium'; END IF;
+
+  v_admin_rpc_denied := false;
+  BEGIN
+    PERFORM public.admin_publish_release('99.0.0', 999, '99.0.0', 'forbidden', 'forbidden', 'required', NULL, NULL);
+  EXCEPTION WHEN OTHERS THEN
+    v_admin_rpc_denied := true;
+  END;
+  IF NOT v_admin_rpc_denied THEN RAISE EXCEPTION 'normal_user_published_release'; END IF;
+
+  SELECT count(*) INTO v_audit_count FROM public.admin_audit_log;
+  IF v_audit_count <> 0 THEN RAISE EXCEPTION 'normal_user_read_admin_audit'; END IF;
+
+  v_admin_rpc_denied := false;
+  BEGIN
+    UPDATE public.profiles SET role='superuser' WHERE id=auth.uid();
+  EXCEPTION WHEN OTHERS THEN
+    v_admin_rpc_denied := true;
+  END;
+  IF NOT v_admin_rpc_denied THEN RAISE EXCEPTION 'normal_user_modified_role'; END IF;
+
+  v_admin_rpc_denied := false;
+  BEGIN
+    INSERT INTO public.user_subscriptions(user_id, plan, source)
+    VALUES (auth.uid(), 'premium', 'admin');
+  EXCEPTION WHEN OTHERS THEN
+    v_admin_rpc_denied := true;
+  END;
+  IF NOT v_admin_rpc_denied THEN RAISE EXCEPTION 'normal_user_self_granted_premium'; END IF;
+END;
+$$;
+
 ROLLBACK;

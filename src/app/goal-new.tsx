@@ -68,6 +68,9 @@ import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import { hasCapability } from '@/services/entitlementCore';
+import { useProductAccessStore } from '@/stores/useProductAccessStore';
+
 export default function GoalNewScreen() {
   const {
     colors,
@@ -83,6 +86,12 @@ export default function GoalNewScreen() {
       ) =>
         state.refreshFinanceData,
     );
+
+  const accounts = useFinanceStore((state) => state.accounts);
+  const access = useProductAccessStore((state) => state.access);
+  const canUseAdvancedTracking = hasCapability(access, 'advanced_planning');
+  const [trackingMode, setTrackingMode] = useState<'manual' | 'account_balance'>('manual');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const [
     name,
@@ -187,6 +196,18 @@ export default function GoalNewScreen() {
       return;
     }
 
+    if (trackingMode === 'account_balance' && !selectedAccountId) {
+      setDialog({ title: 'Konto auswählen', message: 'Bitte wähle das Konto, dessen Kontostand dieses Sparziel verfolgen soll.', confirmLabel: 'Verstanden' });
+      return;
+    }
+
+    if (trackingMode === 'account_balance' && !canUseAdvancedTracking) {
+      setTrackingMode('manual');
+      setSelectedAccountId(null);
+      setDialog({ title: 'Premium erforderlich', message: 'Konto-verknüpfte Sparziele sind eine Premium-Funktion. Dein manueller Entwurf bleibt erhalten.', confirmLabel: 'Verstanden' });
+      return;
+    }
+
     let startingMinor =
       0;
 
@@ -245,6 +266,13 @@ export default function GoalNewScreen() {
         targetDate:
           normalizedDate ||
           undefined,
+
+        trackingMode,
+
+        linkedAccountId:
+          trackingMode === 'account_balance'
+            ? selectedAccountId ?? undefined
+            : undefined,
       });
 
       await refreshFinanceData();
@@ -402,6 +430,52 @@ export default function GoalNewScreen() {
           }
         />
 
+        <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.xl, marginBottom: spacing.sm }]}>FORTSCHRITT</Text>
+
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <FinanceButton
+            label="Manuell"
+            size="small"
+            variant={trackingMode === 'manual' ? 'primary' : 'secondary'}
+            onPress={() => { setTrackingMode('manual'); setSelectedAccountId(null); }}
+            style={{ flex: 1 }}
+          />
+          <FinanceButton
+            label="Mit Konto"
+            size="small"
+            variant={trackingMode === 'account_balance' ? 'primary' : 'secondary'}
+            onPress={() => {
+              if (canUseAdvancedTracking) setTrackingMode('account_balance');
+              else router.push('/premium' as never);
+            }}
+            style={{ flex: 1 }}
+          />
+        </View>
+
+        {!canUseAdvancedTracking ? (
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.sm }]}>Premium kann den Fortschritt direkt aus einem verknüpften Bankkonto übernehmen.</Text>
+        ) : null}
+
+        {trackingMode === 'account_balance' ? (
+          <View style={{ marginTop: spacing.md, gap: spacing.xs }}>
+            {accounts.map((account) => (
+              <FinancePressable
+                key={account.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: selectedAccountId === account.id }}
+                onPress={() => setSelectedAccountId(account.id)}
+                intent="navigation"
+                style={{ backgroundColor: selectedAccountId === account.id ? colors.surfaceInteractive : colors.surface, borderRadius: 12, borderWidth: 1, borderColor: selectedAccountId === account.id ? colors.primary : colors.border }}
+                contentStyle={{ padding: spacing.md }}
+              >
+                <Text style={[typography.bodyMedium, { color: colors.text }]}>{account.name}</Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, marginTop: spacing.xxs }]}>{account.institutionName ?? account.providerId} · {account.type === 'savings' ? 'Sparkonto' : 'Konto'}</Text>
+              </FinancePressable>
+            ))}
+            {accounts.length === 0 ? <Text style={[typography.caption, { color: colors.textSecondary }]}>Noch kein verfügbares Konto. Verbinde zuerst eine Bank.</Text> : null}
+          </View>
+        ) : null}
+
         <FinanceTextField
           containerStyle={{
             marginTop:
@@ -439,7 +513,7 @@ export default function GoalNewScreen() {
             startingInputRef
           }
 
-          label="STARTBETRAG (EUR, OPTIONAL)"
+          label={trackingMode === 'account_balance' ? 'STARTBETRAG (NICHT VERWENDET)' : 'STARTBETRAG (EUR, OPTIONAL)'}
 
           value={
             startingAmount
@@ -462,6 +536,8 @@ export default function GoalNewScreen() {
           blurOnSubmit={
             false
           }
+
+          helperText={trackingMode === 'account_balance' ? 'Der verknüpfte Kontostand ist die einzige Fortschrittsquelle.' : undefined}
         />
 
         <FinanceTextField

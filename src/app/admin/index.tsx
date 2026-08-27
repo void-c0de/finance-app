@@ -30,6 +30,8 @@ export default function AdminScreen() {
           <SettingsRow title="Release-Steuerung" description="Patch Notes und Mindestversionen veröffentlichen" value="›" onPress={() => router.push('/admin/releases' as Href)} />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <SettingsRow title="Nutzer-Entitlements" description="Premium gezielt gewähren oder entziehen" value="›" onPress={() => router.push('/admin/users' as Href)} />
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <SettingsRow title="Diagnose" description="Sichere Betriebs- und Supportinformationen" value="›" onPress={() => router.push('/admin/diagnostics' as Href)} />
         </FinanceCard>
       </ScrollView>
     </SafeAreaView>
