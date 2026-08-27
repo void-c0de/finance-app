@@ -14,6 +14,11 @@ import {
 } from '@/services/merchantNormalization';
 
 import { buildBudgetProgress } from '@/services/budgetInsightsCore';
+import {
+    buildRecurringInsights,
+    type RecurringItem,
+    type RecurringSummary,
+} from '@/services/recurringInsightsCore';
 
 import type {
     Budget,
@@ -82,6 +87,9 @@ export type UpcomingRecurringInsight = {
   currency: string;
   nextDate: string;
   driftPercent?: number;
+  kind: RecurringItem['kind'];
+  confidence: RecurringItem['confidence'];
+  reason: string;
 };
 
 export type FinanceInsights = {
@@ -105,6 +113,12 @@ export type FinanceInsights = {
 
   upcomingRecurring:
     UpcomingRecurringInsight[];
+
+  recurringItems:
+    RecurringItem[];
+
+  recurringSummary:
+    RecurringSummary;
 
   categorySpending:
     CategorySpendingInsight[];
@@ -365,84 +379,25 @@ export function buildFinanceInsights(
       )
     );
 
-  const recurringGroups =
-    new Map<string, Transaction[]>();
+  const recurring = buildRecurringInsights(input.transactions, {
+    normalizeMerchant: normalizeMerchantName,
+    referenceDate: input.referenceDate,
+  });
 
-  for (const transaction of input.transactions) {
-    if (
-      !transaction.isRecurring ||
-      transaction.isInternalTransfer ||
-      transaction.direction !== 'expense' ||
-      transaction.bookingStatus === 'pending'
-    ) {
-      continue;
-    }
+  const projectedRecurringMinor = recurring.summary.monthlyCommittedMinor;
 
-    const title = normalizeMerchantName(
-      transaction.counterpartyName ?? transaction.description,
-    );
-
-    const key = `${transaction.accountId}|${transaction.currency}|${title}`;
-    const group = recurringGroups.get(key) ?? [];
-    group.push(transaction);
-    recurringGroups.set(key, group);
-  }
-
-  let projectedRecurringMinor = 0;
-  const upcomingRecurring: UpcomingRecurringInsight[] = [];
-  const now = input.referenceDate ?? new Date();
-
-  for (const [key, group] of recurringGroups) {
-    group.sort(
-      (left, right) => Date.parse(left.bookingDate) - Date.parse(right.bookingDate),
-    );
-
-    const latest = group[group.length - 1];
-    const previous = group[group.length - 2];
-
-    if (!latest || !previous) {
-      continue;
-    }
-
-    const intervalDays = Math.max(
-      1,
-      (Date.parse(latest.bookingDate) - Date.parse(previous.bookingDate)) /
-        (24 * 60 * 60 * 1000),
-    );
-
-    const monthlyMultiplier = Math.min(5, Math.max(1 / 12, 30 / intervalDays));
-    projectedRecurringMinor += Math.round(latest.amountMinor * monthlyMultiplier);
-
-    let nextTimestamp = Date.parse(latest.bookingDate) + intervalDays * 24 * 60 * 60 * 1000;
-
-    while (nextTimestamp < now.getTime()) {
-      nextTimestamp += intervalDays * 24 * 60 * 60 * 1000;
-    }
-
-    if (nextTimestamp <= now.getTime() + 45 * 24 * 60 * 60 * 1000) {
-      const difference = latest.amountMinor - previous.amountMinor;
-      const driftPercent = previous.amountMinor > 0
-        ? difference / previous.amountMinor
-        : 0;
-
-      upcomingRecurring.push({
-        key,
-        title: normalizeMerchantName(
-          latest.counterpartyName ?? latest.description,
-        ),
-        amountMinor: latest.amountMinor,
-        currency: latest.currency,
-        nextDate: new Date(nextTimestamp).toISOString().slice(0, 10),
-        driftPercent:
-          Math.abs(difference) >= 100 && Math.abs(driftPercent) >= 0.1
-            ? driftPercent
-            : undefined,
-      });
-    }
-  }
-
-  upcomingRecurring.sort(
-    (left, right) => left.nextDate.localeCompare(right.nextDate),
+  const upcomingRecurring: UpcomingRecurringInsight[] = recurring.upcoming.map(
+    (item) => ({
+      key: item.key,
+      title: item.title,
+      amountMinor: item.amountMinor,
+      currency: item.currency,
+      nextDate: item.nextDate,
+      driftPercent: item.driftPercent,
+      kind: item.kind,
+      confidence: item.confidence,
+      reason: item.reason,
+    }),
   );
 
   const spendingByCategory =
@@ -484,6 +439,12 @@ export function buildFinanceInsights(
     projectedRecurringMinor,
 
     upcomingRecurring,
+
+    recurringItems:
+      recurring.items,
+
+    recurringSummary:
+      recurring.summary,
 
     categorySpending,
 

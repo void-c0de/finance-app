@@ -68,3 +68,41 @@ Prepared patch-note copy for the compatible milestone:
 An AAB produced by `bundleRelease` is only a technical Play-delivery candidate while the release build uses the debug keystore. Public distribution requires a protected upload key or EAS-managed credentials. Keystores, aliases and passwords remain outside Git.
 
 Release metadata is published from **Mehr → Administration → Release-Steuerung**. This action is authorized server-side and audited. Paid billing and public store distribution remain separate milestones.
+
+## 1.2.0 / versionCode 3 — native boundary (2026-08-27)
+
+This is a deliberate native generation, not a marketing bump. It carries the
+`./plugins/withFinanceUploadSigning` config plugin (a `build.gradle` prebuild
+mod) plus recurring-payment intelligence, dashboard intelligence cards and the
+savings-goal lifecycle formalisation.
+
+Runtime boundary rules for 1.2.0:
+
+- `expo.version` is `1.2.0`; `android.versionCode` is `3`; `package.json`
+  version matches. `runtimeVersion.policy` stays `appVersion`, so the runtime is
+  `1.2.0`.
+- A `1.1.0` device must **not** receive any of this as an OTA. The
+  `expo-updates` edge function already enforces exact `expo-runtime-version`
+  header matching; `npm run test:runtime-boundary` additionally asserts that the
+  published `docs/api/manifest.json` never advertises a runtime newer than the
+  app and that its asset URLs carry the manifest's own runtime segment.
+- The OTA channel for `1.2.0` starts empty. `1.2.0` devices run the embedded
+  bundle until a `1.2.0` OTA is published with `npm run publish:ota` from a JS
+  build produced against the `1.2.0` binary.
+- The stale `docs/updates/1.0.0` manifest stays in place; it can only ever be
+  served to a hypothetical `1.0.0` client and is fail-closed for everyone else.
+- If a required native upgrade must be signalled to older installs, publish an
+  `app_releases` row for `android` with `minimum_native_version = "1.2.0"`;
+  `requiresNativeUpgrade` then shows the blocking prompt on `1.1.0`.
+
+Prepared German patch notes for 1.2.0:
+
+- Abo-Erkennung: Netflix, Strom, Versicherung & Co. werden als Abo, Rechnung, Einkommen oder „unbestätigt" eingeordnet
+- Fixkosten-Vorschau: nächste fällige wiederkehrende Zahlung und monatlich gebundene Kosten im Dashboard
+- Konto-verknüpfte Sparziele: Kontostand ist die einzige Fortschrittsquelle, keine Doppelzählung bei Eigenüberweisungen
+- Dashboard beantwortet klarer „Was passiert mit meinem Geld?" (Budgetrest, unkategorisierte Umsätze, wiederkehrende Kosten)
+- Schnellerer Planungs-Start und echte Monatsbudgets aus 1.1.x bleiben erhalten
+
+Signing status for 1.2.0 is unchanged: without `FINANCE_UPLOAD_*` the release
+build falls back to the debug keystore (development artifact only). A protected
+upload key or EAS-managed credential is still required before Play upload.
