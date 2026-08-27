@@ -49,7 +49,7 @@ action · ❌ not started.
 | --- | --- |
 | `npx tsc --noEmit` / `npm run lint` / `npx expo-doctor` clean | ✅ |
 | All `npm run test:*` green (35 suites) + CI green on origin/master | ✅ |
-| Supabase migration parity + `db lint` | ✅ (14 migrations) |
+| Supabase migration parity + `db lint` | ✅ (13 migrations) |
 | Live rollback authz tests (deletion, billing) | ✅ (`supabase/tests/*.sql`) |
 | Edge Functions deployed + live-tested | ✅ `finalize-account-deletion`, `verify-purchase`, `billing-webhook` |
 | Runtime boundary test (1.5.0 / vc6) | ✅ |

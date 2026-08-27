@@ -403,4 +403,4 @@ an RC2 OTA is prepared but not published.
   exposure, no safe fix without an SDK downgrade.
 
 3 migrations pushed this milestone (`20260828120000`, `20260828140000`), db lint
-clean, parity 14/14. 3 Edge Functions deployed/updated.
+clean, parity 13/13. 3 Edge Functions deployed/updated.
