@@ -1,7 +1,27 @@
 # Release checklist — Finance App → Google Play
 
-Concrete gap list from current (Aug 2026) Play requirements. ✅ done · ⏳ ready,
-needs one external action · ❌ not started.
+**This is the navigation page for the release process.** Concrete gap list from
+current (Aug 2026) Play requirements. ✅ done · ⏳ ready, needs one external
+action · ❌ not started.
+
+## Document map
+
+| Doc | Purpose |
+| --- | --- |
+| [`PLAY_SUBMISSION_PACK.md`](./PLAY_SUBMISSION_PACK.md) | Copy/paste values for the Play Console (identity, URLs, review notes) |
+| [`PLAY_DATA_SAFETY.md`](./PLAY_DATA_SAFETY.md) | Source of truth for the Data Safety form |
+| [`PLAY_FINANCIAL_FEATURES.md`](./PLAY_FINANCIAL_FEATURES.md) | Source of truth for the Financial Features declaration |
+| [`STORE_LISTING.md`](./STORE_LISTING.md) | DE/EN listing copy + banking disclaimer + "claims not to make" |
+| [`SCREENSHOT_PLAN.md`](./SCREENSHOT_PLAN.md) | Synthetic-data screenshot capture plan |
+| [`CLOSED_TEST_CHECKLIST.md`](./CLOSED_TEST_CHECKLIST.md) | 12-testers / 14-days closed test |
+| [`REAL_USER_QA.md`](./REAL_USER_QA.md) | Tester script |
+| [`PRIVACY_DATA_MAP.md`](./PRIVACY_DATA_MAP.md) | Engineering data-flow reference |
+| [`THREAT_MODEL.md`](./THREAT_MODEL.md) | Per-threat mitigation / residual risk |
+| [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md) | The facts only the maintainer can supply |
+| [`BILLING_SERVER_CONTRACT.md`](./BILLING_SERVER_CONTRACT.md) | Purchase-verification architecture (built + what's left) |
+| [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md) | Install on a real iPhone for 0 € |
+| [`RELEASE.md`](./RELEASE.md) | Native release contract + per-version history |
+| [`PRODUCT.md`](./PRODUCT.md) · [`PLAN.md`](./PLAN.md) | Product rules · status |
 
 ## Policy / compliance
 
@@ -27,28 +47,46 @@ needs one external action · ❌ not started.
 
 | Item | Status |
 | --- | --- |
-| `npx tsc --noEmit` clean | ✅ |
-| `npm run lint` clean | ✅ |
-| `npx expo-doctor` 21/21 | ✅ |
-| All `npm run test:*` green | ✅ |
-| Supabase migration parity + `db lint` | ✅ |
-| Deletion authorization rollback test | ✅ (`supabase/tests/data_lifecycle.sql`) |
-| `finalize-account-deletion` Edge Function deployed + live-tested | ✅ |
+| `npx tsc --noEmit` / `npm run lint` / `npx expo-doctor` clean | ✅ |
+| All `npm run test:*` green (35 suites) + CI green on origin/master | ✅ |
+| Supabase migration parity + `db lint` | ✅ (14 migrations) |
+| Live rollback authz tests (deletion, billing) | ✅ (`supabase/tests/*.sql`) |
+| Edge Functions deployed + live-tested | ✅ `finalize-account-deletion`, `verify-purchase`, `billing-webhook` |
 | Runtime boundary test (1.5.0 / vc6) | ✅ |
-| AAB structurally validated (bundletool) | ✅ (see `RELEASE.md`) |
+| AAB structurally validated (bundletool), download split ~33 MB | ✅ |
 | Cold start on a physical Android 16 device, no Metro | ✅ |
+| Windowed transaction list (no freeze at 10k+) | ✅ |
+| Synthetic large-dataset perf test | ✅ (`test:perf-scale`) |
+| Debug-log retention (14 days) | ✅ (`prune_my_debug_logs`) |
+| Admin: deletion panel + audit-log viewer | ✅ |
+| Analytics month-range (3/6/12/24) | ✅ |
+| Multi-currency: EUR base, foreign partitioned + labelled | ✅ |
+| Demo data mode (screenshots/QA) | ✅ (`/demo`, Superuser/dev) |
+| Support diagnostic bundle (redacted) | ✅ |
+
+## RC2 — what changed since RC1
+
+Pure JS/server/web/CI + one config change; **native stays 1.5.0 / versionCode
+6 / runtime 1.5.0**. Nothing here is a native boundary → an OTA to 1.5.0 devices
+is prepared but not published. iOS config was added (bundle id, Face ID string,
+SQLCipher confirmed) — no Android impact.
 
 ## Version
 
-- Native generation **1.5.0 / versionCode 6 / runtime 1.5.0** (RC1).
-- Reason for the bump from 1.4.0: native manifest hardening (permission removal,
-  `allowBackup=false`, app label) — not OTA-deliverable to 1.4.0 devices.
-- OTA: the 1.5.0 channel starts empty; devices run the embedded bundle.
+- Native generation **1.5.0 / versionCode 6 / runtime 1.5.0**.
+- OTA: the 1.5.0 channel starts empty; devices run the embedded bundle. An RC2
+  OTA can be published when the release process authorizes it (`npm run publish:ota`).
 
 ## The only external blockers
 
 1. **Play upload keystore** (`FINANCE_UPLOAD_*`) — to produce a Play-signable AAB.
 2. **Google Play Console access** — to transcribe Data Safety / Financial
    Features, upload the AAB, set up the closed test, complete IARC.
-3. **Legal fields** in the privacy policy (`[BITTE ERGÄNZEN]`).
-4. **Tink production agreement** — only needed to leave sandbox; not a store blocker.
+3. **Legal fields** — see [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md).
+4. **Google Play billing credentials** (Play Console products + a Google Cloud
+   service-account key + Pub/Sub) — only to turn on real purchases. Coupons /
+   admin grants deliver Premium meanwhile. See `BILLING_SERVER_CONTRACT.md`.
+5. **Tink production agreement** — only to leave sandbox; not a store blocker.
+6. **iOS**: a Mac *or* the GitHub macOS runner with Xcode 26 for the final
+   compile step — see [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md).
+   Not an Android/Play blocker.
