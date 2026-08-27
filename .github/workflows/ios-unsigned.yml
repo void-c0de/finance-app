@@ -13,8 +13,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
-    timeout-minutes: 45
+    runs-on: macos-latest
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 
@@ -23,8 +23,14 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Select the newest installed Xcode
+        run: |
+          set -eo pipefail
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+          swift --version
 
       - run: npm ci
 
@@ -42,7 +48,8 @@ jobs:
         run: |
           set -eo pipefail
           WORKSPACE=$(ls -d *.xcworkspace | head -1)
-          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).workspace.schemes[0]))")
+          # pick the app scheme, not EASClient / Pods
+          SCHEME=$(xcodebuild -workspace "$WORKSPACE" -list -json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const all=JSON.parse(s).workspace.schemes;console.log(all.find(x=>!/^EASClient$|^Pods/.test(x))||all[0]);})")
           echo "Workspace=$WORKSPACE Scheme=$SCHEME"
           xcodebuild \
             -workspace "$WORKSPACE" \
@@ -50,6 +57,7 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
+            -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
