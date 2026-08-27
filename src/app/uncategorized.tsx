@@ -5,7 +5,6 @@ import {
 } from 'react';
 
 import {
-    type Href,
     router,
 } from 'expo-router';
 
@@ -73,7 +72,12 @@ import {
 
 import {
     hasCapability,
+    type PremiumGateContext,
 } from '@/services/entitlementCore';
+
+import {
+    PremiumSheet,
+} from '@/components/premium/PremiumSheet';
 
 import {
     useProductAccessStore,
@@ -137,6 +141,11 @@ export default function UncategorizedScreen() {
       access,
       'advanced_category_rules',
     );
+
+  const [
+    premiumGate,
+    setPremiumGate,
+  ] = useState<PremiumGateContext | null>(null);
 
   /*
    * Review-Queue:
@@ -672,7 +681,7 @@ export default function UncategorizedScreen() {
                               <FinancePressable
                                 accessibilityRole="button"
                                 accessibilityLabel="Premium für automatische Händlerregeln ansehen"
-                                onPress={() => router.push('/premium' as Href)}
+                                onPress={() => setPremiumGate('category_rules')}
                                 intent="navigation"
                                 style={[
                                   styles.premiumHint,
@@ -732,6 +741,11 @@ export default function UncategorizedScreen() {
           )}
         </View>
       </ScrollView>
+
+      <PremiumSheet
+        context={premiumGate}
+        onClose={() => setPremiumGate(null)}
+      />
     </SafeAreaView>
   );
 }

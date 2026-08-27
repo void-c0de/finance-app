@@ -140,12 +140,8 @@ export default function CategoryRulesScreen() {
   }
 
   useEffect(() => {
-    if (access.isPremium) {
-      void loadRules();
-    } else {
-      setIsLoading(false);
-    }
-  }, [access.isPremium]);
+    void loadRules();
+  }, []);
 
   function categoryNameFor(
     categoryId:
@@ -228,7 +224,7 @@ export default function CategoryRulesScreen() {
     );
   }
 
-  if (!access.isPremium) {
+  if (!access.isPremium && !isLoading && rules.length === 0) {
     return (
       <SafeAreaView
         edges={['top', 'bottom']}
@@ -410,6 +406,14 @@ export default function CategoryRulesScreen() {
         >
           REGELN ({rules.length})
         </Text>
+
+        {!access.isPremium && rules.length > 0 ? (
+          <FinanceCard style={{ marginBottom: spacing.md }}>
+            <Text style={[typography.small, { color: colors.textSecondary }]}>
+              Deine bestehenden Regeln bleiben aktiv und du kannst sie hier verwalten. Neue automatische Regeln entstehen wieder mit Premium.
+            </Text>
+          </FinanceCard>
+        ) : null}
 
         {isLoading ? (
         <Text style={[typography.caption, { color: colors.textMuted }]}>
