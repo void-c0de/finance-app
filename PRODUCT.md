@@ -33,7 +33,7 @@ boolean.
 | Pillar | Premium value |
 | --- | --- |
 | **Automatisieren** | Reusable merchant/category rules; account-linked and transaction-rule savings automation |
-| **Verstehen** | Month-over-month comparison, multi-month category & commitment trends, abo price-change detection, missed-payment intelligence, 30/60/90-day cashflow forecast |
+| **Verstehen** | Month-over-month comparison, multi-month category & commitment trends, abo price-change detection, the full missed-payment analysis on `/analytics`, 30/60/90-day cashflow forecast |
 | **Planen** | Unlimited budgets and savings goals; advanced automated planning |
 | **Personalisieren** | Six Premium themes (Ozean, Smaragd, Rosé, Violett, Graphit, Mitternacht) |
 | **Daten** | Budgets / savings / recurring CSV; a versioned full finance-backup JSON |
@@ -156,7 +156,7 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 - `attentionCore` is one pure, deterministic model over the independent "needs attention" concepts: bank-connection health, over-budget categories, a failed cloud sync, uncategorized expenses and uncertain recurring candidates.
 - Items are prioritized `critical` → `action_required` → `review` → `informational`. Transient harmless states (`temporarily_unavailable`) never escalate past `informational`; a `revoked` bank connection is `critical`.
 - The dashboard surfaces the top three near the top of the feed with a priority-coloured accent; each item deep-links to its recovery screen. Connection health never hides or deletes historical transactions.
-- Action-critical alerts (bank revoked / consent expired / reconnect, over-budget, failed sync, uncategorized) are **always Standard** — safety is never paywalled. Deeper financial attention (abo price changes, long-term pressure) is Premium and never blocks a critical alert.
+- Action-critical alerts (bank revoked / consent expired / reconnect, over-budget, failed sync, uncategorized) are **always Standard** — safety is never paywalled. A missed-recurring nudge ("erwartete Zahlung bisher nicht erkannt") is also Standard because it is a review-level "did you forget to check something" prompt, not deep analysis. The full price-change / missed-payment / trend analysis lives on the Premium `/analytics` screen and never blocks a critical alert.
 
 ## Themes
 
