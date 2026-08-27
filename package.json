@@ -93,7 +93,8 @@
     "test:currency-scope": "node --experimental-strip-types scripts/test-currency-scope.mjs",
     "test:billing-server": "node scripts/test-billing-server.mjs",
     "test:ios-config": "node scripts/test-ios-config.mjs",
-    "test:perf-scale": "node --experimental-strip-types scripts/test-perf-scale.mjs"
+    "test:perf-scale": "node --experimental-strip-types scripts/test-perf-scale.mjs",
+    "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs"
   },
   "private": true
 }

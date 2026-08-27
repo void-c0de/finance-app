@@ -12,6 +12,7 @@ import { TypedConfirmSheet, type TypedConfirmConfig } from '@/components/data/Ty
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { performFinanceHaptic } from '@/services/haptics';
 import { exportAndShare } from '@/services/exportService';
+import { createAndShareSupportBundle } from '@/services/supportDiagnostics';
 import { countUnsyncedChanges } from '@/services/pendingSyncStatus';
 import { wipeLocalFinanceData } from '@/services/localDataReset';
 import {
@@ -77,6 +78,22 @@ export default function DataPrivacyScreen() {
         setDialog({ title: 'Teilen nicht verfügbar', message: 'Das System-Teilen-Menü steht auf diesem Gerät nicht bereit.', confirmLabel: 'Verstanden' });
       } else if (result === 'error') {
         setDialog({ title: 'Backup fehlgeschlagen', message: 'Bitte erneut versuchen. Es wurde nichts hochgeladen.', confirmLabel: 'Verstanden' });
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function createSupportBundle() {
+    if (busy) return;
+    setBusy('support');
+    try {
+      await performFinanceHaptic('selection');
+      const result = await createAndShareSupportBundle();
+      if (result === 'unavailable') {
+        setDialog({ title: 'Teilen nicht verfügbar', message: 'Das System-Teilen-Menü steht auf diesem Gerät nicht bereit.', confirmLabel: 'OK' });
+      } else if (result === 'error') {
+        setDialog({ title: 'Diagnose fehlgeschlagen', message: 'Bitte erneut versuchen.', confirmLabel: 'OK' });
       }
     } finally {
       setBusy(null);
@@ -266,6 +283,16 @@ export default function DataPrivacyScreen() {
             description={signedIn ? 'Angemeldet · Ende-zu-Ende dir zugeordnet' : 'Kein Konto verbunden'}
             icon={<Text style={[styles.glyph, { color: colors.primary }]}>●</Text>}
             onPress={() => router.push('/cloud-account' as Href)}
+          />
+        </FinanceCard>
+
+        <Text style={[typography.caption, styles.label, { color: colors.textMuted, marginTop: spacing.xxl }]}>SUPPORT</Text>
+        <FinanceCard padded={false}>
+          <SettingsRow
+            title="Diagnose für Support erstellen"
+            description="Redigierte technische Zusammenfassung – ohne Beträge, Umsätze oder Zugangsdaten"
+            icon={<Text style={[styles.glyph, { color: colors.info }]}>◔</Text>}
+            onPress={() => void createSupportBundle()}
           />
         </FinanceCard>
 
