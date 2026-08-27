@@ -44,4 +44,58 @@ const spending = buildMonthlyCategorySpending([
 assert.equal(spending.get('food'), 2_000, 'Nur gebuchte, eigene, kategorisierte Ausgaben des Monats zählen');
 assert.equal(spending.has('uncategorized'), false, 'Nicht kategorisierte Ausgaben landen in keinem Budget');
 
+// --- Randfälle (WS-J) ---------------------------------------------------
+
+// Monatsgrenze: 01. und letzter Tag desselben Monats zählen, Nachbarmonate nicht.
+const boundary = buildMonthlyCategorySpending([
+  { id: 'a', bookingDate: '2026-08-01', direction: 'expense', amountMinor: 100, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false },
+  { id: 'b', bookingDate: '2026-08-31', direction: 'expense', amountMinor: 200, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false },
+  { id: 'c', bookingDate: '2026-07-31', direction: 'expense', amountMinor: 999, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false },
+  { id: 'd', bookingDate: '2026-09-01', direction: 'expense', amountMinor: 999, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false },
+], new Date('2026-08-15T12:00:00Z'));
+assert.equal(boundary.get('food'), 300, 'Monatsgrenzen exakt: nur Augustumsätze');
+
+// Erstattung / negativer Ausgabenbetrag: reduziert die Kategorieausgabe.
+const refund = buildMonthlyCategorySpending([
+  { id: 'r1', bookingDate: '2026-08-05', direction: 'expense', amountMinor: 5_000, categoryId: 'shop', bookingStatus: 'booked', isInternalTransfer: false },
+  { id: 'r2', bookingDate: '2026-08-06', direction: 'expense', amountMinor: -2_000, categoryId: 'shop', bookingStatus: 'booked', isInternalTransfer: false },
+], new Date('2026-08-15T12:00:00Z'));
+assert.equal(refund.get('shop'), 3_000, 'Erstattung (negative Ausgabe) senkt die Kategorieausgabe');
+
+// Gelöschte Kategorie: Ausgabe zeigt weiter auf die alte categoryId, aber ohne
+// passendes Budget entsteht kein Fortschritt; mit Budget bleibt der Name Fallback.
+const orphan = buildBudgetProgress({
+  categories: [],
+  budgets: [{ id: 'bo', categoryId: 'gone', name: 'Altes Budget', amountMinor: 1_000, period: 'monthly' }],
+  spendingByCategory: new Map([['gone', 1_500]]),
+});
+assert.equal(orphan[0].categoryName, 'Altes Budget', 'Ohne Kategorie greift der Budgetname');
+assert.equal(orphan[0].progress, 1.5);
+
+// Nullbudget: kein Fortschritt (Division vermieden), Rest = negative Ausgabe.
+const zero = buildBudgetProgress({
+  categories: [{ id: 'x', name: 'X' }],
+  budgets: [{ id: 'bz', categoryId: 'x', name: 'X', amountMinor: 0, period: 'monthly' }],
+  spendingByCategory: new Map([['x', 4_200]]),
+});
+assert.equal(zero[0].progress, 0, 'Nullbudget => kein Fortschritt statt Infinity');
+assert.equal(zero[0].remainingMinor, -4_200);
+
+// Nicht-monatliche Perioden werden ignoriert.
+const weekly = buildBudgetProgress({
+  categories: [{ id: 'x', name: 'X' }],
+  budgets: [{ id: 'bw', categoryId: 'x', name: 'X', amountMinor: 1_000, period: 'weekly' }],
+  spendingByCategory: new Map([['x', 500]]),
+});
+assert.equal(weekly.length, 0, 'Nur monatliche Budgets werden ausgewertet');
+
+// Sehr große Beträge bleiben exakt (Minor-Units sind ganze Zahlen).
+const big = buildBudgetProgress({
+  categories: [{ id: 'x', name: 'X' }],
+  budgets: [{ id: 'bb', categoryId: 'x', name: 'X', amountMinor: 900_000_000, period: 'monthly' }],
+  spendingByCategory: new Map([['x', 1_200_000_000]]),
+});
+assert.equal(big[0].remainingMinor, -300_000_000);
+assert.equal(big[0].progress, 1_200_000_000 / 900_000_000);
+
 console.log('Budget insights: all tests passed');

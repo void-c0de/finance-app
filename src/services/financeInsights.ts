@@ -13,7 +13,10 @@ import {
     normalizeMerchantName,
 } from '@/services/merchantNormalization';
 
-import { buildBudgetProgress } from '@/services/budgetInsightsCore';
+import {
+    buildBudgetProgress,
+    buildMonthlyCategorySpending,
+} from '@/services/budgetInsightsCore';
 import {
     buildRecurringInsights,
     type RecurringItem,
@@ -405,22 +408,17 @@ export function buildFinanceInsights(
     }),
   );
 
-  const spendingByCategory =
-    new Map(
-      categorySpending.map(
-        (
-          item
-        ) => [
-          item.categoryId,
-          item.amountMinor,
-        ]
-      )
-    );
-
+  /*
+   * Budgets nutzen dieselbe kanonische Monatswahrheit wie das Dashboard:
+   * eine einzige Funktion, keine parallele Implementierung.
+   */
   const budgetInsights = buildBudgetProgress({
     budgets: input.budgets,
     categories: input.categories,
-    spendingByCategory,
+    spendingByCategory: buildMonthlyCategorySpending(
+      input.transactions,
+      input.referenceDate,
+    ),
   });
 
   const classificationRate =
