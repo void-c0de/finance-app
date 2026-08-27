@@ -13,7 +13,8 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 - **DONE** Supabase auth + per-user cloud sync (LWW, tombstones, cursors).
   Merge semantics are a pure, tested core (`syncMergeCore`).
 - **DONE** Standalone Android release; embedded update; OTA gateway with strict
-  runtime-version matching. Native generation **1.4.0 / versionCode 5**.
+  runtime-version matching. Native generation **1.5.0 / versionCode 6** (RC1),
+  targetSdk 36 (Android 16).
 - **DONE** Server-authoritative Standard / Premium / Superuser, capability
   registry, coupons, admin center, release publishing, redacted diagnostics.
 - **DONE** Password security (zxcvbn-ts score ≥ 3, HIBP k-anonymity, fail-closed).
@@ -162,21 +163,30 @@ a cancellable grace window. Nothing is deleted inside the grace window.
 
 ## Release
 
-- **DONE** 1.4.0 / versionCode 5 native boundary (adds `expo-document-picker`
-  for backup import); runtime-boundary and release-config tests updated.
-  Previous: 1.3.0 / versionCode 4 (`expo-sharing` + `expo-file-system`).
+- **DONE** 1.5.0 / versionCode 6 / runtime 1.5.0 — **Release Candidate 1**.
+  Native boundary = manifest hardening (`SYSTEM_ALERT_WINDOW` removed,
+  `allowBackup=false`, real app label). targetSdk **already 36** — the 31 Aug
+  2026 Play deadline is met with no SDK change.
+- **DONE** `finalize-account-deletion` Edge Function **deployed** (server creds
+  auto-provided by the Supabase Edge runtime — the earlier "manual key" blocker
+  was wrong). Live-tested.
+- **DONE** Web account-deletion + privacy portal live on GitHub Pages
+  (`docs/` → `void-c0de.github.io/finance-app/`).
+- **DONE** Play readiness docs (`RELEASE_CHECKLIST.md` et al.); CI quality gate
+  (`.github/workflows/ci.yml`).
+- **DONE** Signing safety gate (`verify:release-signing --expect-production`).
 - **PARTIAL** Native artifacts — debug-signed APK/AAB build locally and
   cold-start clean on device; development/internal only.
 - **BLOCKED** Play upload — needs a protected upload key (`FINANCE_UPLOAD_*`) or
   EAS-managed credentials, held by the maintainer, never committed.
-- **BLOCKED** `finalize-account-deletion` Edge Function deploy — needs
-  `supabase functions deploy` + `SUPABASE_SERVICE_ROLE_KEY` secret. Cloud
-  finance-data deletion works without it.
+- **BLOCKED** Play Console actions (Data Safety, Financial Features, closed test,
+  IARC) — need the console.
 
 ## Not started
 
-- Paid billing (Google Play Billing / RevenueCat receipt verification). The
+- Paid billing (Google Play Billing v8+ / RevenueCat receipt verification). The
   entitlement model, Premium Center and `billingCore` are architecture-ready;
-  the client never grants itself Premium.
+  `BILLING_SERVER_CONTRACT.md` specs the Edge Functions. The client never grants
+  itself Premium. No obsolete billing library is present.
 - iOS.
 - Multi-currency goals and budgets.

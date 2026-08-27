@@ -279,6 +279,89 @@ Prepared German patch notes for 1.4.0:
 
 External blockers:
 - Play upload key (`FINANCE_UPLOAD_*`) — build stays debug-signed without it.
-- `finalize-account-deletion` Edge Function deploy (`supabase functions deploy`
-  + `SUPABASE_SERVICE_ROLE_KEY` secret). Cloud finance-data deletion is fully
-  functional without it; only the auth-user row removal waits on the deploy.
+- `finalize-account-deletion` Edge Function deploy — **RESOLVED in 1.5.0** (see below).
+
+## 1.5.0 / versionCode 6 — Release Candidate 1 (2026-08-27)
+
+Deliberate native generation. No new native module — the boundary is **native
+manifest hardening** that cannot be delivered by OTA to a 1.4.0 device:
+
+- `withReleaseHardening` config plugin removes **`SYSTEM_ALERT_WINDOW`** (Google
+  Play flags the "display over other apps" permission; the app never needs it —
+  it was only in the Expo template for the dev LogBox overlay) and sets
+  **`android:allowBackup="false"`** (the SQLCipher DB is unreadable without the
+  device-bound SecureStore key, which is never backed up — Android Auto Backup /
+  device transfer would only move a useless encrypted file; the app's own backup
+  + cloud sync is the sanctioned path).
+- App display label is now **"Finance App"** (was the `finance-app` placeholder).
+- `expo.version` → `1.5.0`, `android.versionCode` → `6`, `package.json` → `1.5.0`,
+  runtime `1.5.0`. `test:runtime-boundary` asserts this and
+  `requiresNativeUpgrade('1.4.0','1.5.0') === true`.
+
+### targetSdk / Android 16 (API 36)
+
+Verified — Finance App **already targets API 36** (merged manifest
+`targetSdkVersion="36"`, APK `aapt` `targetSdk=36`, `compileSdkVersion 36`). The
+31 Aug 2026 Play deadline is met with **no SDK change**. `edgeToEdgeEnabled=true`
+in `gradle.properties` (Android 16 enforces edge-to-edge); `react-native-safe-area-context`
+handles insets. `windowSoftInputMode=adjustResize` + `softwareKeyboardLayoutMode:resize`
+preserve the "no focused textbox covered by the keyboard" invariant. Android 16
+ignores `screenOrientation` locks on large screens for SDK-36 apps — acceptable,
+the app is phone-first.
+
+### Account-deletion Edge Function — deployed
+
+`supabase functions deploy finalize-account-deletion` → **live**, `verify_jwt=true`.
+Server credentials (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SECRET_KEYS`)
+are **auto-provided by the Supabase hosted Edge runtime** — nothing manual,
+nothing in Git. Caller identity from the platform-verified JWT `sub`; no request
+body, no target-user argument. Live-tested: unauth → 401, wrong method → 405,
+authed + no due request → 409 `not_due` (deletes nothing). The
+`p_allow_account` guard (migration `20260827180000`) means only the Edge
+Function finalises an `account` request; the opportunistic sync-time call
+handles `finance_data` only.
+
+### Web account deletion — live
+
+`https://void-c0de.github.io/finance-app/konto-loeschen.html` (GitHub Pages, from
+`docs/`). Publicly viewable (no login wall to see it), HTTPS, direct link.
+Email/password sign-in then `request_data_deletion` / `cancel_data_deletion` via
+the **publishable** key only. Verified in a real browser at the github.io origin:
+module loads through the CSP, cross-origin auth works, RPC round-trips, mobile
+375px layout has no horizontal scroll. Also: `datenschutz.html`, `support.html`,
+`passwort-neu.html`, `index.html`.
+
+### Signing
+
+`npm run verify:release-signing <artifact> --expect-production` fails (exit 1) if
+a candidate is debug-signed or the signature can't be read. `npm run release:android:aab`
+builds the AAB. Without `FINANCE_UPLOAD_*` the artifacts stay debug-signed
+(development only) — the gate makes that impossible to miss.
+
+### Play readiness docs
+
+`RELEASE_CHECKLIST.md`, `PLAY_DATA_SAFETY.md`, `PLAY_FINANCIAL_FEATURES.md`,
+`STORE_LISTING.md`, `CLOSED_TEST_CHECKLIST.md`, `PRIVACY_DATA_MAP.md`,
+`SCREENSHOT_PLAN.md`, `REAL_USER_QA.md`, `BILLING_SERVER_CONTRACT.md`.
+
+### Billing
+
+No Google Play Billing Library present → the "PBL v8 by 31 Aug 2026" deadline
+does **not** apply. `billingCore` holds the verification shapes + precedence;
+`BILLING_SERVER_CONTRACT.md` specifies the future Edge Functions. Premium Center
+shows `formatPriceLine(PREMIUM_PRICING)` — honest "prices follow" until configured.
+
+Prepared German patch notes for 1.5.0:
+
+- Konto- und Datenlöschung jetzt auch im Browser: void-c0de.github.io/finance-app
+- „Über anderen Apps anzeigen"-Berechtigung entfernt – die App braucht sie nicht
+- Auto-Backup deaktiviert: dein Gerätespeicher bleibt privat, Wiederherstellung läuft über Cloud-Sync und das App-Backup
+- Superuser: Übersicht offener Löschanträge
+- Kleinere Verbesserungen an Erststart-Hinweisen
+
+External blockers (only these):
+1. Play upload keystore (`FINANCE_UPLOAD_*`) → for a Play-signable AAB.
+2. Play Console access → Data Safety / Financial Features transcription, AAB
+   upload, closed-test setup, IARC rating.
+3. Legal fields in `docs/datenschutz.html` (`[BITTE ERGÄNZEN]`).
+4. Tink production agreement → only to leave sandbox; not a store blocker.

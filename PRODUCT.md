@@ -158,7 +158,7 @@ Four operations, four distinct safety models. They are never conflated in the UI
 - **Backup importieren** — free. `backupImportCore.inspectBackup` treats the file as untrusted: byte-size cap, JSON parse guard, format/version check, per-row field validation (id pattern, enum, ISO timestamp, **safe-integer money only**, string-length cap), duplicate-id rejection, required-FK integrity (broken → reject, never partial), optional-FK sanitised to null, prototype-pollution rejection. Then a preview (counts) before any write.
 - **Restore semantics** — a **merge**, never a blind replace. `backupRestoreService.applyRestore` runs one `withExclusiveTransactionAsync`; any failure rolls the whole thing back. Per row it applies last-writer-wins against the local state (`shouldApplyIncomingRow` semantics): an older backup row never overwrites a newer local row, and **never resurrects a newer local tombstone**. Restored rows keep their original backup `created_at`/`updated_at` so LWW stays correct against the cloud on the next sync. Bank connections are restored as `status = 'requires_action'` metadata only — an import never restores a bank authorisation.
 - **Lokale Daten zurücksetzen** — clears only the on-device SQLCipher rows and sync cursors. Cloud copy and account are untouched; a configured sync rebuilds the device on next run. `countUnsyncedChanges()` (mirrors the push predicate exactly) is shown first and **warns before unsynced local changes are lost**.
-- **Cloud-Finanzdaten löschen** / **Konto löschen** — server-authoritative. `request_data_deletion()` opens a **3-day cancellable grace window**; nothing is deleted during it. After it lapses, `finalize_my_due_deletion()` (called opportunistically at sync start — no scheduler, free-tier only) purges only the caller's `finance_*` rows in FK-safe order and the sync engine then wipes the local DB so the same run cannot re-upload deleted data. Account deletion additionally needs the `finalize-account-deletion` Edge Function (service-role `auth.admin.deleteUser` on the caller only) — deploying it is an external blocker; finance-data deletion works without it. Every function is `SECURITY DEFINER`, `search_path` pinned, `anon` revoked, and accepts **no target-user argument**. Typed `LÖSCHEN` / `ZURÜCKSETZEN` confirmation — safety friction, not confirm-shaming.
+- **Cloud-Finanzdaten löschen** / **Konto löschen** — server-authoritative, available **in app and on the web** (`void-c0de.github.io/finance-app/konto-loeschen.html` — publicly viewable, HTTPS, authenticated action). `request_data_deletion()` opens a **3-day cancellable grace window**; nothing is deleted during it. After it lapses, `finalize_my_due_deletion()` (called opportunistically at sync start — no scheduler, free-tier only) purges only the caller's `finance_*` rows in FK-safe order and the sync engine then wipes the local DB so the same run cannot re-upload deleted data. An `account` request is finalised **only** by the deployed `finalize-account-deletion` Edge Function (`p_allow_account` guard), which also removes the `auth.users` row via the auto-provided service credential — no manual secret. Every function is `SECURITY DEFINER`, `search_path` pinned, `anon` revoked, and accepts **no target-user argument**. Typed `LÖSCHEN` / `ZURÜCKSETZEN` confirmation — safety friction, not confirm-shaming.
 - New-device recovery derives every analytic (comparisons, trends, commitments, forecast, price changes, missed payments, budget/goal progress) at read time from synced base data — nothing derived needs to sync and nothing derived can be lost.
 
 ## Attention center
@@ -220,6 +220,33 @@ This protects every official app authentication flow. Supabase's paid leaked-pas
 - `resolveEntitlement` is the deterministic precedence rule across every source (`superuser`, `coupon`, `admin`, `google_play`, `revenuecat`, `store`, `migration`): the Superuser role wins outright; otherwise the candidate with the **latest** expiry wins and `permanent` beats any date — so a coupon or admin grant can only ever extend a running paid term, never shorten it. `mergePurchaseExpiry` mirrors the server-side coupon rule.
 - The authoritative rule is unchanged: a client purchase claim is not an entitlement. Only a server-verified `user_subscriptions` row grants Premium. `PurchaseVerificationRequest`/`Result` and `PREMIUM_PRODUCTS` (monthly/yearly) are shaped so a future Play Billing / RevenueCat → Edge-Function verification path drops in without an architecture change.
 - `scripts/test-billing-readiness.mjs` covers the precedence combinations (coupon→paid, paid→coupon, admin↔coupon order-independence, permanent, superuser, expired/revoked) and purchase-request validation.
+
+## Store readiness (Play)
+
+- **targetSdk 36** (Android 16) — verified in the merged manifest and the APK.
+  Meets the 31 Aug 2026 Play requirement with no SDK change.
+- **Permissions minimised**: INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC /
+  USE_FINGERPRINT, VIBRATE, and legacy storage capped at `maxSdkVersion 32`.
+  `SYSTEM_ALERT_WINDOW` is stripped by the `withReleaseHardening` plugin;
+  `test:android-permissions` enforces the allowlist against the built APK.
+- **`allowBackup=false`**: the encrypted DB is useless without the device-bound
+  key, so Auto Backup / device transfer would only move a broken state. The
+  app's own backup + cloud sync is the path.
+- **No third-party analytics / advertising / crash SDK** (dependency-scanned).
+  No advertising ID.
+- **Account deletion**: in app **and** on the web, data actually deleted (not
+  deactivated), 3-day cancellable grace only. Deletion URL and privacy URL are
+  live on GitHub Pages.
+- **Data Safety** and **Financial Features** answers are prepared as
+  source-of-truth docs (`PLAY_DATA_SAFETY.md`, `PLAY_FINANCIAL_FEATURES.md`):
+  account aggregation (read-only, via Tink) = yes; banking / payments / lending
+  / investing / crypto = no.
+- **No billing library** → the PBL v8 deadline does not apply yet. `billingCore`
+  + `BILLING_SERVER_CONTRACT.md` make the future path drop-in; the client never
+  grants itself Premium.
+- **Signing**: `verify:release-signing --expect-production` blocks a debug-signed
+  candidate. Remaining external blockers: the upload keystore and Play Console
+  access.
 
 ## Update product flow
 

@@ -87,7 +87,8 @@
     "test:themes": "node --experimental-strip-types scripts/test-themes.mjs",
     "test:backup-import": "node --experimental-strip-types scripts/test-backup-import.mjs",
     "test:billing-readiness": "node --experimental-strip-types scripts/test-billing-readiness.mjs",
-    "test:data-lifecycle": "node --experimental-strip-types scripts/test-data-lifecycle.mjs"
+    "test:data-lifecycle": "node --experimental-strip-types scripts/test-data-lifecycle.mjs",
+    "test:android-permissions": "node scripts/test-android-permissions.mjs"
   },
   "private": true
 }
