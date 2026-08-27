@@ -42,7 +42,8 @@ a cold start.
 
 Product access, Superuser authorization, Premium coupons and release metadata
 are documented in [`PRODUCT.md`](./PRODUCT.md). The repeatable standalone and
-OTA release contract is documented in [`RELEASE.md`](./RELEASE.md).
+OTA release contract is documented in [`RELEASE.md`](./RELEASE.md). A
+reality-based status and roadmap is in [`PLAN.md`](./PLAN.md).
 
 The currently used local APK is development-distribution only because it is
 debug-signed. Public distribution requires a private upload key and an Android

@@ -14,6 +14,8 @@ The app resolves access centrally through `ProductAccess` and `hasCapability`; s
 
 The executable source of truth is `PRODUCT_CAPABILITIES` in `src/services/entitlementCore.ts`. Product surfaces call `hasCapability`; they do not infer authorization from plan labels.
 
+Standard keeps every part of the user's own financial truth: accounts, transactions, manual categorization, the intelligent dashboard, basic monthly budgets, manual savings goals, and **basic visibility of confidently detected recurring payments** (classification and the next due payment). Premium (`premium_analytics`, `advanced_planning`, `advanced_category_rules`, `advanced_exports`) enhances rather than unlocks: reusable merchant rules, account-linked / rule-based savings goals, advanced recurring forecasting and comparisons, and exports. Superuser inherits every Premium capability from the role. A capability is never authorized client-side only, and never by a hardcoded identity.
+
 Premium is currently a real entitlement granted by coupon, administrator or the Superuser override. Paid recurring billing is deliberately not presented until a legitimate Play Billing/RevenueCat integration exists. A future billing provider must write into the same `user_subscriptions` model.
 
 Manual categorization of individual transactions remains a Standard capability. Premium users can turn a reviewed assignment into a reusable merchant rule for future transactions. Existing rules and manual assignments remain active after Premium expires; only creating and managing additional rules is locked. Financial history and user decisions are therefore never removed on downgrade.
