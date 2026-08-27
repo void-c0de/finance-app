@@ -60,6 +60,7 @@
     "test:recurring-insights": "node --experimental-strip-types scripts/test-recurring-insights.mjs",
     "test:pending": "node --experimental-strip-types scripts/test-pending-reconciliation.mjs",
     "test:sync-merge": "node --experimental-strip-types scripts/test-sync-merge.mjs",
+    "test:sqlite-repo": "node scripts/test-sqlite-repo.mjs",
     "test:offline-matrix": "node --experimental-strip-types scripts/test-offline-matrix.mjs",
     "test:transfers": "node --experimental-strip-types scripts/test-internal-transfers.mjs",
     "test:release-config": "node scripts/test-release-config.mjs",

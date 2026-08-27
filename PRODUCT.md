@@ -72,6 +72,24 @@ Future paid sources (`google_play`, `revenuecat`) are supported by the client mo
 - `buildCashflowForecast` is deliberately conservative: it projects only future recurring occurrences inside the horizon, labels each `known` / `likely` / `uncertain`, and never estimates discretionary spending. It exposes `projectedAfterKnown` and `projectedAfterLikely` (uncertain excluded). The dashboard states plainly that this is not a guaranteed month-end balance.
 - The forward 30/60/90-day forecast card is Premium (`premium_analytics`, Superuser inherits). Standard keeps every recurring number, the committed-cost total and the next due payment. If Premium expires, only the projection card disappears; the persisted `recurring_series` corrections and all history remain.
 
+### Price changes and missed payments
+
+- `detectCommitmentPriceChanges` compares the latest amount against the **median of prior amounts** (not just the previous one, so one-off spikes are ignored). Thresholds are confidence-aware: a small stable step counts for a subscription; only large, clear shifts count for a bill or utility, where amount variability is normal. Never presented as certain when the evidence is a single jump.
+- `detectMissedRecurring` flags a series whose expected next payment is past its grace window (derived from the historical cadence) with no matching charge. It requires ≥ 3 occurrences and a still-active series, and it produces **no signal at all when the bank data itself is stale** (newest booked transaction older than the freshness limit) — a bank that has not synced is never mistaken for a cancelled subscription. The wording is always "erwartete Zahlung bisher nicht erkannt", never "gekündigt".
+
+## Analytics
+
+- `analyticsCore` is a pure leaf: month-over-month comparison and multi-month category trends. All rules match the rest of the app — booked only, internal transfers excluded, refunds (negative expenses) reduce the sum, integer minor units, manual categorisation and recurring overrides respected.
+- "No data" is distinct from "zero": `hasBaseline` / `hasEnoughData` gate every comparison, and no percentage is produced when the previous month was zero.
+- Standard keeps the current-month truth it already has (dashboard, planning). The `/analytics` screen — historical comparison, trends, price changes, missed payments — is Premium (`premium_analytics`). Premium expiry hides the screen; no user data or correction is deleted.
+
+## Export and data portability
+
+- `exportCore` produces CSV from **user-owned data only**: transactions, budgets, savings goals, recurring series. No tokens, sessions, provider credentials, secret IDs, raw provider payloads or debug data. Integer-only money formatting; RFC-4180 escaping; UTF-8 BOM + CRLF so Excel reads umlauts.
+- Transactions CSV is a Standard capability (basic portability of your own data is never paywalled). Budgets / savings goals / recurring export is `advanced_exports` (Premium).
+- Delivery is the Android share sheet (`Share`). The app never uploads an export anywhere; the privacy note on the export screen says so. A direct file attachment needs a native module and is planned for the next native build.
+- Logout, local device reset, "export my data", cloud-data deletion and account deletion are treated as distinct operations with distinct safety models — see `PLAN.md`. Destructive cloud/account deletion is not implemented until its confirmation/audit model is mature.
+
 ## Attention center
 
 - `attentionCore` is one pure, deterministic model over the independent "needs attention" concepts: bank-connection health, over-budget categories, a failed cloud sync, uncategorized expenses and uncertain recurring candidates.

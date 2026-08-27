@@ -47,8 +47,19 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 - **DONE** Dashboard 2.0 — attention card near the top, premium forecast card,
   fixed-cost / next-payment / budget / savings cards; the standalone
   "Zu prüfen" card folded into the attention center.
-- **NEXT** Subscription/commitment trend history and CSV export behind
-  `advanced_exports`.
+- **DONE** Analytics 2.0 (`analyticsCore`): month-over-month comparison
+  (income / expenses / cashflow, no-baseline aware), top category changes,
+  6-month category trends with slope. Premium `/analytics` screen; Standard
+  keeps its current-month numbers.
+- **DONE** Commitment price-change detection (strict for subscriptions, loose
+  for utilities, one-off spikes ignored) and "expected payment did not appear"
+  detection — grace window from the cadence, and **no alert when the bank data
+  itself is stale**. Surfaced in the attention center and `/analytics`.
+- **DONE** CSV export (`exportCore`): transactions (Standard), budgets /
+  savings goals / recurring (Premium). Integer money, RFC-4180 escaping,
+  Excel-friendly BOM/CRLF. Delivered via the Android share sheet.
+- **NEXT** File-attachment export (needs `expo-sharing`, a native-boundary
+  addition for the next native build); month-range picker for `/analytics`.
 
 ## Banking
 
@@ -64,13 +75,64 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
 ## Offline & recovery
 
 - **DONE** Offline create/update/delete for budgets, goals, contributions,
-  categories, rules, connections; reconnect is idempotent (tombstone revive).
+  categories, rules, connections, recurring-series corrections; reconnect is
+  idempotent (tombstone revive).
 - **DONE** New-device pull rebuilds accounts, transactions, categories, rules,
-  budgets, goals, contributions and entitlements from the cloud.
+  budgets, goals, contributions, recurring-series and entitlements from the
+  cloud. Analytics carry **no** local-only source of truth — every number
+  (comparisons, trends, commitments, forecast, price changes, missed payments)
+  is derived from the synced base data at read time, so nothing extra needs to
+  sync and nothing derived can be lost.
 - **DONE** Offline-merge proof matrix (`test-offline-matrix.mjs`): two-device +
   server simulation over the real primitives covering every create/update/
   delete/reconnect/merge scenario, plus a parent-before-child table-order guard
   for recovery.
+- **DONE** Real SQL behaviour test (`test-sqlite-repo.mjs`, `node:sqlite`):
+  the exact `recurring_series` (v13) and `goal_contributions` (v9) DDL, proving
+  insert/update triggers, `ON CONFLICT(id)` upsert without duplication,
+  tombstone + `updated_at` advance, resurrection via re-upsert, active-row
+  filtering, the partial-unique idempotency index, and that a parent tombstone
+  never hard-deletes children. Limitation: plain SQLite, not SQLCipher — SQL
+  semantics are identical, encryption itself is not exercised here.
+
+## Data portability
+
+These are distinct operations with distinct safety models:
+
+| Operation | Effect | Status |
+| --- | --- | --- |
+| **Logout** (`Cloud-Konto`) | ends the Supabase session; local SQLCipher data untouched; sync stops | DONE |
+| **Export my data** (`Daten exportieren`) | read-only CSV of user-owned data via the share sheet; nothing deleted, nothing uploaded by the app | DONE (transactions Standard, rest Premium) |
+| **Local device reset** | wipes the on-device SQLCipher DB only; cloud copy remains and re-syncs on next login | exists in `Daten & Datenschutz`; **kept behind a destructive confirmation** |
+| **Delete cloud finance data** | server-side tombstone/removal of `finance_*` rows for the owner | **NOT built** — needs a mature, audited server RPC and a strong confirmation flow |
+| **Delete account** | Supabase auth user removal (cascades `finance_*` via `ON DELETE CASCADE`) | **NOT built** — irreversible; belongs to a dedicated account-deletion milestone |
+| **New-device restore** | fresh login → full pull rebuilds every synced domain in dependency order | DONE |
+
+Rule: destructive cloud/account deletion is not implemented until its safety
+model (confirmation, audit, undo window where possible) is mature. Basic
+portability (export, restore) is real now.
+
+## Billing readiness (not billing)
+
+- The entitlement model already carries `source: 'google_play' | 'revenuecat' |
+  'store' | 'coupon' | 'admin' | 'migration' | 'superuser'` and a single
+  `user_subscriptions`-shaped write path. Any future verified purchase grants
+  the **same** central Premium entitlement through `hasCapability`.
+- Required future flow: client purchase UI → Google Play Billing / RevenueCat →
+  **server-side** receipt/webhook verification → server writes the entitlement.
+  Premium is never granted because the client claims a purchase succeeded.
+- Not integrated now: no safe billing test infrastructure exists and coupon /
+  admin grants already deliver the product value. No fake "coming soon" UI
+  beyond the one honest line on the Premium screen.
+
+## Theming
+
+- Palettes (`system` / `light` / `dark` / `amoled`) are token maps in
+  `src/theme/finance-theme.ts` selected by `useThemeStore`; screens read
+  semantic tokens only. Adding a preset = adding one token map + one enum
+  value; no screen changes. Accessibility-oriented basics (light/dark/AMOLED)
+  are and stay free. Premium accent presets are a possible later addition and
+  need no architectural work. Not building a theme marketplace.
 
 ## Release
 

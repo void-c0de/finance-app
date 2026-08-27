@@ -161,6 +161,21 @@ owner-scoped RLS, applied to the linked project; `supabase db lint` clean).
   - Premium: 30-/60-/90-Tage-Cashflow-Prognose aus deinen Fixkosten
   - Gebundene Fixkosten sauber getrennt von unbestätigten Kandidaten
 
+### Analytics 2.0 & Export milestone — OTA-compatible with runtime 1.2.0 (2026-08-27)
+
+Pure JavaScript/TypeScript — no schema change, no server migration, no native
+module. `analyticsCore`, `exportCore`, the price-change / missed-payment
+detectors and the `/analytics` + `/export` screens run on the existing 1.2.0
+binary. CSV export uses the React Native core `Share` API (already in the
+binary); a file-attachment export would need `expo-sharing` and is deferred to
+the next native build. Deliverable as an OTA to runtime 1.2.0. No `1.3.0`.
+
+Prepared OTA patch-note copy:
+
+- Analysen (Premium): Monatsvergleich, Kategorie-Trends, Abo-Preisänderungen
+- „Erwartete Zahlung bisher nicht erkannt" – ohne frische Bankdaten kein Fehlalarm
+- Daten exportieren: Umsätze als CSV (Standard), Budgets/Sparziele/Abos (Premium)
+
 Signing status for 1.2.0 is unchanged: without `FINANCE_UPLOAD_*` the release
 build falls back to the debug keystore (development artifact only). A protected
 upload key or EAS-managed credential is still required before Play upload.
