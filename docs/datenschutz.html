@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Finance App – Datenschutzerklärung</title>
+<link rel="stylesheet" href="assets/portal.css">
+</head>
+<body>
+<header class="site">
+  <span class="mark" aria-hidden="true">F</span>
+  <strong>Finance App</strong>
+</header>
+<main class="wrap">
+  <h1>Datenschutzerklärung</h1>
+  <p class="lead">Diese Erklärung beschreibt, welche Daten die Android-App „Finance App" verarbeitet, zu welchem Zweck, wo sie gespeichert werden und welche Rechte du hast.</p>
+  <p class="small">Stand: August 2026. Dies ist eine an der tatsächlichen App-Architektur ausgerichtete technische Vorlage. Sie ersetzt keine anwaltliche Prüfung.</p>
+
+  <h2>1. Verantwortlicher</h2>
+  <p>
+    [BITTE ERGÄNZEN: Name / ggf. Firma]<br>
+    [BITTE ERGÄNZEN: Anschrift]<br>
+    E-Mail: [BITTE ERGÄNZEN: Kontakt-E-Mail]
+  </p>
+
+  <h2>2. Überblick: Wo liegen deine Daten?</h2>
+  <ul>
+    <li><strong>Auf deinem Gerät:</strong> Alle Finanzdaten werden lokal in einer mit SQLCipher <strong>verschlüsselten Datenbank</strong> gespeichert. Der Schlüssel liegt im Android-Keystore-gestützten Secure Store und verlässt das Gerät nie.</li>
+    <li><strong>In der Cloud (optional):</strong> Nur wenn du ein Konto verbindest, werden deine Finanzdaten zusätzlich in einer Supabase-/PostgreSQL-Datenbank gespeichert, damit du sie auf mehreren Geräten nutzen und wiederherstellen kannst. Zeilen sind per <em>Row Level Security</em> streng an dein Konto gebunden.</li>
+    <li><strong>Bei der Bank / beim Open-Banking-Anbieter (optional):</strong> Wenn du eine Bank verbindest, läuft dies über den Anbieter <strong>Tink</strong>. Die App speichert keine Bank-Zugangsdaten.</li>
+  </ul>
+
+  <h2>3. Konto &amp; Anmeldung</h2>
+  <p>Für die optionale Cloud-Synchronisierung verwendest du eine E-Mail-Adresse und ein Passwort (Supabase Auth). Verarbeitet werden: E-Mail-Adresse, ein serverseitig gehashtes Passwort, Zeitpunkte der An-/Abmeldung und eine zufällige Nutzer-ID.</p>
+  <p><strong>Passwort-Sicherheitsprüfung:</strong> Vor Registrierung oder Passwortänderung prüft die App die Passwortstärke lokal (zxcvbn) und gleicht das Passwort <strong>anonymisiert</strong> mit dem Dienst „Have I Been Pwned – Pwned Passwords" ab. Dabei wird nur der SHA-1-Hash gebildet und ausschließlich dessen <strong>erste fünf Zeichen</strong> an die API gesendet (k-Anonymität). Das Passwort selbst wird nie übertragen.</p>
+  <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertrag/Nutzung der von dir angeforderten Funktion).</p>
+
+  <h2>4. Finanzdaten</h2>
+  <p>Die App verarbeitet die von dir eingegebenen oder importierten Finanzinformationen: Konten- und Umsatzdaten, Kategorien, Budgets, Sparziele und Sparbeiträge, wiederkehrende Zahlungen, sowie daraus abgeleitete Auswertungen (Monatsvergleiche, Trends, Prognosen). Diese Daten dienen ausschließlich der Darstellung und Analyse für dich.</p>
+  <p>Ohne verbundenes Cloud-Konto bleiben diese Daten ausschließlich lokal auf deinem Gerät.</p>
+
+  <h2>5. Bankanbindung über Tink (Open Banking)</h2>
+  <p>Die Bankanbindung ist optional und erfolgt über <strong>Tink</strong> (Open Banking, ausschließlich <em>Lesezugriff</em> / Kontoinformationen – keine Zahlungsauslösung). Die Autorisierung findet auf einer von Tink gehosteten Seite statt; der Austausch des Autorisierungscodes gegen einen Zugriffstoken erfolgt serverseitig. Die App speichert <strong>keine</strong> Bank-Zugangsdaten oder Tink-Token auf dem Gerät.</p>
+  <p>Derzeit wird die Tink-<strong>Sandbox</strong> verwendet (Testumgebung). Ein Produktivbetrieb mit echten Bankdaten setzt eine gesonderte Vereinbarung mit Tink voraus und ist als solcher gekennzeichnet.</p>
+  <p>Für die Verarbeitung durch Tink gilt die Datenschutzerklärung von Tink (Tink AB, Schweden).</p>
+
+  <h2>6. Diagnose-Protokolle</h2>
+  <p>Zur Fehlersuche führt die App ein kurzes, rollierendes Protokoll technischer Ereignisse. <strong>Vor</strong> einer möglichen Übertragung werden potenziell personenbezogene Inhalte (u. a. Beträge, Namen, Tokens, E-Mail-Adressen) automatisch entfernt (Redaction). Nur wenn du ein Cloud-Konto verbunden hast, werden diese redigierten technischen Protokolle deinem Konto zugeordnet in Supabase gespeichert, um Synchronisierungsprobleme nachvollziehen zu können. Es werden keine Finanzinhalte übertragen.</p>
+  <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Fehlerbehebung und Stabilität).</p>
+
+  <h2>7. Kein Tracking, keine Werbung</h2>
+  <p>Die App enthält <strong>keine</strong> Analyse-, Tracking- oder Werbe-SDKs von Drittanbietern. Produkt-/Nutzungsmetriken (z. B. wie oft ein Premium-Hinweis angezeigt wurde) werden nur flüchtig im Arbeitsspeicher gezählt und <strong>nicht</strong> übertragen. Es werden keine Geräte-Werbe-IDs erhoben. Diese Website setzt keine Cookies außer der technisch notwendigen Anmelde-Sitzung auf der Kontolöschungs-Seite.</p>
+
+  <h2>8. Export &amp; Backup</h2>
+  <p>Exporte (CSV) und Finanz-Backups (JSON) werden nur auf deine ausdrückliche Aktion erzeugt, als Datei über das System-Teilen-Menü bereitgestellt und <strong>niemals automatisch hochgeladen</strong>. Backups enthalten deine Finanzdaten, aber keine Passwörter, Sitzungen oder Bank-Token.</p>
+
+  <h2>9. Premium</h2>
+  <p>Der Premium-Status wird serverseitig verwaltet (Coupon-Einlösung oder Freischaltung). Verarbeitet werden Zeitpunkt, Quelle und Ablauf der Berechtigung, zugeordnet zu deiner Nutzer-ID. Ein Bezahlvorgang über einen App-Store ist derzeit nicht integriert.</p>
+
+  <h2>10. Empfänger / Auftragsverarbeiter</h2>
+  <ul>
+    <li><strong>Supabase</strong> (Datenbank, Authentifizierung, Server-Funktionen) – Hosting der Cloud-Daten.</li>
+    <li><strong>Tink</strong> – nur bei aktiver Bankanbindung.</li>
+    <li><strong>Have I Been Pwned</strong> – nur der anonymisierte 5-Zeichen-Hash-Präfix bei der Passwortprüfung.</li>
+    <li><strong>GitHub Pages</strong> – Auslieferung dieser Website (dabei fallen serverseitige Zugriffsprotokolle bei GitHub an).</li>
+  </ul>
+  <p>[BITTE PRÜFEN: Standort der Supabase-Region und ggf. erforderliche Grundlage für eine Drittlandübermittlung (Standardvertragsklauseln).]</p>
+
+  <h2>11. Speicherdauer</h2>
+  <ul>
+    <li>Lokale Daten: bis du sie löschst oder die App deinstallierst.</li>
+    <li>Cloud-Daten: bis zur Löschung (siehe unten). Nach Ablauf des 3-Tage-Kulanzfensters werden sie serverseitig entfernt.</li>
+    <li>Diagnose-Protokolle: kurzfristig; [BITTE ERGÄNZEN: konkrete Aufbewahrungsfrist, z. B. 30 Tage].</li>
+  </ul>
+
+  <h2>12. Deine Rechte</h2>
+  <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch sowie das Recht, dich bei einer Aufsichtsbehörde zu beschweren.</p>
+  <ul>
+    <li><strong>Datenübertragbarkeit:</strong> In der App unter <em>Mehr → Daten &amp; Datenschutz → Backup erstellen</em> bzw. <em>Daten exportieren</em>.</li>
+    <li><strong>Löschung:</strong> In der App unter <em>Mehr → Daten &amp; Datenschutz</em> oder im Browser unter <a href="konto-loeschen.html">Kontolöschung</a>. Es gilt ein 3-tägiges, stornierbares Kulanzfenster; danach ist die Löschung endgültig.</li>
+  </ul>
+  <p>Zuständige Aufsichtsbehörde: [BITTE ERGÄNZEN: je nach Wohnsitz/Bundesland].</p>
+
+  <h2>13. Kontakt</h2>
+  <p>Datenschutzanfragen: [BITTE ERGÄNZEN: Kontakt-E-Mail] – siehe auch <a href="support.html">Support</a>.</p>
+</main>
+<footer class="site">Finance App · <a href="index.html">Start</a> · <a href="konto-loeschen.html">Kontolöschung</a> · <a href="support.html">Support</a></footer>
+</body>
+</html>

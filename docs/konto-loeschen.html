@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://cqemndaghehbehtjnkwy.supabase.co https://cdn.jsdelivr.net; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Finance App – Konto löschen</title>
+<link rel="stylesheet" href="assets/portal.css">
+</head>
+<body>
+<header class="site">
+  <span class="mark" aria-hidden="true">F</span>
+  <strong>Finance App</strong>
+</header>
+<main class="wrap">
+  <h1>Konto löschen</h1>
+  <p class="lead">Hier kannst du die Löschung deiner Finance-App-Anmeldung und deiner Cloud-Daten anfordern – ohne die App zu installieren.</p>
+
+  <div class="card">
+    <h2>Was gelöscht wird</h2>
+    <ul>
+      <li><strong>Cloud-Finanzdaten:</strong> Konten, Umsätze, Kategorien, Regeln, Budgets, Sparziele, Sparbeiträge, wiederkehrende Serien und Diagnose-Protokolle, die deinem Konto zugeordnet sind.</li>
+      <li><strong>Anmeldekonto</strong> (bei „Konto löschen"): deine E-Mail-basierte Supabase-Anmeldung.</li>
+      <li><strong>Premium-Status</strong> und laufende Berechtigungen.</li>
+    </ul>
+    <h2>Was bleibt</h2>
+    <ul>
+      <li>Nichts wird nur „deaktiviert" oder „pausiert" – die Daten werden entfernt.</li>
+      <li>Daten, die ausschließlich lokal auf deinem Gerät liegen, werden hier nicht berührt. In der App: <em>Mehr → Daten &amp; Datenschutz → Lokale Daten zurücksetzen</em>.</li>
+      <li>Anonyme, nicht personenbezogene Abrechnungs-/Auditvermerke ohne Finanzinhalte können aus Nachweisgründen aufbewahrt werden.</li>
+    </ul>
+    <h2>Kulanzfenster: 3 Tage</h2>
+    <p>Nach dem Antrag gibt es ein <strong>3-tägiges Kulanzfenster</strong>. In dieser Zeit passiert nichts und du kannst den Antrag hier jederzeit stornieren. Danach wird die Löschung endgültig und ist nicht umkehrbar.</p>
+  </div>
+
+  <div id="auth" class="card">
+    <h2>Anmelden</h2>
+    <p class="small">Melde dich mit deiner Finance-App-E-Mail an. Nur du kannst die Löschung deines eigenen Kontos anfordern.</p>
+    <div id="authMsg" class="msg hidden" role="alert"></div>
+    <label for="email">E-Mail</label>
+    <input id="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
+    <label for="password">Passwort</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <div class="row">
+      <button id="signInBtn" type="button">Anmelden</button>
+      <button id="forgotBtn" type="button" class="link">Passwort vergessen?</button>
+    </div>
+  </div>
+
+  <div id="account" class="card hidden">
+    <h2>Angemeldet</h2>
+    <p>als <strong id="acctEmail"></strong> <button id="signOutBtn" type="button" class="link">Abmelden</button></p>
+    <div id="acctMsg" class="msg hidden" role="status"></div>
+
+    <div id="statusNone">
+      <p>Wähle, was gelöscht werden soll:</p>
+      <div class="row">
+        <button id="delFinanceBtn" type="button" class="secondary">Nur Cloud-Finanzdaten löschen</button>
+        <button id="delAccountBtn" type="button" class="danger">Gesamtes Konto löschen</button>
+      </div>
+      <p class="small">Beide Optionen starten das 3-Tage-Kulanzfenster.</p>
+    </div>
+
+    <div id="statusPending" class="hidden">
+      <div class="msg info">
+        <strong id="pendingKind"></strong><br>
+        <span id="pendingWhen"></span>
+      </div>
+      <div class="row">
+        <button id="cancelBtn" type="button" class="secondary">Antrag stornieren</button>
+      </div>
+    </div>
+
+    <div id="statusDone" class="hidden">
+      <div class="msg ok">Die Löschung wurde abgeschlossen.</div>
+    </div>
+  </div>
+
+  <p class="small">Technisch: Diese Seite spricht ausschließlich mit Supabase Auth und geschützten Server-Funktionen (<code>request_data_deletion</code>, <code>cancel_data_deletion</code>, <code>get_my_deletion_status</code>). Es kommt nur der öffentliche Publishable-Schlüssel zum Einsatz; jede Prüfung läuft serverseitig über deine Anmeldung.</p>
+</main>
+<footer class="site">
+  Finance App · <a href="index.html">Start</a> · <a href="datenschutz.html">Datenschutz</a> · <a href="support.html">Support</a>
+</footer>
+<script type="module" src="assets/konto-loeschen.js"></script>
+</body>
+</html>

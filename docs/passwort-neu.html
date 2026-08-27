@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src https://cqemndaghehbehtjnkwy.supabase.co https://cdn.jsdelivr.net; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Finance App – Neues Passwort</title>
+<link rel="stylesheet" href="assets/portal.css">
+</head>
+<body>
+<header class="site">
+  <span class="mark" aria-hidden="true">F</span>
+  <strong>Finance App</strong>
+</header>
+<main class="wrap">
+  <h1>Neues Passwort setzen</h1>
+  <div class="card">
+    <div id="msg" class="msg info" role="status">Recovery-Link wird geprüft …</div>
+    <div id="form" class="hidden">
+      <label for="pw1">Neues Passwort (mind. 12 Zeichen)</label>
+      <input id="pw1" type="password" autocomplete="new-password">
+      <label for="pw2">Passwort wiederholen</label>
+      <input id="pw2" type="password" autocomplete="new-password">
+      <div class="row"><button id="saveBtn" type="button">Passwort speichern</button></div>
+      <p class="small">Danach kannst du dich wieder in der App und unter <a href="konto-loeschen.html">Kontolöschung</a> anmelden.</p>
+    </div>
+  </div>
+</main>
+<footer class="site">Finance App · <a href="index.html">Start</a> · <a href="datenschutz.html">Datenschutz</a></footer>
+<script type="module" src="assets/passwort-neu.js"></script>
+</body>
+</html>
