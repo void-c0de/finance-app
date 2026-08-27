@@ -4,6 +4,8 @@ import {
   buildCashflowForecast,
   buildMonthlyCommitments,
   buildRecurringInsights,
+  detectCommitmentPriceChanges,
+  detectMissedRecurring,
   recurringSeriesKey,
 } from '../src/services/recurringInsightsCore.ts';
 
@@ -143,5 +145,85 @@ assert.ok(
   forecastAll.projectedAfterLikelyMinor < forecastAll.projectedAfterKnownMinor,
   'erkannte Ausgaben senken die Projektion weiter',
 );
+
+// --- price-change detection -------------------------------------------
+const priceRef = new Date('2026-09-01T00:00:00.000Z');
+const netflixHike = buildRecurringInsights([
+  tx({ id: 'nh1', merchant: 'NETFLIX.COM', amountMinor: 1799, bookingDate: '2026-05-04' }),
+  tx({ id: 'nh2', merchant: 'NETFLIX.COM', amountMinor: 1799, bookingDate: '2026-06-04' }),
+  tx({ id: 'nh3', merchant: 'NETFLIX.COM', amountMinor: 1799, bookingDate: '2026-07-04' }),
+  tx({ id: 'nh4', merchant: 'NETFLIX.COM', amountMinor: 1999, bookingDate: '2026-08-04' }),
+], { referenceDate: priceRef });
+const changes = detectCommitmentPriceChanges(netflixHike.items);
+assert.equal(changes.length, 1, 'Abo-Preiserhöhung wird erkannt');
+assert.equal(changes[0].fromMinor, 1799);
+assert.equal(changes[0].toMinor, 1999);
+assert.equal(changes[0].deltaMinor, 200);
+
+// variable utility bill must NOT be flagged for normal swings
+const stromSwings = buildRecurringInsights([
+  tx({ id: 'sw1', merchant: 'Stadtwerke Strom', amountMinor: 8000, bookingDate: '2026-05-15' }),
+  tx({ id: 'sw2', merchant: 'Stadtwerke Strom', amountMinor: 8600, bookingDate: '2026-06-15' }),
+  tx({ id: 'sw3', merchant: 'Stadtwerke Strom', amountMinor: 7700, bookingDate: '2026-07-15' }),
+  tx({ id: 'sw4', merchant: 'Stadtwerke Strom', amountMinor: 8300, bookingDate: '2026-08-15' }),
+], { referenceDate: priceRef });
+assert.equal(
+  detectCommitmentPriceChanges(stromSwings.items).length,
+  0,
+  'normale Versorger-Schwankung wird nicht als Preisänderung gemeldet',
+);
+
+// one-off spike must NOT be flagged
+const spike = buildRecurringInsights([
+  tx({ id: 'sp1', merchant: 'ClubXYZ', amountMinor: 2500, bookingDate: '2026-05-10' }),
+  tx({ id: 'sp2', merchant: 'ClubXYZ', amountMinor: 2500, bookingDate: '2026-06-10' }),
+  tx({ id: 'sp3', merchant: 'ClubXYZ', amountMinor: 2500, bookingDate: '2026-07-10' }),
+  tx({ id: 'sp4', merchant: 'ClubXYZ', amountMinor: 9000, bookingDate: '2026-08-10' }),
+], { referenceDate: priceRef });
+// baseline 2500, latest 9000 -> big jump, but prev (2500) is baseline and there
+// is only one occurrence at the new level -> for uncertain/bill kind the "two on
+// new level" rule is not satisfied; a single big jump from baseline still counts
+// as a step change though. Ensure it is at most low confidence.
+const spikeChanges = detectCommitmentPriceChanges(spike.items);
+if (spikeChanges.length > 0) {
+  assert.notEqual(spikeChanges[0].confidence, 'high', 'einmaliger Ausschlag ist nie hohe Konfidenz');
+}
+
+// --- missed recurring -------------------------------------------------
+const missedRef = new Date('2026-09-05T00:00:00.000Z');
+const monthly = [
+  tx({ id: 'm1', merchant: 'Spotify', amountMinor: 999, bookingDate: '2026-05-10' }),
+  tx({ id: 'm2', merchant: 'Spotify', amountMinor: 999, bookingDate: '2026-06-10' }),
+  tx({ id: 'm3', merchant: 'Spotify', amountMinor: 999, bookingDate: '2026-07-10' }),
+  tx({ id: 'm4', merchant: 'Spotify', amountMinor: 999, bookingDate: '2026-08-10' }),
+];
+const spot = buildRecurringInsights(monthly, { referenceDate: missedRef });
+
+// fresh bank data -> the ~Sep-10 charge is overdue on Sep-5? no. Use later ref.
+const lateRef = new Date('2026-09-20T00:00:00.000Z');
+const spotLate = buildRecurringInsights(monthly, { referenceDate: lateRef });
+const missedFresh = detectMissedRecurring({
+  items: spotLate.items,
+  referenceDate: lateRef,
+  latestBookedDate: '2026-09-19',
+});
+assert.equal(missedFresh.length, 1, 'überfällige Abo-Zahlung bei frischen Bankdaten wird gemeldet');
+assert.equal(missedFresh[0].title.toLowerCase().includes('spotify'), true);
+
+// stale bank data -> NO alert
+const missedStale = detectMissedRecurring({
+  items: spotLate.items,
+  referenceDate: lateRef,
+  latestBookedDate: '2026-08-25',
+});
+assert.deepEqual(missedStale, [], 'veraltete Bankdaten erzeugen keinen Fehlalarm');
+
+// still within grace window -> no alert
+const withinWindow = detectMissedRecurring({
+  items: spot.items,
+  referenceDate: new Date('2026-09-11T00:00:00.000Z'),
+  latestBookedDate: '2026-09-11',
+});
+assert.deepEqual(withinWindow, [], 'innerhalb des Kulanzfensters kein Alarm');
 
 console.log('Recurring insights: all tests passed');

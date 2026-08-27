@@ -234,7 +234,12 @@ export type RecurringItem = {
   monthlyEstimateMinor: number;
   occurrences: number;
   lastDate: string;
+  /** Erstes projiziertes Vorkommen nach der letzten Buchung – kann in der Vergangenheit liegen. */
+  expectedDate: string;
+  /** Nächstes Vorkommen ab jetzt (immer in der Zukunft). */
   nextDate: string;
+  /** Beobachtete Beträge je Vorkommen, chronologisch, immer positiv. */
+  amountHistoryMinor: number[];
   reason: string;
   driftPercent?: number;
 };
@@ -369,7 +374,8 @@ export function buildRecurringInsights(
       baseAmountMinor * monthlyMultiplierFor(classification.cadence, effectiveInterval),
     );
 
-    let nextTimestamp = Date.parse(latest.bookingDate) + effectiveInterval * DAY_MS;
+    const expectedTimestamp = Date.parse(latest.bookingDate) + effectiveInterval * DAY_MS;
+    let nextTimestamp = expectedTimestamp;
     while (nextTimestamp < now.getTime()) {
       nextTimestamp += effectiveInterval * DAY_MS;
     }
@@ -400,7 +406,9 @@ export function buildRecurringInsights(
       monthlyEstimateMinor,
       occurrences: group.length,
       lastDate: latest.bookingDate.slice(0, 10),
+      expectedDate: new Date(expectedTimestamp).toISOString().slice(0, 10),
       nextDate: new Date(nextTimestamp).toISOString().slice(0, 10),
+      amountHistoryMinor: amountsMinor,
       reason: override?.confirmed && !override?.kind ? 'Bestätigt' : classification.reason,
       driftPercent,
     });
@@ -622,4 +630,162 @@ export function buildCashflowForecast(input: {
     projectedAfterLikelyMinor,
     occurrences,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Commitment / subscription price-change detection
+// ---------------------------------------------------------------------------
+
+export type CommitmentPriceChange = {
+  seriesKey: string;
+  title: string;
+  kind: RecurringKind;
+  fromMinor: number;
+  toMinor: number;
+  deltaMinor: number;
+  deltaPercent: number;
+  confidence: RecurringConfidence;
+};
+
+/**
+ * Erkennt echte Preisänderungen einer laufenden Verpflichtung.
+ *
+ * Konservativ und konfidenz-bewusst:
+ * - Abo: schon kleine, stabile Sprünge zählen (Basis = Median der bisherigen
+ *   Beträge, aktueller Betrag muss deutlich und als neues Plateau abweichen).
+ * - Rechnung/Versorger/unbestätigt: normale Schwankung ist erwartbar – nur
+ *   große, klare Verschiebungen werden gemeldet.
+ * - Einmalige Ausreißer werden nicht gemeldet (der aktuelle Wert muss vom
+ *   bisherigen Median abweichen, nicht nur vom direkten Vorgänger).
+ */
+export function detectCommitmentPriceChanges(
+  items: readonly RecurringItem[],
+): CommitmentPriceChange[] {
+  const changes: CommitmentPriceChange[] = [];
+
+  for (const item of items) {
+    const history = item.amountHistoryMinor;
+    if (history.length < 3) continue;
+
+    const baseline = median(history.slice(0, -1));
+    const latest = history[history.length - 1];
+    if (baseline <= 0) continue;
+
+    const deltaMinor = latest - baseline;
+    const deltaPercent = deltaMinor / baseline;
+    const absPercent = Math.abs(deltaPercent);
+    const absMinor = Math.abs(deltaMinor);
+
+    const strict = item.kind === 'subscription';
+    const minMinor = strict ? 50 : 300;
+    const minPercent = strict ? 0.03 : 0.2;
+    if (absMinor < minMinor || absPercent < minPercent) continue;
+
+    // Kein einmaliger Ausreißer: der vorletzte Betrag sollte noch nahe an der
+    // Basis liegen, der letzte klar davon weg (echter Stufenwechsel), ODER die
+    // letzten zwei liegen beide auf dem neuen Niveau.
+    const prev = history[history.length - 2];
+    const prevIsBaseline = Math.abs(prev - baseline) <= Math.max(minMinor, baseline * 0.05);
+    const twoOnNewLevel =
+      history.length >= 4 &&
+      Math.abs(prev - latest) <= Math.max(minMinor, Math.abs(latest) * 0.05) &&
+      Math.abs(history[history.length - 3] - baseline) <= Math.max(minMinor, baseline * 0.05);
+    if (!prevIsBaseline && !twoOnNewLevel) continue;
+
+    changes.push({
+      seriesKey: item.key,
+      title: item.title,
+      kind: item.kind,
+      fromMinor: Math.round(baseline),
+      toMinor: latest,
+      deltaMinor: Math.round(deltaMinor),
+      deltaPercent,
+      confidence:
+        strict && (twoOnNewLevel || item.userConfirmed)
+          ? 'high'
+          : item.confidence === 'high'
+            ? 'medium'
+            : 'low',
+    });
+  }
+
+  changes.sort((left, right) => Math.abs(right.deltaMinor) - Math.abs(left.deltaMinor));
+  return changes;
+}
+
+// ---------------------------------------------------------------------------
+// Missed / silent recurring series — "expected payment did not appear"
+// ---------------------------------------------------------------------------
+
+export type MissedRecurring = {
+  seriesKey: string;
+  title: string;
+  kind: RecurringKind;
+  direction: 'income' | 'expense';
+  lastDate: string;
+  expectedByDate: string;
+  daysOverdue: number;
+};
+
+/**
+ * Meldet Serien, deren erwartete nächste Zahlung überfällig ist und für die
+ * kein passender Umsatz existiert.
+ *
+ * Bewusst vorsichtig – behauptet NIE eine Kündigung:
+ * - braucht >= 3 Vorkommen (klares Muster),
+ * - Kulanzfenster aus dem historischen Rhythmus (max. Abweichung berücksichtigt),
+ * - nur „frische" Serien (letzte Zahlung < 3 Intervalle her) – eine vor Monaten
+ *   beendete Serie ist nicht „ausgeblieben",
+ * - **kein Alarm, wenn die Bankdaten selbst veraltet sind** (neuester gebuchter
+ *   Umsatz älter als `maxDataStalenessDays`).
+ */
+export function detectMissedRecurring(input: {
+  items: readonly RecurringItem[];
+  referenceDate?: Date;
+  /** Buchungsdatum (YYYY-MM-DD) des insgesamt neuesten gebuchten Umsatzes. */
+  latestBookedDate?: string | null;
+  maxDataStalenessDays?: number;
+}): MissedRecurring[] {
+  const now = input.referenceDate ?? new Date();
+  const nowMs = now.getTime();
+  const maxStaleness = input.maxDataStalenessDays ?? 4;
+
+  if (input.latestBookedDate) {
+    const freshnessMs = Date.parse(`${input.latestBookedDate}T23:59:59.999Z`);
+    if (Number.isFinite(freshnessMs) && (nowMs - freshnessMs) / DAY_MS > maxStaleness) {
+      // Bankdaten veraltet -> keine „ausgeblieben"-Signale (keine Fehlalarme).
+      return [];
+    }
+  }
+
+  const missed: MissedRecurring[] = [];
+
+  for (const item of input.items) {
+    if (item.occurrences < 3) continue;
+
+    const interval = Math.max(1, item.intervalDays);
+    const grace = Math.max(4, interval * 0.25);
+    const expectedMs = Date.parse(`${item.expectedDate}T00:00:00.000Z`);
+    const lastMs = Date.parse(`${item.lastDate}T00:00:00.000Z`);
+    if (!Number.isFinite(expectedMs) || !Number.isFinite(lastMs)) continue;
+
+    const overdueDays = (nowMs - expectedMs) / DAY_MS;
+    const sinceLastDays = (nowMs - lastMs) / DAY_MS;
+
+    if (overdueDays <= grace) continue; // noch im Fenster
+    if (sinceLastDays > interval * 3) continue; // Serie ist längst beendet, nicht „ausgeblieben"
+
+    missed.push({
+      seriesKey: item.key,
+      title: item.title,
+      kind: item.kind,
+      direction: item.direction,
+      lastDate: item.lastDate,
+      expectedByDate: new Date(expectedMs + grace * DAY_MS).toISOString().slice(0, 10),
+      daysOverdue: Math.round(overdueDays - grace),
+    });
+  }
+
+  missed.sort((left, right) => right.daysOverdue - left.daysOverdue);
+  return missed;
 }

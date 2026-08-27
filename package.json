@@ -71,6 +71,7 @@
     "test:savings-lifecycle": "node --experimental-strip-types scripts/test-savings-lifecycle.mjs",
     "test:budgets": "node --experimental-strip-types scripts/test-budget-insights.mjs",
     "test:attention": "node --experimental-strip-types scripts/test-attention.mjs",
+    "test:analytics": "node --experimental-strip-types scripts/test-analytics.mjs",
     "test:password-security": "node --experimental-strip-types scripts/test-password-security.mjs"
   },
   "private": true
