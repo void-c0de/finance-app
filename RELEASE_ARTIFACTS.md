@@ -27,8 +27,8 @@ maintainer supplies `FINANCE_UPLOAD_*`.
 
 | | |
 | --- | --- |
-| Workflow run | `33164472562` on `a21eb2b` (macos-26 / Xcode 26.6 / iPhoneOS 26.5 SDK) |
-| SHA-256 | `9f3b4c37eda7417a4ae01adfed4f220a3d15bbb252cd430fee9773c9788b3b75` (changes every build) |
+| Workflow run | `33172312802` on `7c2b59b` (macos-26 / Xcode 26.6 / iPhoneOS 26.5 SDK) |
+| SHA-256 | `4f57b2560d1fcb415936f59035a5a6ef44b8f4cc6ff6c020af2ae49acbb3157c` (changes every build) |
 | Size | 18.3 MB (zip), 122 files |
 | Bundle id / version | `com.nocta-xz.financeapp` · 1.5.0 (6) · min iOS 16.4 |
 | Arch / signing | `arm64` · unsigned (`cryptid 0`) |
