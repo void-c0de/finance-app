@@ -83,3 +83,6 @@ adi.pb
 
 # bundletool jar (dev tool, not a dependency)
 /tools/
+
+# generated Play submission bundle (npm run build:submission)
+store-assets/submission/

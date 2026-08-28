@@ -46,7 +46,9 @@ if (!pf.gates.secretGuard) reasons.engineeringClosedTest.push('secret guard fail
 if (!pf.gates.otaManifest) reasons.engineeringClosedTest.push('OTA manifest not client-loadable');
 if (!pf.gates.brandAssets) reasons.engineeringClosedTest.push('store image assets invalid');
 if (!pf.submissionBundle.complete) reasons.engineeringClosedTest.push('submission bundle incomplete');
-if (pf.git.dirty) reasons.engineeringClosedTest.push('working tree dirty (commit first)');
+// On CI we are always on an already-committed, pushed SHA; a "dirty" tree there
+// only means the read-only checks regenerated a build artefact.
+if (pf.git.dirty && !process.env.CI) reasons.engineeringClosedTest.push('working tree dirty (commit first)');
 
 // --- REAL CLOSED TEST ------------------------------------------------------
 if (!pf.evidence.playAppExists) reasons.realClosedTest.push('Play Console app does not exist yet (maintainer)');
