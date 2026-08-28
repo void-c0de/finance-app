@@ -101,7 +101,8 @@
     "ios:unsigned": "node scripts/ios-unsigned-build.mjs",
     "ios:unsigned:info": "node scripts/ios-unsigned-build.mjs --info",
     "ios:unsigned:download": "node scripts/ios-unsigned-build.mjs --download",
-    "ios:unsigned:prepare": "node scripts/ios-unsigned-build.mjs --prepare"
+    "ios:unsigned:prepare": "node scripts/ios-unsigned-build.mjs --prepare",
+    "screenshots:android": "node scripts/capture-screenshots.mjs"
   },
   "private": true
 }

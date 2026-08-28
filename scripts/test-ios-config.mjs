@@ -101,4 +101,35 @@ assert.match(wf, /CODE_SIGNING_ALLOWED=NO/);
 assert.match(wf, /workflow_dispatch/, 'nur manuell (macOS-Minuten)');
 assert.ok(!/APPLE_ID|APP_STORE_CONNECT|CERTIFICATE|P12|provisioning/i.test(wf), 'keine Apple-Credentials im Workflow');
 
-console.log('iOS config: bundle id, Face ID, SQLCipher, deep-link scheme, unsigned build workflow — ready');
+// --- Banking-Deep-Link: hosted Tink-Link-Flow braucht das App-Schema --
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+for (const dep of ['expo-web-browser', 'expo-crypto', 'expo-secure-store', 'expo-linking']) {
+  assert.ok(pkg.dependencies[dep], `${dep} ist Dependency (iOS-Tink-Rückkanal / state-Nonce)`);
+}
+const callbackCore = readFileSync('src/banking/tink/tinkCallbackCore.ts', 'utf8');
+assert.match(callbackCore, /financeapp:\/\/bank\/tink/, 'Tink-Redirect nutzt das App-Schema');
+assert.ok(
+  callbackCore.includes(`'${appJson.scheme}://bank/tink'`) ||
+    callbackCore.includes(`${appJson.scheme}://bank/tink`),
+  'Tink-Redirect-Schema == app.json scheme',
+);
+assert.match(callbackCore, /state/, 'Tink-Link bindet einen state-Nonce');
+
+// --- Info.plist: keine unnötigen Berechtigungs-Strings -----------
+const forbiddenPlist = [
+  'NSCameraUsageDescription',
+  'NSLocationWhenInUseUsageDescription',
+  'NSLocationAlwaysAndWhenInUseUsageDescription',
+  'NSContactsUsageDescription',
+  'NSMicrophoneUsageDescription',
+  'NSPhotoLibraryUsageDescription',
+  'NSPhotoLibraryAddUsageDescription',
+  'NSUserTrackingUsageDescription',
+];
+for (const key of forbiddenPlist) {
+  assert.ok(!(key in (ios.infoPlist ?? {})), `keine ${key} in ios.infoPlist (nicht genutzt)`);
+}
+
+console.log(
+  'iOS config: bundle id, Face ID, SQLCipher, deep-link scheme, privacy manifest, Tink callback, unsigned build — ready',
+);
