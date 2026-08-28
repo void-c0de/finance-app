@@ -1,4 +1,4 @@
-# Dependency audit — 2026-08-28 (Finance App 1.5.0, Expo SDK 57)
+# Dependency audit — 2026-08-28 (Finance App 1.6.0, Expo SDK 57)
 
 ## Runtime production dependencies
 
@@ -7,8 +7,9 @@ package is on the version Expo SDK 57 expects (React 19.2.3, RN 0.86.3, Hermes,
 `@supabase/supabase-js` 2.95.3, the `expo-*` set at ~57.x).
 
 No third-party analytics / advertising / attribution / crash SDK (verified by
-name scan of `package.json` + `node_modules`). No native billing library. No
-`react-native-firebase`, Sentry, Amplitude, Segment, AppsFlyer, etc.
+name scan of `package.json` + `node_modules`). No `react-native-firebase`,
+Sentry, Amplitude, Segment, AppsFlyer, etc. One native billing library since
+RC6 — `expo-iap` (first-party store billing only, no analytics; see below).
 
 ## `npm audit --omit=dev` → 12 moderate, **build-tooling only**
 
@@ -54,26 +55,44 @@ runtime dependencies and there is no realistic exploitation path.
 build **compiles** with Xcode 26.6 (macOS-26 runner). SQLCipher is compiled in — `_exsqlite3_key_v2` symbols verified in the arm64 binary (the
 top-level `useSQLCipher` prop covers iOS). No entitlement-gated module.
 
-## Expo SDK 57 patch drift (2026-08-28)
+## Expo SDK 57 patch convergence — DONE (RC6, 2026-08-28)
 
-`npx expo-doctor` now reports 4 packages behind the SDK-57 patch line:
+`npx expo install --fix` applied as part of the `1.6.0` native boundary:
 
-| package | installed | expected |
+| package | 1.5.0 | 1.6.0 |
 | --- | --- | --- |
-| `expo` | 57.0.17 | ~57.0.18 |
-| `expo-constants` | 57.0.15 | ~57.0.16 |
-| `expo-font` | 57.0.1 | ~57.0.2 |
-| `expo-updates` | 57.0.18 | ~57.0.19 |
+| `expo` | 57.0.17 | 57.0.18 |
+| `expo-constants` | 57.0.15 | 57.0.16 |
+| `expo-font` | 57.0.1 | 57.0.2 |
+| `expo-updates` | 57.0.18 | 57.0.19 |
 
-Patch-level only, same minor. **Deferred, not applied**: no CVE / no bug fix we
-need, and bumping `expo-updates` / `expo` now would desync the JS tree from the
-committed native artifacts (`RELEASE.md`: no OTA from native deps that differ
-from the target binary). Fold `npx expo install --fix` into the next native
-build (the `1.6.0` boundary or the Play-submission build), then re-run the iOS
-CI compile.
+Patch-level, same minor. `npx expo install --check` → "Dependencies are up to
+date". These were deferred from RC5 precisely because `expo` / `expo-updates`
+changes belong to a native binary, not an OTA — RC6 rebuilds Android + iOS, so
+this is the right boundary.
+
+## Native billing dependency — expo-iap 5.4.0 (RC6, new)
+
+`expo-iap` (OpenIAP spec; `openiap-apple` = StoreKit 2, `openiap-google` = Play
+Billing — **9.1.0 linked in the built AAB**, verified via
+`com.google.android.play.billingclient.version`; well clear of the v7-blocked
+deadline of 31 Aug 2026). Chosen over `react-native-purchases` (RevenueCat) — no third-party
+middleman, matches the server-authoritative `verify-purchase` model — and over
+`react-native-iap` (bare-RN focused). Officially listed by Expo for IAP in 2026.
+
+- Expo module + config plugin → works with prebuild/CNG, no eject.
+- `devDependencies.expo: ^57.0.12` — developed against SDK 57.
+- `deps: none`; peer `expo`/`react`/`react-native`. iOS platform min 13.4 (we
+  ship 16.4); Android `minSdk` 23 (we ship 24), `compileSdk`/`targetSdk` 36.
+- Config plugin adds `com.android.vending.BILLING` to the Android manifest
+  (already on the `test:android-permissions` allowlist) and `OpenIAP` pod on
+  iOS. No iOS entitlement / Info.plist string; StoreKit.framework is OS-provided
+  → compiles unsigned in CI without any App Store Connect credential.
+- The adapter is only loaded/registered when `EXPO_PUBLIC_PREMIUM_*_ID` are set
+  (`registerBilling.ts` dynamic import). A no-store build never touches it.
 
 ## Action
 
-Run `npx expo install --fix` as part of the next native build, not before.
-Re-check the 12 build-tooling audit entries after each Expo SDK patch; a future
-`@expo/config-plugins` bump clears them.
+Re-check the 12 build-tooling npm-audit entries (`@expo/config-plugins → xcode →
+uuid`) after each Expo SDK patch; a future `@expo/config-plugins` bump clears
+them. They remain build-tooling only, no runtime exposure.

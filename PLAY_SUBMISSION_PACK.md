@@ -17,13 +17,13 @@ secrets.** Cross-checked against the repo on 2026-08-28.
 
 | Field | Value |
 | --- | --- |
-| versionName | `1.5.0` |
-| versionCode | `6` |
+| versionName | `1.6.0` |
+| versionCode | `7` |
 | targetSdkVersion | `36` (Android 16) — meets the 31 Aug 2026 requirement |
 | minSdkVersion | `24` |
 | Format | AAB (`npm run release:android:aab`) |
 | Signing | Play App Signing + your upload key (`FINANCE_UPLOAD_*`). `npm run verify:release-signing <aab> --expect-production` **must pass** before upload. |
-| Permissions | INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC, USE_FINGERPRINT, VIBRATE, READ/WRITE_EXTERNAL_STORAGE (maxSdk 32). No SYSTEM_ALERT_WINDOW. No billing permission. |
+| Permissions | INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC, USE_FINGERPRINT, VIBRATE, READ/WRITE_EXTERNAL_STORAGE (maxSdk 32), **`com.android.vending.BILLING`** (added by the `expo-iap` plugin — required by Play Billing). No SYSTEM_ALERT_WINDOW. |
 
 ## URLs (live on GitHub Pages)
 
@@ -53,13 +53,31 @@ Transcribe from **`PLAY_FINANCIAL_FEATURES.md`**. Summary:
 - **No** to: banking, payments/transfers, lending/BNPL, investing, crypto, FX,
   insurance, tax. The app holds no funds and initiates no payments.
 
+## Billing readiness (RC6)
+
+| Item | State |
+| --- | --- |
+| Play Billing client | **IMPLEMENTED** — `expo-iap@5.4.0` (Play Billing Library 8.x via `openiap-google`), clears the v7-blocked deadline |
+| Purchase state machine | **IMPLEMENTED + TESTED** — `test:purchase-state-machine`; `verified` only after server confirmation; pending never unlocks; cancel ≠ error |
+| Server verification | **DEPLOYED, NOT CONFIGURED** — `verify-purchase` returns `not_configured` (501) until `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME` are set |
+| Store products | **NOT CREATED** — no `premium.monthly` / `premium.yearly` subscription in the Console yet |
+| Product IDs in build | **NOT CONFIGURED** — `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` / `_YEARLY_ID` unset → adapter not registered → UI shows the honest "Preise folgen" state, no fake checkout |
+| Real purchase tested | **NO** — not physically verified against Google Play |
+| RTDN webhook | **DEPLOYED, NOT CONFIGURED** — `billing-webhook` acks until `PLAY_RTDN_VERIFICATION_TOKEN` is set |
+
+External steps remaining: create the subscription + base plans in the Console;
+create a Google Cloud service account (View financial data + Play Developer API),
+set its JSON as the Function secret; create the Pub/Sub topic for RTDN; set the
+three build-env / Function secrets. No code change required for any of these.
+
 ## App access (instructions for Google's review team)
 
 > Die App ist offline nutzbar; ein Konto ist optional.
 >
 > Premium-Prüfung: Coupon-Code **[erzeuge einen unter Mehr → Administration →
 > Premium-Coupons, z. B. GOOGLEREVIEW mit 90 Tagen]** unter *Mehr → Abos &
-> Premium* einlösen. Es gibt bewusst keinen In-App-Kauf.
+> Premium* einlösen. Der native Store-Kauf ist implementiert, aber bis zur
+> Freigabe der Store-Produkte bewusst deaktiviert (Zustand "Preise folgen").
 >
 > Beispieldaten ohne Bank: *Bankkonto hinzufügen → Demo-Verbindung*. Erzeugt
 > synthetische Konten/Umsätze; keine echten Bankdaten.

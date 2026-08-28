@@ -5,10 +5,32 @@ only after the **server** verifies it. This file defines the contract so the
 verification layer can be added later without touching the client's capability
 model.
 
-Status (2026-08-28): **server architecture built and deployed; store calls stubbed
-pending credentials.** No billing library, no store products, no checkout yet.
-`billingCore.ts` holds the pure shapes and precedence rules; the server side below
-is now real code.
+Status (2026-08-28, RC6): **server architecture built and deployed; native store
+client (`expo-iap`) IMPLEMENTED; store calls stubbed pending credentials; no store
+products created, no real purchase tested.** `billingCore.ts` holds the pure shapes
+and precedence rules; the server side below is real code; the client adapter below
+is real code that is only registered when `EXPO_PUBLIC_PREMIUM_*_ID` are set.
+
+### RC6 — native client adapter (IMPLEMENTED, NOT store-tested)
+
+- `expo-iap@5.4.0` (OpenIAP: `openiap-google` = Play Billing 8.x, `openiap-apple`
+  = StoreKit 2). Config plugin, native boundary → app 1.6.0 / versionCode 7.
+- `src/services/billing/expoIapAdapter.ts` — `BillingClient` impl. Purchase flow:
+  native `purchaseUpdatedListener` → `tokenOf(purchase)` (unified `purchaseToken`)
+  → `handoffToServer({ platform, productId, purchaseToken })` → **only** on
+  `{ ok: true }` does it `finishTransaction()` and only then does
+  `usePurchaseStore` refetch entitlements. `purchaseState === 'pending'` returns
+  `{ kind: 'pending' }` and unlocks nothing. User cancel → `{ kind: 'cancelled' }`,
+  never surfaced as an error.
+- `src/services/billing/productConfig.ts` — env-driven, **no hard-coded store IDs**.
+  Missing config → `[]` → `isBillingConfigured()` false → adapter not registered →
+  UI keeps the honest "Preise folgen" state.
+- `src/services/billing/purchaseStateMachine.ts` — pure reducer, 12 phases;
+  `verified` is reachable **only** via `VERIFY_OK` (server confirmation).
+  Tests: `test:purchase-state-machine`, `test:product-config`, plus new static
+  guards in `test:billing-server`.
+- `src/services/billing/registerBilling.ts` — dynamic `import()` of the adapter,
+  only when configured; never blocks boot; failure degrades to null client.
 
 ### Built and live
 
@@ -43,9 +65,11 @@ is now real code.
 1. Fill in `verifyWithGooglePlay()` (the OAuth2 service-account token + the
    `purchases.subscriptionsv2.tokens.get` call) — the shape and the DB write are
    done, only the ~30 lines that talk to Google remain.
-2. Add a **v8+** Play Billing client (see below).
+2. ~~Add a v8+ Play Billing client~~ — **DONE (RC6)**: `expo-iap` (Play Billing
+   8.x via `openiap-google`).
 3. Play Console products + Google Cloud service account + Pub/Sub topic + the
-   Function secrets.
+   Function secrets. Set `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` /
+   `EXPO_PUBLIC_PREMIUM_YEARLY_ID` to the real product IDs in the build env.
 
 ## Components
 
@@ -111,10 +135,9 @@ detect upgrades/downgrades).
 2. Google Cloud: a service account with "View financial data" + Play Developer
    API access; download its JSON key → set as the Function secret.
 3. Enable Real-time developer notifications (Pub/Sub topic) in Play Console.
-4. Add a Play Billing Library **v8+** client (`expo-in-app-purchases` is
-   unmaintained — use a maintained RN Play Billing wrapper or a small native
-   module). **Do not add an older billing library** (v7 is blocked for new
-   submissions from 31 Aug 2026).
+4. ~~Add a Play Billing Library v8+ client~~ — **DONE (RC6)**: `expo-iap@5.4.0`
+   ships Play Billing 8.x (`openiap-google`), which clears the v7-blocked-from
+   31 Aug 2026 deadline. `expo-in-app-purchases` was explicitly **not** used.
 
 ## App Store (RC4 — added)
 
@@ -132,10 +155,11 @@ detect upgrades/downgrades).
 
 `src/services/billingClient.ts` — provider-neutral `BillingClient`
 (`queryProducts` / localized prices / `purchase` / `restorePurchases`). Ships as
-`nullBillingClient` (honest "not available"). A Google Play Billing v8 / StoreKit
-adapter registers via `registerBillingClient()` when it exists; the UI is
-unchanged. `handoffToServer()` is the only path to Premium — the adapter never
-touches `productAccess`.
+`nullBillingClient` (honest "not available"). **RC6:** the `expo-iap` adapter
+(`expoIapAdapter.ts`, Play Billing 8.x + StoreKit 2) registers via
+`registerBillingClient()` when `EXPO_PUBLIC_PREMIUM_*_ID` are set; otherwise the
+null client stays and the UI is unchanged. `handoffToServer()` is the only path
+to Premium — the adapter never touches `productAccess`.
 
 ## Client-side rule (enforced today)
 

@@ -22,6 +22,7 @@ const ALLOWED = new Set([
   'android.permission.READ_EXTERNAL_STORAGE', // Legacy, maxSdkVersion=32
   'android.permission.WRITE_EXTERNAL_STORAGE', // Legacy, maxSdkVersion=32
   'com.nocta_xz.financeapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION', // RN, self-scoped
+  'com.android.vending.BILLING', // RC6: Play Billing 8.x (expo-iap) — Pflicht für In-App-Käufe
 ]);
 
 const FORBIDDEN = [
@@ -33,7 +34,6 @@ const FORBIDDEN = [
   'android.permission.ACCESS_FINE_LOCATION',
   'android.permission.ACCESS_COARSE_LOCATION',
   'android.permission.CAMERA',
-  'com.android.vending.BILLING',
   'android.permission.RECEIVE_BOOT_COMPLETED',
 ];
 

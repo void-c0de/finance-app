@@ -502,3 +502,78 @@ clean, parity 13/13. 3 Edge Functions deployed/updated.
   need a debug build (`__DEV__` opens `/demo`).
 - 38/38 test suites (new `test:ios-tooling`), tsc, lint, expo-doctor 21/21,
   secret guard clean. No Supabase change. No Android/iOS native change.
+
+## RC6 — 1.6.0 / versionCode 7 / runtime 1.6.0 — NATIVE BOUNDARY (2026-08-28)
+
+**Deliberate native generation.** New native module `expo-iap@5.4.0` (OpenIAP:
+Google Play Billing **9.1.0** / StoreKit 2 — verified in the built AAB via
+`com.google.android.play.billingclient.version`) + Expo SDK 57 patch convergence
+(`expo` 57.0.18, `expo-constants` 57.0.16, `expo-font` 57.0.2, `expo-updates`
+57.0.19). `expo.version` 1.5.0 → 1.6.0, `android.versionCode` 6 → 7,
+`ios.buildNumber` "7", `runtimeVersion.policy = appVersion` → runtime 1.6.0.
+Not OTA-deliverable to a 1.5.0 device.
+
+### Billing client
+
+- `src/services/billing/purchaseStateMachine.ts` — pure, 12 phases. `verified`
+  is reachable **only** via `VERIFY_OK` (= server-confirmed). Cancel ≠ error.
+  `pending` unlocks nothing. `verification_failed` → retry / restore path.
+  `test:purchase-state-machine`.
+- `src/services/billing/productConfig.ts` — store product IDs from
+  `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` / `EXPO_PUBLIC_PREMIUM_YEARLY_ID`. **No fake
+  IDs.** Both unset → `not_configured` (no crash, keeps "Preise folgen").
+  `test:product-config`.
+- `src/services/billing/expoIapAdapter.ts` — `BillingClient` over `expo-iap`.
+  Flow: native purchase → unified token (iOS JWS / Android purchaseToken) →
+  `handoffToServer` (`verify-purchase`) → `apply_verified_subscription`
+  (service role) → entitlement refetch → **only then** UI Premium.
+  `finishTransaction` (Play acknowledge) runs **only after** a successful server
+  verify. Never touches `productAccess`. `deferred-payment`/`pending` → not premium.
+- `src/services/billing/registerBilling.ts` — registers the adapter at boot
+  **only if** product IDs are configured; otherwise `nullBillingClient` stays.
+  `expo-iap` is dynamically imported so a no-store build never touches it.
+- `src/stores/usePurchaseStore.ts` — drives the machine (`loadProducts` / `buy`
+  / `restore` / `retryVerification`).
+- `premium.tsx` — real subscribe card with store-localized prices + "Käufe
+  wiederherstellen" when configured; the honest "Preise folgen" + coupon path
+  otherwise. No fake countdowns / discounts / scarcity.
+
+### Server (unchanged, already correct)
+
+`verify-purchase` v2 (deployed, `verify_jwt=true`): JWT-derived caller identity,
+platform + product whitelist, `sha256('${platform}:${token}')` stored (no raw
+token), `verifyWithGooglePlay` / `verifyWithAppStore` isolated and returning
+`not_configured` (501) until Google/Apple server credentials exist. No RC6
+schema change — `billing_subscriptions` + `apply_verified_subscription` already
+handle `google_play` / `app_store` / `revenuecat`.
+
+### Manifest
+
+`expo-iap` adds `com.android.vending.BILLING` to the Android manifest (required
+for Play Billing; moved from the `test:android-permissions` FORBIDDEN list to the
+ALLOWED list in RC6, enforced against the built APK). No iOS capability or
+Info.plist entry needed; StoreKit.framework is OS-provided.
+
+### Verified builds
+
+- **Android** (local, `assembleRelease bundleRelease --rerun-tasks`): APK + AAB,
+  `com.nocta_xz.financeapp`, versionName 1.6.0 / versionCode 7, targetSdk 36 /
+  minSdk 24, `allowBackup=false`, SQLCipher (`sqlcipher_*` in
+  `libexpo-sqlite.so`), Play Billing 9.1.0, deep links (`https` App Links +
+  `financeapp://`). `test:android-permissions` green against the APK.
+  `verify:release-signing --expect-production` correctly **fails** (debug-signed —
+  intended until `FINANCE_UPLOAD_*`).
+- **iOS** (CI `ios-unsigned.yml` run `33178550618`, all steps green): `arm64`,
+  `LC_ENCRYPTION_INFO_64 cryptid 0` (unsigned), `com.nocta-xz.financeapp`,
+  CFBundleShortVersionString 1.6.0 / CFBundleVersion 7, MinimumOSVersion 16.4,
+  `_exsqlite3_key_v2 T` in the app binary, `PrivacyInfo.xcprivacy` at the app
+  root, `openiap` pod 3.3.0 (`openiap-versions.json` in the bundle), no Apple
+  credentials in the workflow. IPA SHA-256
+  `ec3036cae71f8f9151a9bfc77fa32ad2a8dad3f60daff59066d8ffbaeb555cf6`.
+
+### External blockers (unchanged, precisely bounded)
+
+Real Play/App Store products + Google service-account key + App Store Server API
+key (`.p8`) are still external. Until then billing is `not_configured` and
+Premium continues via coupon / admin. **No real store purchase was tested** —
+that needs Play Console / App Store Connect access.

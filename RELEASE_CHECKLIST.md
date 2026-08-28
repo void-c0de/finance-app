@@ -42,8 +42,8 @@ action · ❌ not started.
 | Privacy policy URL (HTTPS) | ✅ (content ⏳) | `.../datenschutz.html` live; `[BITTE ERGÄNZEN]` legal fields remain. |
 | Data Safety form answers | ✅ prepared | `PLAY_DATA_SAFETY.md`. Transcribe into console. |
 | Financial Features declaration | ✅ prepared | `PLAY_FINANCIAL_FEATURES.md`. Account aggregation = Yes; everything regulated = No. |
-| Google Play Billing Library v8+ (deadline 31 Aug 2026) | ✅ N/A | No billing library present. Applies only when billing is added. |
-| Permissions minimised | ✅ | `SYSTEM_ALERT_WINDOW` removed; only INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC/USE_FINGERPRINT, VIBRATE, legacy storage (maxSdk 32). |
+| Google Play Billing Library v8+ (deadline 31 Aug 2026) | ✅ | `expo-iap@5.4.0` → Play Billing **9.1.0** linked in the AAB (`com.google.android.play.billingclient.version`). Clears the v7 deadline. Store products / credentials still external. |
+| Permissions minimised | ✅ | `SYSTEM_ALERT_WINDOW` removed; INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC/USE_FINGERPRINT, VIBRATE, legacy storage (maxSdk 32), `com.android.vending.BILLING` (Play Billing, added by expo-iap). `test:android-permissions` allowlist enforced against the built APK. |
 | Content rating (IARC) | ❌ | Complete questionnaire (Finance, no ads, no gambling → Everyone/PEGI 3). |
 | Store listing (text, screenshots, feature graphic, icon 512²) | ⏳ | Text ready (`STORE_LISTING.md`); `npm run screenshots:android` captures the 6 demo surfaces once the device is unlocked with demo data loaded — `store-assets/`. Feature graphic + icon still to draw. |
 | App access (review-team instructions) | ⏳ | Provide a Premium coupon + Tink sandbox note. |
@@ -54,12 +54,13 @@ action · ❌ not started.
 | Item | Status |
 | --- | --- |
 | `npx tsc --noEmit` / `npm run lint` / `npx expo-doctor` clean | ✅ |
-| All `npm run test:*` green (35 suites) + CI green on origin/master | ✅ |
-| Supabase migration parity + `db lint` | ✅ (13 migrations) |
+| All `npm run test:*` green (41 suites) + CI green on origin/master | ✅ |
+| Purchase state machine + product config (pure, tested) | ✅ (`test:purchase-state-machine`, `test:product-config`) |
+| Supabase migration parity + `db lint` | ✅ (14 migrations) |
 | Live rollback authz tests (deletion, billing) | ✅ (`supabase/tests/*.sql`) |
 | Edge Functions deployed + live-tested | ✅ `finalize-account-deletion`, `verify-purchase`, `billing-webhook` |
-| Runtime boundary test (1.5.0 / vc6) | ✅ |
-| AAB structurally validated (bundletool), download split ~33 MB | ✅ |
+| Runtime boundary test (1.6.0 / vc7) | ✅ |
+| APK + AAB built (`--rerun-tasks`), aapt-verified: pkg / vc7 / targetSdk 36 / SQLCipher / Billing 9.1.0 / allowBackup=false | ✅ |
 | Cold start on a physical Android 16 device, no Metro | ✅ |
 | Windowed transaction list (no freeze at 10k+) | ✅ |
 | Synthetic large-dataset perf test | ✅ (`test:perf-scale`) |
@@ -80,18 +81,21 @@ action · ❌ not started.
 | Sign + install to a physical iPhone | ⏳ | Maintainer: AltStore/Sideloadly on Windows + a free Apple ID. See [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md). |
 | App Store / TestFlight | ❌ | Needs the paid Apple Developer Program. [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md). |
 
-## RC2 — what changed since RC1
+## RC6 — what changed since RC5
 
-Pure JS/server/web/CI + one config change; **native stays 1.5.0 / versionCode
-6 / runtime 1.5.0**. Nothing here is a native boundary → an OTA to 1.5.0 devices
-is prepared but not published. iOS config was added (bundle id, Face ID string,
-SQLCipher confirmed) — no Android impact.
+**Native boundary → 1.6.0 / versionCode 7 / runtime 1.6.0.** Added the `expo-iap`
+native billing module (Play Billing 9.1.0 / StoreKit 2), a pure purchase state
+machine, env-driven product config (no fake IDs), and the `expoIapAdapter`
+client. Converged the Expo SDK 57 patch drift (`expo` 57.0.18, `expo-updates`
+57.0.19, etc.) in the same rebuild. Server verification layer unchanged — still
+`not_configured` until credentials are set. No real store purchase was tested.
+Android APK + AAB rebuilt with `--rerun-tasks`; iOS unsigned CI re-run.
 
 ## Version
 
-- Native generation **1.5.0 / versionCode 6 / runtime 1.5.0**.
-- OTA: the 1.5.0 channel starts empty; devices run the embedded bundle. An RC2
-  OTA can be published when the release process authorizes it (`npm run publish:ota`).
+- Native generation **1.6.0 / versionCode 7 / runtime 1.6.0**.
+- OTA: the 1.6.0 channel starts empty; devices run the embedded bundle. An OTA
+  can be published when the release process authorizes it (`npm run publish:ota`).
 
 ## The only external blockers
 
@@ -100,8 +104,11 @@ SQLCipher confirmed) — no Android impact.
    Features, upload the AAB, set up the closed test, complete IARC.
 3. **Legal fields** — see [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md).
 4. **Google Play billing credentials** (Play Console products + a Google Cloud
-   service-account key + Pub/Sub) — only to turn on real purchases. Coupons /
-   admin grants deliver Premium meanwhile. See `BILLING_SERVER_CONTRACT.md`.
+   service-account key + Pub/Sub + the `EXPO_PUBLIC_PREMIUM_*_ID` build env) —
+   only to turn on real purchases. The client (Play Billing 9.1.0) and the
+   verification server are implemented; without config the app stays in the
+   honest "Preise folgen" state. Coupons / admin grants deliver Premium
+   meanwhile. See `BILLING_SERVER_CONTRACT.md`.
 5. **Tink production agreement** — only to leave sandbox; not a store blocker.
 6. **iOS**: a Mac *or* the GitHub macOS runner with Xcode 26 for the final
    compile step — see [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md).

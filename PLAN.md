@@ -116,7 +116,11 @@ Rule: every destructive operation is server-authoritative where it touches the
 cloud, self-scoped (`auth.uid()`, no target-user argument), audited, and behind
 a cancellable grace window. Nothing is deleted inside the grace window.
 
-## Billing readiness (not billing)
+## Billing readiness (client + server built, not store-configured)
+
+> RC6 update: the native store client and the purchase state machine are now
+> **implemented and tested** — see "RC6 native billing" below. This section
+> describes the model they plug into. What remains is external store config.
 
 - The entitlement model already carries `source: 'google_play' | 'revenuecat' |
   'store' | 'coupon' | 'admin' | 'migration' | 'superuser'` and a single
@@ -258,3 +262,39 @@ a cancellable grace window. Nothing is deleted inside the grace window.
   (SQLCipher fine on x86_64); 4 clean data-free surfaces captured. Data-rich
   surfaces need a debug build (`__DEV__` opens `/demo`).
 - 38 test suites, tsc/lint/expo-doctor clean. No Supabase / native change.
+
+## RC6 native billing + dependency convergence (2026-08-28)
+
+- **DONE** Native store client — `expo-iap@5.4.0` (OpenIAP: Google Play Billing
+  9.1.0 / StoreKit 2). `expoIapAdapter` implements the provider-neutral
+  `BillingClient`; native purchase → unified token → `verify-purchase` →
+  `apply_verified_subscription` → entitlement refetch → **only then** Premium.
+  `finishTransaction` runs only after a successful server verify. The adapter
+  never touches `productAccess`.
+- **DONE** Pure purchase state machine (`purchaseStateMachine.ts`, 12 phases,
+  `test:purchase-state-machine`) — `verified` only via server confirmation;
+  user cancel ≠ error; `pending` unlocks nothing; `verification_failed` →
+  retry / restore.
+- **DONE** Env-driven product config (`productConfig.ts`, `test:product-config`)
+  — no hard-coded / fake store IDs; both `EXPO_PUBLIC_PREMIUM_*_ID` unset →
+  `not_configured`, UI keeps the honest "Preise folgen" state, no fake checkout.
+- **DONE** `registerBilling.ts` — adapter dynamically imported and registered at
+  boot only when configured; a no-store build never loads `expo-iap`.
+- **DONE** Restore/reconciliation — `getAvailablePurchases()` → normalize →
+  server verify (idempotent on the token hash) → entitlement refetch.
+- **DONE** Expo SDK 57 patch convergence (`expo` 57.0.18, `expo-constants`
+  57.0.16, `expo-font` 57.0.2, `expo-updates` 57.0.19) folded into the same
+  native rebuild.
+- **DONE** Native boundary **1.6.0 / versionCode 7 / runtime 1.6.0**. Android
+  APK + AAB rebuilt (`--rerun-tasks`), aapt-verified (pkg, vc7, targetSdk 36,
+  SQLCipher, Billing 9.1.0, `allowBackup=false`, deep links). iOS unsigned CI
+  run `33178550618` green (arm64, cryptid 0, `_exsqlite3_key_v2`,
+  PrivacyInfo.xcprivacy, openiap pod, no Apple creds).
+- **DONE** `com.android.vending.BILLING` moved FORBIDDEN → ALLOWED in
+  `test:android-permissions`, enforced against the built APK.
+- **BLOCKED** Real purchases — Play Console products + Google service-account
+  key + App Store Server API `.p8` + the `EXPO_PUBLIC_PREMIUM_*_ID` build env.
+  Server verifiers stay `not_configured` (501) until then. **No real store
+  purchase tested.** Coupon / admin Premium unaffected.
+- 41 test suites, tsc / lint / expo-doctor 21/21 / guard:secrets clean,
+  14/14 migrations, db lint clean. No Supabase schema change.
