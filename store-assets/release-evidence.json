@@ -2,7 +2,7 @@
   "schema": "finance-app/release-evidence@1",
   "comment": "Machine-readable record of what has been REALLY verified against external providers vs only engineered/tested with fixtures. Updated by scripts/update-release-evidence.mjs. NEVER stores tokens, receipts, emails, transaction IDs or any secret - only booleans + timestamps + a git sha.",
   "updatedAt": "2026-08-28",
-  "gitSha": "164fe8e",
+  "gitSha": "7f05860",
   "signing": {
     "production_branch_fixed": true,
     "production_branch_proven_ephemeral": true,
@@ -50,6 +50,7 @@
   "notes": [
     "RC7: Google + Apple server verifiers IMPLEMENTED, tested only with synthetic fixtures.",
     "RC8: withFinanceUploadSigning plugin fixed (was silently keeping debug signing for the release buildType), then proven with an ephemeral throwaway key: assembleRelease produced a non-debug cert, verify:release-signing --expect-production passed, key deleted.",
-    "RC8: no external credentials configured (Google service account, Play access, product IDs, upload keystore, Apple, Tink production, EAS token) so no real provider roundtrip was possible this milestone."
+    "RC8: no external credentials configured (Google service account, Play access, product IDs, upload keystore, Apple, Tink production, EAS token) so no real provider roundtrip was possible this milestone.",
+    "RC8: OTA published to the 1.6.0 runtime channel (RC7 client delta). Live-verified: expo-updates function serves manifest id 4551ec42 for runtime 1.6.0; launch asset HTTP 200 (6690315 bytes); 1.0.0 channel now 404."
   ]
 }
