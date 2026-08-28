@@ -29,12 +29,20 @@
  */
 
 import {
+  buildTinkAuthorizeUrl,
+  TINK_REDIRECT_URI,
+} from '@/banking/tink/tinkCallbackCore';
+import {
   getSupabaseClient,
 } from '@/services/cloud/cloudClient';
 
-const CLIENT_ID =
+export { TINK_REDIRECT_URI } from '@/banking/tink/tinkCallbackCore';
+
+export const TINK_CLIENT_ID =
   process.env.EXPO_PUBLIC_TINK_CLIENT_ID ??
   '';
+
+const CLIENT_ID = TINK_CLIENT_ID;
 
 export const TINK_ENVIRONMENT =
   process.env.EXPO_PUBLIC_TINK_ENVIRONMENT === 'production'
@@ -134,60 +142,23 @@ export type TinkTransaction =
   };
 
 /**
- * Tink Link Start-URL: der User waehlt
- * dort seine Bank (inkl. Klarna, falls
- * gelistet) und autorisiert.
+ * Tink-Link-Start-URL. `state` bindet den Rücksprung an die Sitzung und ist
+ * Pflicht — im normalen Flow liefert ihn `startTinkLinkSession()`.
  */
-export function buildTinkLinkUrl(
-  options: {
-    market?:
-      string;
-
-    locale?:
-      string;
-
-    scope?:
-      string;
-  },
-): string {
-  if (
-    !CLIENT_ID
-  ) {
-    throw new Error(
-      'Tink nicht konfiguriert.',
-    );
-  }
-
-  const params =
-    new URLSearchParams(
-      {
-        client_id:
-          CLIENT_ID,
-
-        redirect_uri:
-          'financeapp://bank/tink',
-
-        authorization_page:
-          'DEFAULT',
-
-        scope:
-
-          options.scope ??
-          'accounts:read balances:read transactions:read',
-
-        market:
-
-          options.market ??
-          'DE',
-
-        locale:
-
-          options.locale ??
-          'de_DE',
-      },
-    );
-
-  return `https://link.tink.com/1.0/authorize?${params.toString()}`;
+export function buildTinkLinkUrl(options: {
+  state: string;
+  market?: string;
+  locale?: string;
+  scope?: string;
+}): string {
+  return buildTinkAuthorizeUrl({
+    clientId: CLIENT_ID,
+    state: options.state,
+    market: options.market,
+    locale: options.locale,
+    scope: options.scope,
+    redirectUri: TINK_REDIRECT_URI,
+  });
 }
 
 export type TinkImportPayload = {
@@ -250,8 +221,7 @@ export async function fetchTinkImport(
       body: {
         action: 'exchange-and-fetch',
         code,
-        redirectUri:
-          'financeapp://bank/tink',
+        redirectUri: TINK_REDIRECT_URI,
       },
     },
   );

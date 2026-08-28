@@ -62,6 +62,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:tink-import": "node --experimental-strip-types scripts/test-tink-import.mjs",
+    "test:tink-callback": "node --experimental-strip-types scripts/test-tink-callback.mjs",
     "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
     "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs",
     "test:recurring-classification": "node --experimental-strip-types scripts/test-recurring-classification.mjs",

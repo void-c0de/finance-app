@@ -1,4 +1,4 @@
-import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 import {
   type Href,
@@ -54,11 +54,13 @@ import {
 import {
   tinkUnscaledToMinorUnits,
 
-  buildTinkLinkUrl,
-
   fetchTinkImport,
 
   isTinkProduction,
+
+  TINK_CLIENT_ID,
+
+  TINK_REDIRECT_URI,
 
   TinkImportError,
 
@@ -66,6 +68,17 @@ import {
 
   type TinkTransaction,
 } from '@/banking/tink/tinkClient';
+
+import {
+  classifyTinkCallback,
+  parseTinkCallback,
+} from '@/banking/tink/tinkCallbackCore';
+
+import {
+  clearTinkLinkState,
+  peekTinkLinkState,
+  startTinkLinkSession,
+} from '@/banking/tink/tinkLinkSession';
 
 import {
   groupTinkTransactionsByLocalAccount,
@@ -408,6 +421,9 @@ export default function TinkCallbackScreen() {
       code?:
         string;
 
+      state?:
+        string;
+
       error?:
         string;
     }>();
@@ -706,61 +722,126 @@ export default function TinkCallbackScreen() {
 
         confirmLabel: needsReauth ? 'Erneut verbinden' : 'Verstanden',
 
-        onConfirm: needsReauth ? () => startTinkLink() : undefined,
+        onConfirm: needsReauth ? () => void startTinkLink() : undefined,
       });
     }
   }
+
+  /** Verarbeitet einen Rücksprung (URL vom AuthSession-Ergebnis oder Deep-Link-Params). */
+  const handleCallback = useCallback(
+    async (raw: string | Record<string, string | undefined>) => {
+      const parsed = parseTinkCallback(raw);
+      const expectedState = await peekTinkLinkState();
+      const decision = classifyTinkCallback(parsed, expectedState);
+
+      if (decision.kind === 'exchange' && decision.code) {
+        await clearTinkLinkState();
+        await importWithCode(decision.code);
+        return;
+      }
+
+      // Kein Austausch → state aufräumen und passend informieren.
+      await clearTinkLinkState();
+      setPhase('idle');
+
+      if (decision.kind === 'idle') {
+        return;
+      }
+
+      if (decision.kind === 'error' && decision.connectionStatus) {
+        try {
+          const tink = (await getBankConnections()).find(
+            (connection) => connection.providerId === TINK_PROVIDER_ID,
+          );
+          if (tink) {
+            await updateBankConnectionStatus(tink.id, decision.connectionStatus);
+            await refreshFinanceData();
+          }
+        } catch (statusError) {
+          debugLog.warn(
+            'BANK',
+            `${APP_ERROR_CODES.BNK_TINK_SYNC_FAILED}: Reconnect-Status konnte nicht gesetzt werden`,
+            statusError,
+          );
+        }
+      }
+
+      if (decision.kind !== 'cancelled') {
+        debugLog.warn(
+          'BANK',
+          `${APP_ERROR_CODES.BNK_TINK_EXCHANGE_FAILED}: Tink-Rücksprung ${decision.kind}${
+            decision.code ? ` (${decision.code})` : ''
+          }`,
+        );
+      }
+
+      setDialog({
+        title: decision.title,
+        message: decision.message,
+        confirmLabel: decision.requiresReauthorization ? 'Erneut verbinden' : 'Verstanden',
+        onConfirm: decision.requiresReauthorization ? () => void startTinkLink() : undefined,
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useFocusEffect(
     useCallback(
       () => {
         if (
-          !codeParam ||
-          handledCodeRef.current ===
-            codeParam ||
-          phase ===
-            'working'
+          (!codeParam && !params.error) ||
+          handledCodeRef.current === (codeParam ?? params.error) ||
+          phase === 'working'
         ) {
           return;
         }
 
-        handledCodeRef.current =
-          codeParam;
+        handledCodeRef.current = codeParam ?? params.error ?? null;
 
-        void importWithCode(
-          codeParam,
-        );
+        void handleCallback({
+          code: codeParam,
+          state: typeof params.state === 'string' ? params.state : undefined,
+          error: typeof params.error === 'string' ? params.error : undefined,
+        });
       },
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [
-        codeParam,
-      ],
+      [codeParam, params.error, params.state],
     ),
   );
 
-  function startTinkLink() {
-    try {
-      const url =
-        buildTinkLinkUrl({});
-
-      void Linking.openURL(
-        url,
-      );
-    } catch (error) {
-      debugLog.error(
-        'BANK',
-
-        `${APP_ERROR_CODES.BNK_TINK_EXCHANGE_FAILED}: Tink Link konnte nicht geöffnet werden`,
-
-        error,
-      );
-
+  async function startTinkLink() {
+    if (!TINK_CLIENT_ID) {
       setDialog({
         title: 'Tink nicht konfiguriert',
+        message: 'Es fehlen die Tink-Zugangsdaten in diesem Build.',
+        confirmLabel: 'Verstanden',
+      });
+      return;
+    }
 
-        message: 'Es fehlen die Tink-Zugangsdaten im Build.',
+    try {
+      const { url } = await startTinkLinkSession({ clientId: TINK_CLIENT_ID });
+      const result = await WebBrowser.openAuthSessionAsync(url, TINK_REDIRECT_URI);
 
+      if (result.type === 'success' && result.url) {
+        await handleCallback(result.url);
+      } else {
+        // 'cancel' / 'dismiss' → nichts kaputt, state aufräumen.
+        await clearTinkLinkState();
+        setPhase('idle');
+      }
+    } catch (error) {
+      await clearTinkLinkState();
+      debugLog.error(
+        'BANK',
+        `${APP_ERROR_CODES.BNK_TINK_EXCHANGE_FAILED}: Tink Link konnte nicht geöffnet werden`,
+        error,
+      );
+      setDialog({
+        title: 'Bankverbindung nicht möglich',
+        message: 'Der Tink-Flow konnte nicht gestartet werden. Bitte versuche es später erneut.',
         confirmLabel: 'Verstanden',
       });
     }
