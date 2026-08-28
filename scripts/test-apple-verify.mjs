@@ -107,13 +107,9 @@ try {
   assert.equal(malformed.ok, false);
   assert.equal(malformed.reason, 'malformed');
 
-  // expired leaf
-  sh('openssl req -new -key leaf.key -out leafx.csr -subj "/CN=Expired Leaf"');
-  sh('faketime "2020-01-01 00:00:00" openssl x509 -req -in leafx.csr -CA int.pem -CAkey int.key -CAcreateserial -out leafx.pem -days 1 -sha384 2>/dev/null || openssl x509 -req -in leafx.csr -CA int.pem -CAkey int.key -CAcreateserial -out leafx.pem -days 1 -sha384');
-  // If faketime is unavailable the cert is valid now; check the "certificate_expired" path with a future `now` instead.
+  // certificate validity window: 10 days out, the 3-day leaf is past notAfter.
   const future = new Date(Date.now() + 10 * 86400_000);
   const expired = await jws.verifyAppleJws(goodJws, { trustedRootSha256: rootFp, now: future });
-  // leaf was issued for 3 days, so 10 days out it is expired
   assert.equal(expired.ok, false);
   assert.equal(expired.reason, 'certificate_expired');
 
