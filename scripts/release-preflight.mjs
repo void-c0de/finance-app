@@ -95,13 +95,13 @@ const snapshot = {
 // verdicts per delivery track — a plain roll-up, the human wording lives in release:go-no-go
 snapshot.verdicts = {
   engineeringClosedTest:
-    snapshot.gates.secretGuard && snapshot.gates.otaManifest && snapshot.gates.legal && snapshot.gates.brandAssets
+    snapshot.gates.secretGuard && snapshot.gates.otaManifest && snapshot.gates.brandAssets && snapshot.submissionBundle.complete
       ? 'GO (engineering build; banking + billing run in sandbox/fixture mode)'
       : 'NO-GO (a local gate is failing)',
   realClosedTest:
-    snapshot.evidence.playAppExists && snapshot.evidence.uploadKeyConfigured
+    snapshot.evidence.playAppExists && snapshot.evidence.uploadKeyConfigured && snapshot.gates.legal
       ? 'GO'
-      : 'NO-GO (needs: Play Console app + upload keystore — maintainer-held)',
+      : 'NO-GO (needs: Play Console app + upload keystore + filled legal facts — maintainer-held)',
   production:
     snapshot.evidence.closedTestUploaded && snapshot.evidence.anyRealGoogle
       ? 'GO'
