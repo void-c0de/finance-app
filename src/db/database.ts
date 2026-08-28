@@ -852,3 +852,22 @@ Promise<void> {
 
   await applyMigrations(db);
 }
+
+/**
+ * Schreib-Transaktion auf der EINEN verschlüsselten Verbindung.
+ *
+ * `db.withExclusiveTransactionAsync` öffnet intern eine NEUE Verbindung
+ * (`useNewConnection: true`) und wendet `PRAGMA key` NICHT an → unter SQLCipher
+ * scheitert dann jede Anweisung mit „file is not a database". Wir serialisieren
+ * Schreibzugriffe ohnehin über `withDbLock` und sind der einzige Prozess auf der
+ * Datei, also genügt `withTransactionAsync` auf der gekeyten Verbindung
+ * (BEGIN/COMMIT/ROLLBACK, atomar).
+ */
+export async function withWriteTransaction(
+  db: SQLite.SQLiteDatabase,
+  task: (txn: SQLite.SQLiteDatabase) => Promise<void>,
+): Promise<void> {
+  await db.withTransactionAsync(async () => {
+    await task(db);
+  });
+}

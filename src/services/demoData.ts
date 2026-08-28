@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 
-import { getDatabase } from '@/db/database';
+import { getDatabase, withWriteTransaction } from '@/db/database';
 import { withDbLock } from '@/core/dbWriteLock';
 import { debugLog } from '@/core/debugLog';
 import { inspectBackup } from '@/services/backupImportCore';
@@ -58,7 +58,7 @@ export async function clearDemoData(): Promise<{ ok: boolean; removed: number }>
     const db = await getDatabase();
     let removed = 0;
     try {
-      await db.withExclusiveTransactionAsync(async (txn) => {
+      await withWriteTransaction(db, async (txn) => {
         await txn.runAsync('PRAGMA defer_foreign_keys = ON');
         for (const table of DEMO_TABLES) {
           // Tombstone statt Hard-Delete: falls die Zeilen bereits in der Cloud

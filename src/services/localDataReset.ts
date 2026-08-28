@@ -1,4 +1,4 @@
-import { getDatabase } from '@/db/database';
+import { getDatabase, withWriteTransaction } from '@/db/database';
 import { withDbLock } from '@/core/dbWriteLock';
 import { debugLog } from '@/core/debugLog';
 
@@ -37,7 +37,7 @@ const DATA_TABLES = [
 export async function wipeLocalFinanceDataLocked(): Promise<{ ok: boolean }> {
   const db = await getDatabase();
   try {
-    await db.withExclusiveTransactionAsync(async (txn) => {
+    await withWriteTransaction(db, async (txn) => {
       await txn.runAsync('PRAGMA defer_foreign_keys = ON');
       for (const table of DATA_TABLES) {
         await txn.runAsync(`DELETE FROM ${table}`);

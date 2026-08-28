@@ -1,4 +1,4 @@
-import { getDatabase } from '@/db/database';
+import { getDatabase, withWriteTransaction } from '@/db/database';
 import { withDbLock } from '@/core/dbWriteLock';
 import { debugLog } from '@/core/debugLog';
 import {
@@ -427,7 +427,7 @@ export async function applyRestore(backup: ParsedBackup): Promise<RestoreOutcome
 
     let written = 0;
     try {
-      await db.withExclusiveTransactionAsync(async (txn) => {
+      await withWriteTransaction(db, async (txn) => {
         for (const domain of RESTORE_ORDER) {
           const spec = DOMAIN_TABLES[domain];
           const toWrite = plan.writes[domain];

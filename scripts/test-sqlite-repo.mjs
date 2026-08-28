@@ -224,4 +224,32 @@ assert.equal(db.prepare(`SELECT COUNT(*) c FROM goal_contributions WHERE goal_id
 }
 
 db.close();
-console.log('SQLite repository semantics (plain SQLite, not SQLCipher): all tests passed');
+
+// --- SQLCipher-Regression: withExclusiveTransactionAsync ist verboten -----
+// expo-sqlite öffnet dafür eine NEUE Verbindung (useNewConnection) ohne
+// `PRAGMA key` → unter SQLCipher „file is not a database". Schreib-Transaktionen
+// laufen über withWriteTransaction()/withTransactionAsync auf der gekeyten Verbindung.
+{
+  const { readFileSync, readdirSync, statSync } = await import('node:fs');
+  const walk = (dir) => {
+    const out = [];
+    for (const name of readdirSync(dir)) {
+      const p = `${dir}/${name}`;
+      if (statSync(p).isDirectory()) out.push(...walk(p));
+      else if (/\.(ts|tsx)$/.test(name)) out.push(p);
+    }
+    return out;
+  };
+  const offenders = walk('src').filter((f) => {
+    const src = readFileSync(f, 'utf8');
+    // Aufruf, nicht Kommentar/Doku
+    return /\.withExclusiveTransactionAsync\s*\(/.test(src);
+  });
+  assert.deepEqual(
+    offenders,
+    [],
+    `withExclusiveTransactionAsync ist mit SQLCipher inkompatibel — betroffen: ${offenders.join(', ')}`,
+  );
+}
+
+console.log('SQLite repository semantics (plain SQLite, not SQLCipher) + SQLCipher tx-guard: all tests passed');
