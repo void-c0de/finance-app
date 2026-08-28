@@ -54,7 +54,26 @@ runtime dependencies and there is no realistic exploitation path.
 build **compiles** with Xcode 26.6 (macOS-26 runner). SQLCipher is compiled in — `_exsqlite3_key_v2` symbols verified in the arm64 binary (the
 top-level `useSQLCipher` prop covers iOS). No entitlement-gated module.
 
+## Expo SDK 57 patch drift (2026-08-28)
+
+`npx expo-doctor` now reports 4 packages behind the SDK-57 patch line:
+
+| package | installed | expected |
+| --- | --- | --- |
+| `expo` | 57.0.17 | ~57.0.18 |
+| `expo-constants` | 57.0.15 | ~57.0.16 |
+| `expo-font` | 57.0.1 | ~57.0.2 |
+| `expo-updates` | 57.0.18 | ~57.0.19 |
+
+Patch-level only, same minor. **Deferred, not applied**: no CVE / no bug fix we
+need, and bumping `expo-updates` / `expo` now would desync the JS tree from the
+committed native artifacts (`RELEASE.md`: no OTA from native deps that differ
+from the target binary). Fold `npx expo install --fix` into the next native
+build (the `1.6.0` boundary or the Play-submission build), then re-run the iOS
+CI compile.
+
 ## Action
 
-None required now. Re-check after each Expo SDK patch; a future
-`@expo/config-plugins` bump clears all 12 audit entries.
+Run `npx expo install --fix` as part of the next native build, not before.
+Re-check the 12 build-tooling audit entries after each Expo SDK patch; a future
+`@expo/config-plugins` bump clears them.
