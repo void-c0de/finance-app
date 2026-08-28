@@ -59,6 +59,27 @@ type StoreResult =
   | { ok: false; reason: 'not_configured' | 'invalid_token' | 'store_error' };
 
 /**
+ * Verifies an App Store subscription (StoreKit 2 signed transaction / App Store
+ * Server API). Isolated; returns not_configured until Apple credentials exist.
+ */
+async function verifyWithAppStore(productId: string, purchaseToken: string): Promise<StoreResult> {
+  const issuerId = Deno.env.get('APP_STORE_ISSUER_ID');
+  const keyId = Deno.env.get('APP_STORE_KEY_ID');
+  const privateKey = Deno.env.get('APP_STORE_PRIVATE_KEY');
+  if (!issuerId || !keyId || !privateKey) return { ok: false, reason: 'not_configured' };
+
+  // Real implementation (enable once the secrets are set):
+  //   1. Mint an ES256 JWT for the App Store Server API from (issuerId, keyId, privateKey).
+  //   2. GET https://api.storekit.itunes.apple.com/inApps/v1/subscriptions/{originalTransactionId}
+  //      (purchaseToken carries the originalTransactionId / signed transaction).
+  //   3. Verify the JWS signature chain against Apple's root CA.
+  //   4. Map status + expiresDate → StoreResult; check productId.
+  void productId;
+  void purchaseToken;
+  return { ok: false, reason: 'not_configured' };
+}
+
+/**
  * Verifies a Google Play subscription purchase. Isolated so the rest of the
  * function is fully testable without Google credentials.
  */
@@ -99,13 +120,17 @@ Deno.serve(async (req: Request) => {
   const productId = String(body.productId ?? '');
   const purchaseToken = String(body.purchaseToken ?? '');
 
-  if (platform !== 'google_play' && platform !== 'revenuecat') return j(400, { error: 'bad_platform' });
+  if (platform !== 'google_play' && platform !== 'app_store' && platform !== 'revenuecat') {
+    return j(400, { error: 'bad_platform' });
+  }
   if (!PRODUCT_IDS.has(productId)) return j(400, { error: 'unknown_product' });
   if (purchaseToken.trim().length < 8) return j(400, { error: 'bad_token' });
 
   const store = platform === 'google_play'
     ? await verifyWithGooglePlay(productId, purchaseToken)
-    : ({ ok: false, reason: 'not_configured' } as StoreResult);
+    : platform === 'app_store'
+      ? await verifyWithAppStore(productId, purchaseToken)
+      : ({ ok: false, reason: 'not_configured' } as StoreResult);
 
   if (!store.ok) {
     return j(store.reason === 'not_configured' ? 501 : 400, { error: store.reason });

@@ -57,6 +57,24 @@ BEGIN
   IF c <> 1 THEN RAISE EXCEPTION 'duplicate billing_subscriptions row: %', c; END IF;
 END; $$;
 
+-- 4b) App Store is an accepted provider (RC4); a bogus provider still raises.
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.apply_verified_subscription(
+    current_setting('test.u1')::uuid, 'app_store', 'premium.yearly', 'hash-appstore-1',
+    'active', true, now() + interval '365 days', 'verify_purchase');
+  IF (r->>'plan') <> 'premium' THEN RAISE EXCEPTION 'app_store purchase did not grant premium: %', r; END IF;
+
+  BEGIN
+    PERFORM public.apply_verified_subscription(
+      current_setting('test.u1')::uuid, 'paypal', 'x', 'h2', 'active', true, now(), NULL);
+    RAISE EXCEPTION 'bogus provider was accepted';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%bad_provider%' THEN RAISE; END IF;
+  END;
+END; $$;
+
 -- 5) The merge function is not callable by a normal authenticated user
 DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', current_setting('test.u1'), true); END; $$;
 SET LOCAL ROLE authenticated;

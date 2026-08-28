@@ -39,6 +39,16 @@ const noComments = (s) =>
   assert.ok(!/jsonb_build_object\([^)]*token/i.test(sql), 'kein Token im Audit-Metadata');
 }
 
+// --- App-Store-Erweiterung (RC4, additiv) ---------------------------
+{
+  const sql = noComments(readFileSync('supabase/migrations/20260828160000_billing_app_store.sql', 'utf8'));
+  assert.match(sql, /source IN \([^)]*'google_play'[^)]*'app_store'[^)]*'revenuecat'[^)]*\)/);
+  assert.match(sql, /provider IN \('google_play', 'app_store', 'revenuecat'\)/);
+  assert.match(sql, /IF p_provider NOT IN \('google_play', 'app_store', 'revenuecat'\) THEN RAISE EXCEPTION 'bad_provider'/);
+  assert.match(sql, /REVOKE ALL ON FUNCTION public\.apply_verified_subscription\([^)]*\) FROM PUBLIC, anon, authenticated/);
+  assert.ok(sql.includes('BEGIN;') && sql.includes('COMMIT;'), 'transaktional');
+}
+
 // --- verify-purchase ----------------------------------------------
 {
   const fn = readFileSync('supabase/functions/verify-purchase/index.ts', 'utf8');
@@ -51,6 +61,10 @@ const noComments = (s) =>
   assert.ok(!/eyJ[A-Za-z0-9_-]{20,}/.test(fn) && !/sb_secret_/.test(fn), 'keine Secret-Literale');
   assert.match(fn, /PRODUCT_IDS/, 'Produkt-Whitelist');
   assert.match(fn, /method_not_allowed/, 'nur POST');
+  // App Store: eigener isolierter Verifizierer, ohne Credentials not_configured.
+  assert.match(fn, /verifyWithAppStore/, 'App-Store-Verifizierer vorhanden');
+  assert.match(fn, /platform !== 'app_store'/, 'app_store im Plattform-Guard');
+  assert.match(fn, /APP_STORE_ISSUER_ID|APP_STORE_PRIVATE_KEY/, 'Apple-Server-Credentials (nur Env)');
 }
 
 // --- billing-webhook --------------------------------------------

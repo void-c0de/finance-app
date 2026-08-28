@@ -18,11 +18,12 @@ export type EntitlementSourceKind =
   | 'coupon'
   | 'admin'
   | 'google_play'
+  | 'app_store'
   | 'revenuecat'
   | 'store'
   | 'migration';
 
-export type PurchasePlatform = 'google_play' | 'revenuecat';
+export type PurchasePlatform = 'google_play' | 'app_store' | 'revenuecat';
 
 export type BillingInterval = 'monthly' | 'yearly';
 
@@ -35,6 +36,8 @@ export type PremiumProduct = {
   interval: BillingInterval;
   /** Play-Console Basisplan-/Produkt-ID (final erst mit Store-Setup). */
   googlePlayProductId: string;
+  /** App-Store-Connect Produkt-ID (final erst mit StoreKit-Setup). */
+  appStoreProductId: string;
   /** RevenueCat-Paket-Bezeichner (final erst mit RevenueCat-Setup). */
   revenueCatPackageId: string;
 };
@@ -44,15 +47,31 @@ export const PREMIUM_PRODUCTS: readonly PremiumProduct[] = [
     id: 'premium_monthly',
     interval: 'monthly',
     googlePlayProductId: 'premium.monthly',
+    appStoreProductId: 'premium.monthly',
     revenueCatPackageId: '$rc_monthly',
   },
   {
     id: 'premium_yearly',
     interval: 'yearly',
     googlePlayProductId: 'premium.yearly',
+    appStoreProductId: 'premium.yearly',
     revenueCatPackageId: '$rc_annual',
   },
 ];
+
+/** Store-Produkt-ID einer Plattform → interner Produktschlüssel (oder null). */
+export function productIdForPlatform(
+  platform: PurchasePlatform,
+  storeProductId: string,
+): string | null {
+  const match = PREMIUM_PRODUCTS.find((product) => {
+    if (product.id === storeProductId) return true;
+    if (platform === 'google_play') return product.googlePlayProductId === storeProductId;
+    if (platform === 'app_store') return product.appStoreProductId === storeProductId;
+    return product.revenueCatPackageId === storeProductId;
+  });
+  return match ? match.id : null;
+}
 
 export type PriceConfig = {
   currency: string;
@@ -106,15 +125,13 @@ export type PurchaseVerificationResult =
       reason: 'invalid_token' | 'expired' | 'refunded' | 'on_hold' | 'platform_unavailable' | 'not_configured';
     };
 
+const PURCHASE_PLATFORMS: readonly PurchasePlatform[] = ['google_play', 'app_store', 'revenuecat'];
+
 /** Grundprüfung einer Anfrage, bevor sie überhaupt an den Server geht. */
 export function isWellFormedPurchaseRequest(request: PurchaseVerificationRequest): boolean {
-  if (request.platform !== 'google_play' && request.platform !== 'revenuecat') return false;
+  if (!PURCHASE_PLATFORMS.includes(request.platform)) return false;
   if (typeof request.purchaseToken !== 'string' || request.purchaseToken.trim().length < 8) return false;
-  return PREMIUM_PRODUCTS.some((product) =>
-    request.platform === 'google_play'
-      ? product.googlePlayProductId === request.productId || product.id === request.productId
-      : product.revenueCatPackageId === request.productId || product.id === request.productId,
-  );
+  return productIdForPlatform(request.platform, request.productId) != null;
 }
 
 // ---------------------------------------------------------------------------

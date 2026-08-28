@@ -50,6 +50,28 @@ assert.equal(
   false,
   'unbekanntes Produkt',
 );
+assert.equal(
+  isWellFormedPurchaseRequest({ platform: 'app_store', productId: 'premium.yearly', purchaseToken: 'tok_abcdefgh' }),
+  true,
+  'App Store ist eine gültige Plattform',
+);
+assert.equal(
+  isWellFormedPurchaseRequest({ platform: 'app_store', productId: 'premium_yearly', purchaseToken: 'tok_abcdefgh' }),
+  true,
+  'interner Produktschlüssel wird ebenfalls akzeptiert',
+);
+
+// --- App-Store-Entitlement fließt durch denselben Resolver ----------
+{
+  const now = new Date('2026-08-28T00:00:00Z');
+  const inDays = (n) => new Date(now.getTime() + n * 86_400_000).toISOString();
+  const r = resolveEntitlement(
+    [{ source: 'app_store', expiresAt: inDays(30), active: true }],
+    now,
+  );
+  assert.equal(r.isPremium, true);
+  assert.equal(r.source, 'app_store');
+}
 
 // --- Präzedenz: Superuser schlägt alles ------------------------------
 {
