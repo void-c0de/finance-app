@@ -18,16 +18,22 @@ store-assets/
     *.png       <- final candidates (committed once an iPhone build is signed)
 ```
 
-## Capture (Android, device unlocked)
+## Capture (Android)
 
-```bash
-npm run screenshots:android
-```
+1. Build a **release** APK with the screenshot flag (no dev overlay, `/demo`
+   reachable): `EXPO_PUBLIC_SCREENSHOT_MODE=1` then `gradlew assembleRelease`
+   (or `npx expo run:android --variant release`). The flag is off by default and
+   no `eas.json` profile sets it (`test:screenshot-mode`).
+2. Install on an emulator (`Medium_Phone_API_36.0`) or an unlocked device.
+   In the app: **Mehr → Demo-Daten → Laden**.
+3. `npm run screenshots:android` — walks the surfaces (deep links + tab taps),
+   `adb exec-out screencap`, writes `store-assets/android/raw/`. It refuses to
+   save a frame if a real email / IBAN shows in the UI dump and **never** bypasses
+   the OS keyguard.
 
-Drives the connected device through the demo surfaces via `financeapp://` deep
-links and `adb exec-out screencap`, writing to `store-assets/android/raw/`.
-Requires: the device **unlocked** (the OS keyguard is never bypassed), demo data
-loaded, and — for the Premium/Analytics shot — a Premium coupon redeemed.
+`candidate-*.png` in this folder are captured from the API-36 emulator with the
+deterministic demo dataset (1080×2400). Crop the status bar / normalise before
+uploading.
 
 ## Play requirements (verify at upload time)
 
