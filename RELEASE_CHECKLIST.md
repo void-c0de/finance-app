@@ -67,6 +67,16 @@ action · ❌ not started.
 | Demo data mode (screenshots/QA) | ✅ (`/demo`, Superuser/dev) |
 | Support diagnostic bundle (redacted) | ✅ |
 
+## iOS — free personal-device path
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| App compiles for iOS (unsigned, device SDK) | ✅ | GitHub `macos-latest`, Xcode 26. `npm run ios:unsigned`. |
+| Unsigned re-signable IPA artifact | ✅ | `FinanceApp-ios-unsigned.ipa`, uploaded by the workflow (7-day retention). |
+| Bundle verification in CI (arch / encryption / SQLCipher / privacy manifest) | ✅ | "Verify the app bundle" step. |
+| Sign + install to a physical iPhone | ⏳ | Maintainer: AltStore/Sideloadly on Windows + a free Apple ID. See [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md). |
+| App Store / TestFlight | ❌ | Needs the paid Apple Developer Program. [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md). |
+
 ## RC2 — what changed since RC1
 
 Pure JS/server/web/CI + one config change; **native stays 1.5.0 / versionCode

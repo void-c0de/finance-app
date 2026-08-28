@@ -95,7 +95,9 @@
     "test:ios-config": "node scripts/test-ios-config.mjs",
     "test:perf-scale": "node --experimental-strip-types scripts/test-perf-scale.mjs",
     "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs",
-    "test:resilience": "node --experimental-strip-types scripts/test-resilience.mjs"
+    "test:resilience": "node --experimental-strip-types scripts/test-resilience.mjs",
+    "ios:unsigned": "node scripts/ios-unsigned-build.mjs",
+    "ios:unsigned:info": "node scripts/ios-unsigned-build.mjs --info"
   },
   "private": true
 }

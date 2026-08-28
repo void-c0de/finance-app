@@ -182,14 +182,14 @@ a cancellable grace window. Nothing is deleted inside the grace window.
 - **BLOCKED** Play Console actions (Data Safety, Financial Features, closed test,
   IARC) — need the console.
 
-## Not started
+## Not started / partial
 
-- Paid billing (Google Play Billing v8+ / RevenueCat receipt verification). The
-  entitlement model, Premium Center and `billingCore` are architecture-ready;
-  `BILLING_SERVER_CONTRACT.md` specs the Edge Functions. The client never grants
-  itself Premium. No obsolete billing library is present.
-- iOS.
-- Multi-currency goals and budgets.
+- **PARTIAL** Paid billing. Server is **built + deployed** (`verify-purchase`,
+  `billing-webhook`, `billing_subscriptions`, `apply_verified_subscription`).
+  Missing: a Play Billing client library (waits on Play Console products) and
+  Google service-account credentials. The client never grants itself Premium.
+- **PARTIAL** iOS — see the RC3 section below and `IOS_RELEASE_CHECKLIST.md`.
+- **NEXT** Multi-currency goals and budgets (base-currency scoping shipped; no FX).
 
 ## RC2 hardening milestone (2026-08-28)
 
@@ -198,7 +198,20 @@ a cancellable grace window. Nothing is deleted inside the grace window.
   scoping (no mixed-currency sums), billing verification server (deployed:
   `verify-purchase`/`billing-webhook` + `billing_subscriptions`), support
   diagnostic bundle, windowed transaction list, core resilience guards.
-- **DONE** iOS build readiness — the project **compiles** on Apple's toolchain
-  (GitHub macOS runner, Xcode 26.6). Free personal-iPhone path documented in
-  `IOS_FREE_DEVICE_INSTALL.md` (Xcode Personal Team OR Windows+GitHub runner+AltStore).
 - Native stays 1.5.0 / versionCode 6 / runtime 1.5.0 (RC2 is JS/server/web/CI).
+
+## RC3 release convergence (2026-08-28)
+
+- **DONE** iOS App Store prep docs + `ios.privacyManifests` (no tracking, honest
+  data types, Required-Reason API codes). `APPLE_APP_PRIVACY.md` is the source
+  of truth; `test:ios-config` asserts the manifest and the absence of ATT.
+- **DONE** `.github/workflows/ios-unsigned.yml` hardened: deep bundle
+  verification (arch, `LC_ENCRYPTION_INFO`, SQLCipher symbols, `PrivacyInfo.xcprivacy`,
+  frameworks). Artefact renamed `FinanceApp-ios-unsigned.ipa`. Helper:
+  `npm run ios:unsigned` / `ios:unsigned:info`.
+- **VERIFIED** Blocker burn-down: no `TODO`/`FIXME`/`HACK`/`NOT_IMPLEMENTED`/stub
+  in `src/`. `MockBankProvider` is the intentional sandbox (Tink production is
+  externally blocked). Demo data uses `DE00 …` placeholder IBANs only.
+- **VERIFIED** Android cold-start clean on the physical device (SM-S938B,
+  Android 16), no Metro; 35/35 test suites, tsc, lint, expo-doctor 21/21 green.
+- Native unchanged: 1.5.0 / versionCode 6 / runtime 1.5.0.

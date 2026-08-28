@@ -406,6 +406,27 @@ an RC2 OTA is prepared but not published.
   `APPLE_APP_PRIVACY.md`. Future App Store prep: `IOS_RELEASE_CHECKLIST.md`,
   `APPLE_EXPORT_COMPLIANCE.md`, `APPLE_REVIEW_CHECKLIST.md`, `APP_STORE_LISTING.md`,
   `TESTFLIGHT_CHECKLIST.md`.
+
+## RC3 — 1.5.0 / versionCode 6 (unchanged), release convergence (2026-08-28)
+
+**No native boundary.** CI + docs + tooling only. `versionName` / `versionCode` /
+`runtimeVersion` stay `1.5.0` / `6` / `1.5.0`.
+
+- **iOS unsigned build workflow** (`.github/workflows/ios-unsigned.yml`) hardened
+  with a deep verification step that logs, on the real compiled `.app`:
+  `CFBundleIdentifier` (`com.nocta-xz.financeapp`), architectures (`arm64`),
+  `LC_ENCRYPTION_INFO` cryptid, `PrivacyInfo.xcprivacy` presence, SQLCipher
+  symbols (`sqlite3_key` / codec) in the `expo-sqlite` module, embedded
+  frameworks. Artifact: **`FinanceApp-ios-unsigned.ipa`** (was
+  `FinanceApp-unsigned.ipa`), 7-day retention, **no Apple credentials in CI**.
+- **`npm run ios:unsigned`** — dispatches that workflow and streams progress;
+  **`npm run ios:unsigned:info`** — shows the last run + artifact. Token comes
+  from the local git credential helper; nothing Apple-related is transmitted.
+- **Blocker burn-down**: full `src/` scan — zero `TODO`/`FIXME`/`HACK`/
+  `NOT_IMPLEMENTED`/stub markers. `MockBankProvider` is the deliberate sandbox
+  provider (Tink production is contract-blocked). No dead navigation.
+- Android device re-verified (SM-S938B / Android 16), 35/35 suites, tsc, lint,
+  expo-doctor 21/21, secret guard clean.
 - **CI unchanged** (green). `DEPENDENCY_AUDIT.md`: 12 moderate npm-audit entries
   are build-tooling only (`@expo/config-plugins → xcode → uuid`), no runtime
   exposure, no safe fix without an SDK downgrade.
