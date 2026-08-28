@@ -67,6 +67,35 @@ const noComments = (s) =>
   assert.match(fn, /APP_STORE_ISSUER_ID|APP_STORE_PRIVATE_KEY/, 'Apple-Server-Credentials (nur Env)');
 }
 
+// --- Nativer Client-Adapter (expo-iap) — Sicherheitsvertrag ------
+{
+  const adapter = readFileSync('src/services/billing/expoIapAdapter.ts', 'utf8');
+  // Der Adapter gewährt NIE selbst Premium — nur über handoffToServer.
+  assert.match(adapter, /handoffToServer/, 'Adapter reicht an den Server-Verifizierer');
+  assert.ok(!/productAccess|setAccess|isPremium\s*=/.test(adapter), 'Adapter fasst productAccess nicht an');
+  // finishTransaction (Play-Acknowledge) erst NACH erfolgreicher Server-Prüfung.
+  const finishIdx = adapter.indexOf('finishTransaction({ purchase');
+  const verifyIdx = adapter.indexOf('handoffToServer(');
+  assert.ok(verifyIdx > -1 && finishIdx > verifyIdx, 'finishTransaction erst nach handoffToServer');
+  assert.match(adapter, /purchaseState === 'pending'[\s\S]{0,80}kind: 'pending'/, 'pending schaltet nichts frei');
+  assert.match(adapter, /'user-cancelled'[\s\S]{0,60}kind: 'cancelled'/, 'Abbruch ≠ Fehler');
+  // Keine erfundenen Produkt-IDs.
+  assert.ok(!/premium_monthly_real|['"][a-z.]*\.real['"]|hardcoded/i.test(adapter), 'keine Fake-Produkt-IDs');
+
+  const client = readFileSync('src/services/billingClient.ts', 'utf8');
+  assert.match(client, /gewährt NIEMALS selbst Premium|never grants|niemals selbst Premium/i, 'Client-Vertrag dokumentiert');
+}
+
+// --- Zustandsmaschine: verified nur serverseitig ----------------
+{
+  const sm = readFileSync('src/services/billing/purchaseStateMachine.ts', 'utf8');
+  assert.match(sm, /case 'VERIFY_OK':[\s\S]{0,120}'verified'/, "verified nur über VERIFY_OK");
+  assert.ok(
+    !/case 'PURCHASE_RECEIVED':[\s\S]{0,80}'verified'/.test(sm),
+    'PURCHASE_RECEIVED führt nicht direkt zu verified',
+  );
+}
+
 // --- billing-webhook --------------------------------------------
 {
   const fn = readFileSync('supabase/functions/billing-webhook/index.ts', 'utf8');

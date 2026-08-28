@@ -12,6 +12,7 @@ import { formatPriceLine, PREMIUM_PRICING } from '@/services/billingCore';
 import { redeemPremiumCoupon } from '@/services/productAccess';
 import { trackPremiumEvent } from '@/services/premiumTelemetry';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
+import { usePurchaseStore } from '@/stores/usePurchaseStore';
 
 const SOURCE_LABELS: Record<string, string | null> = {
   coupon: 'Coupon',
@@ -27,6 +28,8 @@ const SOURCE_LABELS: Record<string, string | null> = {
 export default function PremiumScreen() {
   const { colors, spacing, radius, typography } = useFinanceTheme();
   const { access, isLoading, refresh, setAccess } = useProductAccessStore();
+  const { machine, products, configured, loadProducts, buy, restore, retryVerification } =
+    usePurchaseStore();
   const [code, setCode] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -34,7 +37,8 @@ export default function PremiumScreen() {
   useEffect(() => {
     trackPremiumEvent('premium_center_opened');
     void refresh();
-  }, [refresh]);
+    void loadProducts();
+  }, [refresh, loadProducts]);
 
   async function redeem() {
     if (busy) return;
@@ -124,14 +128,89 @@ export default function PremiumScreen() {
 
       {!access.isSuperuser ? (
         <>
-          <FinanceCard style={{ marginTop: spacing.xxl }}>
-            <Text style={[typography.cardTitle, { color: colors.text }]}>Premium aktivieren</Text>
-            <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xs }]}>
-              Premium wird derzeit über Coupons oder die Administration freigeschaltet. Ein Kauf über Google Play folgt, sobald die Abrechnung serverseitig geprüft werden kann – bis dahin gibt es hier bewusst keinen Kauf-Button.
-            </Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.sm }]}>
-              {formatPriceLine(PREMIUM_PRICING)}
-            </Text>
+          {configured && products.length > 0 ? (
+            <FinanceCard style={{ marginTop: spacing.xxl }}>
+              <Text style={[typography.cardTitle, { color: colors.text }]}>Premium abonnieren</Text>
+              <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xs }]}>
+                Abrechnung und Kündigung laufen über deinen App-Store. Premium wird erst nach
+                serverseitiger Prüfung des Kaufs aktiv.
+              </Text>
+              {products.map((product) => (
+                <FinanceButton
+                  key={product.id}
+                  label={`${product.interval === 'monthly' ? 'Monatlich' : 'Jährlich'} · ${product.localizedPrice}`}
+                  loading={machine.phase === 'purchasing' || machine.phase === 'verifying'}
+                  disabled={machine.phase !== 'ready'}
+                  onPress={() => { void buy(product.id); }}
+                  style={{ marginTop: spacing.md }}
+                />
+              ))}
+              {machine.phase === 'pending' ? (
+                <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.md }]}>
+                  Der Kauf ist beim Store ausstehend (z. B. Zahlungsfreigabe). Premium wird aktiv,
+                  sobald der Store und die Serverprüfung bestätigen.
+                </Text>
+              ) : null}
+              {machine.phase === 'verified' ? (
+                <Text style={[typography.small, { color: colors.positive, marginTop: spacing.md }]}>
+                  Premium ist aktiv. Deine Konfiguration bleibt auch nach Ablauf erhalten.
+                </Text>
+              ) : null}
+              {machine.phase === 'verification_failed' ? (
+                <>
+                  <Text style={[typography.small, { color: colors.negative, marginTop: spacing.md }]}>
+                    {machine.message}
+                  </Text>
+                  <FinanceButton
+                    label="Erneut prüfen"
+                    variant="secondary"
+                    onPress={() => { void retryVerification(); }}
+                    style={{ marginTop: spacing.sm }}
+                  />
+                </>
+              ) : null}
+              {machine.phase === 'error' ? (
+                <Text style={[typography.small, { color: colors.negative, marginTop: spacing.md }]}>
+                  {machine.message}
+                </Text>
+              ) : null}
+              <FinanceButton
+                label="Käufe wiederherstellen"
+                variant="ghost"
+                size="small"
+                loading={machine.phase === 'verifying'}
+                onPress={() => { void restore(); }}
+                style={{ marginTop: spacing.lg }}
+              />
+            </FinanceCard>
+          ) : (
+            <FinanceCard style={{ marginTop: spacing.xxl }}>
+              <Text style={[typography.cardTitle, { color: colors.text }]}>Premium aktivieren</Text>
+              <Text style={[typography.small, { color: colors.textSecondary, marginTop: spacing.xs }]}>
+                Premium wird derzeit über Coupons oder die Administration freigeschaltet. Ein Kauf
+                über den App-Store folgt, sobald die Abrechnung serverseitig geprüft werden kann –
+                bis dahin gibt es hier bewusst keinen Kauf-Button.
+              </Text>
+              <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.sm }]}>
+                {formatPriceLine(PREMIUM_PRICING)}
+              </Text>
+              <FinanceButton
+                label="Käufe wiederherstellen"
+                variant="ghost"
+                size="small"
+                onPress={() => { void restore(); }}
+                style={{ marginTop: spacing.md }}
+              />
+              {machine.phase === 'verification_failed' || machine.phase === 'error' ? (
+                <Text style={[typography.small, { color: colors.textMuted, marginTop: spacing.sm }]}>
+                  {machine.message}
+                </Text>
+              ) : null}
+            </FinanceCard>
+          )}
+
+          <FinanceCard style={{ marginTop: spacing.lg }}>
+            <Text style={[typography.cardTitle, { color: colors.text }]}>Coupon einlösen</Text>
             <FinanceTextField
               containerStyle={{ marginTop: spacing.lg }}
               label="Premium-Coupon"

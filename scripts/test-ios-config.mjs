@@ -92,7 +92,7 @@ for (const rel of ['./plugins/withReleaseHardening', './plugins/withFinanceUploa
 // --- expo config bewertet die iOS-Sektion ohne Fehler --------------
 const cfg = JSON.parse(execSync('npx expo config --type public --json', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
 assert.equal(cfg.ios.bundleIdentifier, 'com.nocta-xz.financeapp');
-assert.equal(cfg.ios.buildNumber, '6');
+assert.equal(cfg.ios.buildNumber, '7');
 
 // --- iOS-Build-Workflow ist vorhanden & unsigniert ----------------
 const wf = readFileSync('.github/workflows/ios-unsigned.yml', 'utf8');

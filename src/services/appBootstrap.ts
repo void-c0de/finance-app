@@ -14,6 +14,10 @@ import {
     useThemeStore,
 } from '@/stores/useThemeStore';
 
+import {
+    initBilling,
+} from '@/services/billing/registerBilling';
+
 export async function prepareApplication():
 Promise<void> {
   await Promise.all([
@@ -23,6 +27,10 @@ Promise<void> {
 
     initializeDatabase(),
   ]);
+
+  // Best-effort, blockiert den Boot nie. Registriert den nativen Billing-Adapter
+  // nur, wenn Store-Produkt-IDs konfiguriert sind — sonst no-op.
+  void initBilling();
 }
 
 export async function loadAuthenticatedApplicationData():

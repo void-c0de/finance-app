@@ -18,6 +18,12 @@ const FORBIDDEN = [
   { name: 'Tink client secret assignment', re: /TINK_CLIENT_SECRET\s*[:=]\s*["'][A-Za-z0-9]{8,}/ },
   { name: 'generic long secret assignment', re: /(?:client[_-]?secret|refresh[_-]?token|private[_-]?token)["']?\s*[:=]\s*["'][A-Za-z0-9._-]{28,}["']/i },
   { name: 'keystore password assignment', re: /(?:store|key)Password\s*[:=]\s*["'][^"'\s$]{4,}["']/i },
+  // Billing / Store credentials & belege
+  { name: 'Google service-account JSON', re: /"type"\s*:\s*"service_account"[\s\S]{0,200}"private_key_id"/ },
+  { name: 'App Store Connect API key assignment', re: /APP_STORE_(?:PRIVATE_KEY|KEY_ID|ISSUER_ID)\s*[:=]\s*["'][A-Za-z0-9/+=_-]{6,}["']/ },
+  { name: 'Play service-account key path assignment', re: /GOOGLE_PLAY_SERVICE_ACCOUNT_JSON\s*[:=]\s*["'](?!process\.env)[^"']{20,}["']/ },
+  { name: 'raw Play purchase token dump', re: /"purchaseToken"\s*:\s*"[A-Za-z0-9._-]{40,}"/ },
+  { name: 'raw Apple JWS / receipt dump', re: /"(?:jwsRepresentation|transactionReceipt|signedTransactionInfo)"\s*:\s*"[A-Za-z0-9._-]{60,}"/ },
 ];
 
 // Dateien, die legitim „secret-ähnliche" Muster als Beispiel/Doku/Fixture enthalten.
@@ -67,19 +73,21 @@ for (const file of files) {
   }
 }
 
-// Apple-Geräte-Trust- / Signier-Material darf nie verfolgt sein.
-const APPLE_TRUST_FILES = [
+// Trust- / Signier- / Store-Material darf nie verfolgt sein.
+const FORBIDDEN_FILES = [
   /\.mobiledevicepairing$/i,
   /\.mobileprovision$/i,
-  /\.(p12|p8|certSigningRequest)$/i,
+  /\.(p12|p8|certSigningRequest|keystore|jks)$/i,
   /ALTPairingFile/i,
   /(^|\/)Lockdown\/.*\.plist$/i,
   /(^|\/)anisette.*\.json$/i,
   /(^|\/)adi\.pb$/i,
+  /(^|\/)(play|google)[-_]?service[-_]?account.*\.json$/i,
+  /AuthKey_[A-Z0-9]{6,}\.p8$/i,
 ];
 for (const file of files) {
-  if (APPLE_TRUST_FILES.some((re) => re.test(file))) {
-    findings.push(`${file}: Apple-Trust-/Signier-Material ist eingecheckt`);
+  if (FORBIDDEN_FILES.some((re) => re.test(file))) {
+    findings.push(`${file}: Trust-/Signier-/Store-Material ist eingecheckt`);
   }
 }
 
