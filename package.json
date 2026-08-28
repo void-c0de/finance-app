@@ -88,6 +88,7 @@
     "test:release-evidence": "node scripts/test-release-evidence.mjs",
     "test:global-error": "node --experimental-strip-types scripts/test-global-error.mjs",
     "test:brand-assets": "node scripts/test-brand-assets.mjs",
+    "test:boot-logo-animation": "node scripts/test-boot-logo-animation.mjs",
     "test:ota-manifest": "node scripts/test-ota-manifest.mjs",
     "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
     "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs",

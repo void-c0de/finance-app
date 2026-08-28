@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 
 import {
-    FinanceLogo,
-} from '@/components/brand/FinanceLogo';
+    FinanceLogoAnimated,
+} from '@/components/brand/FinanceLogoAnimated';
 
 import {
     useFinanceTheme,
@@ -300,7 +300,7 @@ export function AppBootSplash({
             logoStyle
           }
         >
-          <FinanceLogo
+          <FinanceLogoAnimated
             size={92}
           />
         </Animated.View>

@@ -134,17 +134,21 @@ function markAlphaAA(u, v, inset, size) {
   return acc / 9;
 }
 function rawMark(u, v, inset) {
-  const pad = 0.15 + inset;
+  // Wider padding so the stroke + its rounded caps stay clear of the tile edge
+  // and the OS adaptive-icon / circle mask (user report: "geht bisschen über
+  // den Rand heraus").
+  const pad = 0.17 + inset;
   const x = (u - pad) / (1 - 2 * pad);
   const y = (v - pad) / (1 - 2 * pad);
 
-  // Upward trend arrow: a confident chevron whose right leg overshoots the
-  // apex height (reads as "up and to the right" = growth). Rounded caps.
-  const apex = [0.46, 0.16];
-  const footL = [0.06, 0.86];
-  const tipR = [0.94, 0.06]; // overshoot above the apex
-  const kneeR = [0.62, 0.5]; // slight bend so the right stroke has energy
-  const T = 0.135;
+  // Upward trend arrow: a confident chevron whose right leg rises above the
+  // apex (reads as "up and to the right" = growth). Rounded caps. Endpoints
+  // pulled inside the unit box so cap + half-thickness never cross it.
+  const apex = [0.44, 0.2];
+  const footL = [0.12, 0.82];
+  const tipR = [0.86, 0.12];
+  const kneeR = [0.6, 0.5]; // slight bend so the right stroke has energy
+  const T = 0.128;
 
   const d = Math.min(
     segDist(x, y, apex, footL),
@@ -198,9 +202,9 @@ save(boxDownscale(icon, 512), 'store-assets/play-icon-512.png');
 save(boxDownscale(icon, 48), 'assets/images/favicon.png');
 
 // adaptive layers — foreground mark sits in the inner ~66% safe zone
-save(drawIcon(1024, { ground: 'transparent', markInset: 0.10 }), 'assets/images/adaptive-foreground.png');
+save(drawIcon(1024, { ground: 'transparent', markInset: 0.12 }), 'assets/images/adaptive-foreground.png');
 save(drawIcon(1024, { ground: 'background' }), 'assets/images/adaptive-background.png');
-save(drawIcon(1024, { ground: 'transparent', markInset: 0.10, markColor: [255, 255, 255] }), 'assets/images/adaptive-monochrome.png');
+save(drawIcon(1024, { ground: 'transparent', markInset: 0.12, markColor: [255, 255, 255] }), 'assets/images/adaptive-monochrome.png');
 
 // splash — transparent mark only; expo-splash-screen composites it on
 // `backgroundColor`. Slightly inset so `imageWidth` renders it at a sensible size.
