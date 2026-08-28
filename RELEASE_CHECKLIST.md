@@ -22,6 +22,7 @@ action · ❌ not started.
 | [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md) | The facts only the maintainer can supply |
 | [`BILLING_SERVER_CONTRACT.md`](./BILLING_SERVER_CONTRACT.md) | Purchase-verification architecture — google_play / app_store / revenuecat (built + what's left) |
 | [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md) | Install on a real iPhone for 0 € |
+| [`IOS_WINDOWS_WLAN_BRIDGE.md`](./IOS_WINDOWS_WLAN_BRIDGE.md) | Windows↔iPhone connection: measured state + minimal one-time-USB path (`npm run ios:device:doctor`) |
 | [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md) | iOS track navigation (free path + App Store) |
 | [`APPLE_APP_PRIVACY.md`](./APPLE_APP_PRIVACY.md) | App Privacy label + `PrivacyInfo.xcprivacy` source of truth |
 | [`APPLE_EXPORT_COMPLIANCE.md`](./APPLE_EXPORT_COMPLIANCE.md) · [`APPLE_REVIEW_CHECKLIST.md`](./APPLE_REVIEW_CHECKLIST.md) · [`APP_STORE_LISTING.md`](./APP_STORE_LISTING.md) · [`TESTFLIGHT_CHECKLIST.md`](./TESTFLIGHT_CHECKLIST.md) | Future App Store submission (paid program) |

@@ -475,3 +475,30 @@ clean, parity 13/13. 3 Edge Functions deployed/updated.
 - `Platform.OS` audit: no silent iOS no-op. 37/37 suites, tsc, lint, expo-doctor
   21/21, secret guard clean. 1 migration pushed (`20260828160000`), db lint
   clean, parity **14/14**. `verify-purchase` redeployed.
+
+## RC5 — 1.5.0 / versionCode 6 (unchanged), physical-device bridge (2026-08-28)
+
+**No native boundary.** Local dev tooling + docs + tests only.
+
+- **Windows↔iPhone diagnosis** (`npm run ios:device:doctor`, read-only): Apple
+  Mobile Device Service + Bonjour healthy, AltServer 1.7.4, PC and phone on one
+  `192.168.178.0/24` — but **no `usbaapl64.sys`, zero Apple USB enumeration ever
+  (`setupapi.dev.log`), no lockdown pairing record, nothing on `_apple-mobdev2._tcp`,
+  `pymobiledevice3` sees no device**. Verdict `NEVER_CONNECTED_USB_PAIRING_REQUIRED`.
+  Cableless first-pairing on iOS ≤ 26 is **not possible**; one USB "Trust" is
+  required (no iTunes UI), then everything is Wi-Fi. `IOS_WINDOWS_WLAN_BRIDGE.md`.
+- **`npm run ios:ipa:serve`** — LAN HTTP: info page, `/source.json` (private
+  AltStore source), `/FinanceApp.ipa`. Exact-path routing, 404 default, no repo
+  root; "download ≠ install" stated in the UI.
+- **`npm run ios:device:status | logs | open`** — `pymobiledevice3` wrappers
+  (iOS version / Developer Mode / app installed; syslog like `adb logcat`;
+  SpringBoard launch). Degrade cleanly with no device. No Apple-ID, no signing.
+- `.tools/` isolated venv (`pymobiledevice3` 11.1.6), gitignored. `.gitignore` +
+  `guard:secrets` now block Apple trust/signing material.
+- **Store screenshots**: Android emulator (`Medium_Phone_API_36.0`, API 36)
+  boots and runs the release APK — SQLCipher migrations 6→13 apply on x86_64,
+  no crash. Clean data-free surfaces captured to `store-assets/android/raw/`
+  (Dashboard empty-state, Themes, Data & Privacy, Premium). Data-rich surfaces
+  need a debug build (`__DEV__` opens `/demo`).
+- 38/38 test suites (new `test:ios-tooling`), tsc, lint, expo-doctor 21/21,
+  secret guard clean. No Supabase change. No Android/iOS native change.
