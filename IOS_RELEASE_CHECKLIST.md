@@ -9,12 +9,30 @@ Navigation page for the iOS track. Two distinct goals — don't confuse them:
 
 ## Free personal-device path — status
 
-**PARTIALLY working today.** The app compiles for iOS (unsigned Release build
-green on the GitHub `macos-latest` runner, Xcode 26.6 / Swift 6.3.3 → 18.2 MB
-`FinanceApp-ios-unsigned.ipa` artifact). Signing + install to a physical iPhone runs
-on Windows via AltStore with a free Apple ID. The only non-Windows step is the
-compile, which needs a Mac **or** the free GitHub runner. Full walkthrough:
+**PARTIALLY working today — the artifact exists.** The `iOS unsigned build`
+workflow runs green on the GitHub `macos-26` runner (Xcode 26.6, iPhoneOS 26.5
+SDK) and produces the re-signable artifact:
+
+| Fact (verified in the compiled bundle) | Value |
+| --- | --- |
+| Artifact | `FinanceApp-ios-unsigned.ipa` — 18.2 MB (zip), 19 MB on disk, 122 files |
+| SHA-256 | `c833342e667396e9dfd90aa614ccf1405874e97eedbd08bce0fb106edce80b7c` (per-build) |
+| `CFBundleIdentifier` | `com.nocta-xz.financeapp` |
+| Version | `CFBundleShortVersionString 1.5.0` / `CFBundleVersion 6` |
+| Architecture | `arm64` (device slice) |
+| `MinimumOSVersion` | `16.4` |
+| Signing | none — `LC_ENCRYPTION_INFO_64 cryptid 0`, ready to re-sign |
+| SQLCipher | `_exsqlite3_key_v2` / `_exsqlite3_keyword_check` symbols present in the binary — **encryption compiled in** |
+| Privacy manifest | `PrivacyInfo.xcprivacy` at the app root + aggregated module manifests |
+| Face ID string | present, German |
+
+Signing + install to a physical iPhone runs on **Windows** via AltStore /
+Sideloadly with a **free Apple ID**. The only non-Windows step is the compile,
+which needs a Mac **or** the free GitHub runner. Full walkthrough:
 [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md).
+
+Kick it off from Windows: `npm run ios:unsigned` (streams progress);
+`npm run ios:unsigned:info` shows the last run + artifact.
 
 ## Engineering readiness (done — no account needed)
 
@@ -22,7 +40,7 @@ compile, which needs a Mac **or** the free GitHub runner. Full walkthrough:
 | --- | --- |
 | `expo prebuild --platform ios` succeeds (on macOS/CI) | ✅ |
 | Bundle identifier `com.nocta-xz.financeapp` (Apple-valid, no `_`) | ✅ |
-| Deployment target (Expo SDK 57 default = iOS 15.1) | ✅ |
+| Deployment target `MinimumOSVersion = 16.4` (verified in the compiled bundle) | ✅ |
 | SQLCipher on iOS (`useSQLCipher` top-level prop) | ✅ verified in the CI pod install + build |
 | Keychain / SecureStore survives 7-day re-sign (same Team → same access group) | ✅ documented + backup-first fallback |
 | Face ID `Info.plist` string (German) | ✅ |

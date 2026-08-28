@@ -89,13 +89,24 @@ Time per weekly refresh: ~2 minutes.
 
 ### Produce the unsigned IPA (free GitHub macOS runner)
 
-The repo has a workflow `.github/workflows/ios-unsigned.yml`:
+The repo has a workflow `.github/workflows/ios-unsigned.yml`. Two ways to run it:
 
-1. GitHub → **Actions** → **"iOS unsigned build"** → **Run workflow**.
-2. It runs on `macos-15`, does `expo prebuild` + `pod install` + an
-   **unsigned** `xcodebuild` (`CODE_SIGNING_ALLOWED=NO`), packages
-   `FinanceApp-ios-unsigned.ipa` and uploads it as an artifact.
-3. Download the artifact zip, extract `FinanceApp-ios-unsigned.ipa`.
+- **From Windows:** `npm run ios:unsigned` — dispatches the workflow and streams
+  progress; `npm run ios:unsigned:info` shows the last run + artifact. (Uses the
+  GitHub token from your local git credential helper — nothing Apple-related.)
+- **From the browser:** GitHub → **Actions** → **"iOS unsigned build"** →
+  **Run workflow**.
+
+It runs on `macos-latest` (currently `macos-26`, Xcode 26.6), does
+`expo prebuild` + `pod install` + an **unsigned** `xcodebuild`
+(`CODE_SIGNING_ALLOWED=NO`), verifies the bundle, packages
+`FinanceApp-ios-unsigned.ipa` and uploads it as an artifact (7-day retention).
+Then: GitHub → the run → **Artifacts** → download `FinanceApp-ios-unsigned-ipa`,
+unzip it.
+
+Last verified build: `arm64`, `com.nocta-xz.financeapp`, 1.5.0 (6),
+`MinimumOSVersion 16.4`, unsigned (`cryptid 0`), SQLCipher symbols
+(`_exsqlite3_key_v2`) present, `PrivacyInfo.xcprivacy` bundled. 18.2 MB.
 
 Public repositories get **free macOS Actions minutes**. No Apple credentials are
 in CI — the build is unsigned; AltStore signs it on your machine.

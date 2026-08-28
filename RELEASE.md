@@ -396,8 +396,8 @@ an RC2 OTA is prepared but not published.
 - **Core resilience**: `test:resilience` + an `isUsable()` guard in `analyticsCore`.
 - **iOS build readiness**: `ios.bundleIdentifier` `com.nocta-xz.financeapp`,
   Face ID Info.plist string, SQLCipher confirmed on iOS, `eas.json` simulator
-  profile, `.github/workflows/ios-unsigned.yml` (macOS-26 runner → **compiles**,
-  Swift 6.2). See `IOS_FREE_DEVICE_INSTALL.md`.
+  profile, `.github/workflows/ios-unsigned.yml` (macOS-26 runner). See the RC3
+  section below for the verified IPA artifact.
 - **iOS privacy manifest** (`app.json → ios.privacyManifests`): `NSPrivacyTracking`
   false, no tracking domains; collected data types = email / other financial
   info / other diagnostic data (all linked, none tracking, App-Functionality
@@ -422,6 +422,12 @@ an RC2 OTA is prepared but not published.
 - **`npm run ios:unsigned`** — dispatches that workflow and streams progress;
   **`npm run ios:unsigned:info`** — shows the last run + artifact. Token comes
   from the local git credential helper; nothing Apple-related is transmitted.
+- **Verified IPA artifact** (run 33159727525): `FinanceApp-ios-unsigned.ipa`,
+  18.2 MB, `arm64`, `CFBundleIdentifier com.nocta-xz.financeapp`, `1.5.0 (6)`,
+  `MinimumOSVersion 16.4`, unsigned (`LC_ENCRYPTION_INFO_64 cryptid 0` → ready to
+  re-sign), **SQLCipher compiled in** (`_exsqlite3_key_v2` symbol in the binary),
+  `PrivacyInfo.xcprivacy` at the app root with aggregated module manifests, Face
+  ID string present. SHA-256 `c833342e…dce80b7c` (per build).
 - **Blocker burn-down**: full `src/` scan — zero `TODO`/`FIXME`/`HACK`/
   `NOT_IMPLEMENTED`/stub markers. `MockBankProvider` is the deliberate sandbox
   provider (Tink production is contract-blocked). No dead navigation.

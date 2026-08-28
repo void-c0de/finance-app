@@ -51,7 +51,7 @@ runtime dependencies and there is no realistic exploitation path.
 ## iOS native dependencies
 
 `pod install` **resolves cleanly** on the CI macOS runner; the unsigned Release
-build **compiles** with Xcode 26.6 / Swift 6.2. SQLCipher pod is used (the
+build **compiles** with Xcode 26.6 (macOS-26 runner). SQLCipher is compiled in — `_exsqlite3_key_v2` symbols verified in the arm64 binary (the
 top-level `useSQLCipher` prop covers iOS). No entitlement-gated module.
 
 ## Action
