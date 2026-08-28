@@ -386,3 +386,27 @@ plugin fix + release tooling + docs + a JS-only OTA of the RC7 client delta.
   `false`.
 - 51 test suites, tsc / lint / expo-doctor 21/21 / guard clean. Supabase
   unchanged (17/17 parity).
+
+## RC9 store assets + release doctor 3.0 (2026-08-28)
+
+**No native / runtime change** — 1.6.0 / versionCode 7 / runtime 1.6.0. Store
+assets + tooling + a minimal client addition.
+
+- **DONE** `store-assets/feature-graphic.png` (1024×500, brand gradient + real
+  icon, text-free) via `build:feature-graphic`. Play icon 512 (RC8) present.
+- **DONE** `release:doctor` 3.0 — REAL PLAY PASS tier, per-row `blocking` flag,
+  `CLOSED TEST: READY / NOT READY` verdict, full purchase chain rows.
+- **DONE** `src/core/globalErrorHandler.ts` — minimal global uncaught-error /
+  unhandled-rejection logger (redacted `debugLog`, previous RN handler preserved,
+  no SDK). Installed first in `prepareApplication()`. `test:global-error`.
+- **DONE** `PLAY_APP_CONTENT.md` (Console answer sheet), `PLAY_RELEASE_NOTES.md`
+  (German closed-test notes). `STORE_LISTING.md` refreshed for 1.6.0.
+- **DONE** Android 16 / targetSdk 36 audit (`ANDROID_RELEASE_READINESS.md`):
+  edge-to-edge on, no `QUERY_ALL_PACKAGES`, scoped storage capped maxSdk 32,
+  16 KB-aligned native libs, no foreground service.
+- **VERIFIED** external state: still zero credentials (Google/Apple/Play/keystore/
+  RTDN/EAS). Every REAL PROVIDER / REAL PLAY flag is `false`.
+- **BLOCKED** the first real Google roundtrip, production-signed AAB, closed-test
+  upload, first real purchase — all on external credentials/access.
+- 52 test suites, tsc / lint / expo-doctor 21/21 / guard clean. Supabase
+  unchanged (17/17 parity, db lint clean).

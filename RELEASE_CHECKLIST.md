@@ -45,7 +45,7 @@ action · ❌ not started.
 | Google Play Billing Library v8+ (deadline 31 Aug 2026) | ✅ | `expo-iap@5.4.0` → Play Billing **9.1.0** linked in the AAB (`com.google.android.play.billingclient.version`). Clears the v7 deadline. Store products / credentials still external. |
 | Permissions minimised | ✅ | `SYSTEM_ALERT_WINDOW` removed; INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC/USE_FINGERPRINT, VIBRATE, legacy storage (maxSdk 32), `com.android.vending.BILLING` (Play Billing, added by expo-iap). `test:android-permissions` allowlist enforced against the built APK. |
 | Content rating (IARC) | ⏳ prepared | Answer-prep guide in `PLAY_IARC_PREP.md` (LIKELY vs MUST-CONFIRM). Complete the questionnaire in the console. IAP = **Yes** since RC7. |
-| Store listing (text, screenshots, feature graphic, icon 512²) | ⏳ | Text ready (`STORE_LISTING.md`); `npm run screenshots:android` captures the 6 demo surfaces once the device is unlocked with demo data loaded — `store-assets/`. Feature graphic + icon still to draw. |
+| Store listing (text, screenshots, feature graphic, icon 512²) | ✅ assets ready | `STORE_LISTING.md` (text), `store-assets/android/` (6× 1080×2400), `store-assets/play-icon-512.png`, `store-assets/feature-graphic.png` (1024×500). All generated/verified. |
 | App access (review-team instructions) | ⏳ | Provide a Premium coupon + Tink sandbox note. |
 | Closed test: 12 testers / 14 days (if new personal account) | ❌ | See `CLOSED_TEST_CHECKLIST.md`. Confirm account type first. |
 
@@ -54,7 +54,7 @@ action · ❌ not started.
 | Item | Status |
 | --- | --- |
 | `npx tsc --noEmit` / `npm run lint` / `npx expo-doctor` clean | ✅ |
-| All `npm run test:*` green (49 suites) + CI green on origin/master | ✅ |
+| All `npm run test:*` green (52 suites) + CI green on origin/master | ✅ |
 | Purchase state machine + product config (pure, tested) | ✅ (`test:purchase-state-machine`, `test:product-config`) |
 | Server purchase verification (Google Play API + Apple JWS/ASSN v2) | ✅ IMPLEMENTED, returns `not_configured` until credentials (`test:google-verify`, `test:apple-verify`, `test:webhook-auth`) |
 | Purchase replay / account-switch guard | ✅ (`apply_verified_subscription` first-owner-wins; `supabase/tests/billing.sql`) |
@@ -82,6 +82,17 @@ action · ❌ not started.
 | Bundle verification in CI (arch / encryption / SQLCipher / privacy manifest) | ✅ | "Verify the app bundle" step. |
 | Sign + install to a physical iPhone | ⏳ | Maintainer: AltStore/Sideloadly on Windows + a free Apple ID. See [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md). |
 | App Store / TestFlight | ❌ | Needs the paid Apple Developer Program. [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md). |
+
+## RC9 — what changed since RC8
+
+**No native change — 1.6.0 / vc7 / runtime 1.6.0 unchanged.** Store assets + tooling.
+
+- `store-assets/feature-graphic.png` (1024×500) generated; Play icon 512 present → all store image assets ready.
+- `release:doctor` 3.0: `CLOSED TEST: READY/NOT READY` verdict + per-row blocking flags. Currently **NOT READY** (Console access, upload keystore, 6 legal facts).
+- `src/core/globalErrorHandler.ts` — minimal uncaught-error/rejection logger (redacted `debugLog`, no SDK). Ships with the next build.
+- `PLAY_APP_CONTENT.md` (Console answer sheet), `PLAY_RELEASE_NOTES.md` (DE notes). Android 16 / targetSdk 36 audit.
+- External state re-verified: still zero credentials → no real provider roundtrip.
+- 52 suites, tsc/lint/guard/expo-doctor clean.
 
 ## RC7 — what changed since RC6
 

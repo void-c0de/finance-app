@@ -693,3 +693,38 @@ OTA to the `1.6.0` runtime channel (`docs/api/manifest.json` +
 `docs/updates/1.6.0/`, served by the `expo-updates` Edge Function). The config-
 plugin fix is **not** in the OTA (build-time only). The embedded RC6 bundle
 remains the anti-brick fallback.
+
+## RC9 — 1.6.0 / versionCode 7 / runtime 1.6.0 (UNCHANGED) — store assets + release doctor 3.0
+
+**No native / runtime change.** RC9 is store assets + tooling + a minimal client
+addition (global error handler, ships with the next build, **not** OTA'd). Version
+deliberately not bumped.
+
+### External state — still nothing configured
+
+Verified again: no `FINANCE_UPLOAD_*`, no Google service account (env or Supabase
+secret), no product IDs, no Apple credentials, no RTDN, no EAS token, no keystore
+or service-account file anywhere on disk. Every `REAL PROVIDER PASS` / `REAL PLAY
+PASS` is `false`. The RC9 primary targets (real Google roundtrip, production
+signing, closed-test upload, first real purchase) are **all credential-blocked**.
+
+### Delivered
+
+- **`store-assets/feature-graphic.png`** (1024×500) — brand-blue gradient + the
+  real app icon, text-free, no fake badges/ratings/bank logos. `build:feature-graphic`.
+  `store-assets/play-icon-512.png` (RC8) also present.
+- **`release:doctor` 3.0** — `REAL PLAY PASS` tier, a `blocking` flag per row, and
+  a `CLOSED TEST: READY / NOT READY` verdict. Currently **NOT READY** — blocking
+  gates: Play Console access, upload keystore, legal (6 facts). The full purchase
+  chain (GOOGLE AUTH REAL → ANDROID PUBLISHER REACHED → PRODUCT QUERY REAL →
+  PURCHASE REAL → VERIFY REAL → ENTITLEMENT REAL → RESTORE REAL) is one row each.
+- **`src/core/globalErrorHandler.ts`** — logs each uncaught error / unhandled
+  rejection once through the redacted `debugLog`, then calls the previous RN
+  handler. No SDK, no upload, nothing swallowed. `test:global-error`.
+- **`PLAY_APP_CONTENT.md`** — the Play Console "App content" answer sheet.
+  **`PLAY_RELEASE_NOTES.md`** — German closed-test release notes.
+- `STORE_LISTING.md` + `ANDROID_RELEASE_READINESS.md` updated (Android 16 /
+  targetSdk 36 audit; Billing 9.1.0 re-verified in the built APK; SQLCipher
+  `withExclusiveTransactionAsync` confirmed absent from write paths).
+
+### Tests: 51 → 52 suites (`test:global-error`).
