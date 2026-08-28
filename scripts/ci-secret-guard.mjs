@@ -67,6 +67,22 @@ for (const file of files) {
   }
 }
 
+// Apple-Geräte-Trust- / Signier-Material darf nie verfolgt sein.
+const APPLE_TRUST_FILES = [
+  /\.mobiledevicepairing$/i,
+  /\.mobileprovision$/i,
+  /\.(p12|p8|certSigningRequest)$/i,
+  /ALTPairingFile/i,
+  /(^|\/)Lockdown\/.*\.plist$/i,
+  /(^|\/)anisette.*\.json$/i,
+  /(^|\/)adi\.pb$/i,
+];
+for (const file of files) {
+  if (APPLE_TRUST_FILES.some((re) => re.test(file))) {
+    findings.push(`${file}: Apple-Trust-/Signier-Material ist eingecheckt`);
+  }
+}
+
 if (findings.length > 0) {
   console.error('✗ Secret-Guard: Treffer\n' + findings.map((f) => '  - ' + f).join('\n'));
   process.exit(1);

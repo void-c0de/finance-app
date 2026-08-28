@@ -64,3 +64,19 @@ deno.lock
 # CI build artifacts pulled locally (iOS unsigned IPA, etc.) — never commit
 .artifacts/
 store-assets/**/raw/
+
+# Local dev tooling (isolated Python venv for pymobiledevice3, etc.)
+.tools/
+
+# Apple device trust / signing material — MUST NEVER be committed
+*.mobiledevicepairing
+*.mobileprovision
+*.p12
+*.p8
+*.pem
+*.cer
+*.certSigningRequest
+**/ALTPairingFile*
+**/Lockdown/*.plist
+anisette*.json
+adi.pb

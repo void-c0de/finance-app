@@ -95,6 +95,7 @@
     "test:currency-scope": "node --experimental-strip-types scripts/test-currency-scope.mjs",
     "test:billing-server": "node scripts/test-billing-server.mjs",
     "test:ios-config": "node scripts/test-ios-config.mjs",
+    "test:ios-tooling": "node scripts/test-ios-tooling.mjs",
     "test:perf-scale": "node --experimental-strip-types scripts/test-perf-scale.mjs",
     "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs",
     "test:resilience": "node --experimental-strip-types scripts/test-resilience.mjs",
@@ -102,6 +103,11 @@
     "ios:unsigned:info": "node scripts/ios-unsigned-build.mjs --info",
     "ios:unsigned:download": "node scripts/ios-unsigned-build.mjs --download",
     "ios:unsigned:prepare": "node scripts/ios-unsigned-build.mjs --prepare",
+    "ios:device:doctor": "node scripts/ios-device-doctor.mjs",
+    "ios:ipa:serve": "node scripts/ios-ipa-serve.mjs",
+    "ios:device:status": "node scripts/ios-device.mjs status",
+    "ios:device:logs": "node scripts/ios-device.mjs logs",
+    "ios:device:open": "node scripts/ios-device.mjs open",
     "screenshots:android": "node scripts/capture-screenshots.mjs"
   },
   "private": true
