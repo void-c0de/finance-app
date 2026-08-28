@@ -70,26 +70,52 @@ jobs:
             EXPANDED_CODE_SIGN_IDENTITY="-" \
             clean build
 
+      - name: Verify the app bundle (arch, encryption, SQLCipher, plist)
+        working-directory: ios
+        run: |
+          set -eo pipefail
+          APP=$(find build/Build/Products -maxdepth 2 -name "*.app" -type d | grep -v "\.app/" | head -1)
+          [ -n "$APP" ] || { echo "no .app produced"; ls -R build/Build/Products | head -60; exit 1; }
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          BIN="$APP/$(defaults read "$PWD/$APP/Info" CFBundleExecutable)"
+          echo "=== Info.plist (key values) ==="
+          for k in CFBundleIdentifier CFBundleDisplayName CFBundleName CFBundleShortVersionString CFBundleVersion MinimumOSVersion; do
+            printf '%s = %s\n' "$k" "$(/usr/libexec/PlistBuddy -c "Print :$k" "$APP/Info.plist" 2>/dev/null || echo '-')"
+          done
+          echo "=== NSFaceIDUsageDescription ==="
+          /usr/libexec/PlistBuddy -c "Print :NSFaceIDUsageDescription" "$APP/Info.plist" || true
+          echo "=== Architectures ==="
+          lipo -archs "$BIN" || file "$BIN"
+          echo "=== Is the main binary encrypted? (expect cryptid 0 = unsigned/unencrypted) ==="
+          otool -l "$BIN" | grep -A4 LC_ENCRYPTION_INFO || echo "no LC_ENCRYPTION_INFO"
+          echo "=== PrivacyInfo.xcprivacy present? ==="
+          find "$APP" -name "PrivacyInfo.xcprivacy" -print
+          echo "=== SQLCipher / SQLite linkage ==="
+          (otool -L "$BIN"; find "$APP/Frameworks" -maxdepth 1 -type d 2>/dev/null) | grep -iE "sqlcipher|sqlite|crypto|commoncrypto" || echo "(statically linked — checking symbols)"
+          nm -a "$BIN" 2>/dev/null | grep -iE "sqlite3_key|sqlcipher_" | head -5 || echo "(no exported sqlcipher symbols in main binary — expo-sqlite links it in its own module)"
+          echo "=== expo-sqlite module binary ==="
+          SQ=$(find "$APP" -iname "*sqlite*" -type f | head -3); echo "$SQ"
+          for f in $SQ; do echo "--- $f"; nm -a "$f" 2>/dev/null | grep -iE "sqlite3_key|codec|sqlcipher" | head -5 || true; done
+          echo "=== Embedded frameworks ==="
+          ls -1 "$APP/Frameworks" 2>/dev/null || echo "(none / static)"
+
       - name: Package unsigned IPA
         working-directory: ios
         run: |
           set -eo pipefail
-          echo "--- everything built ---"
-          find build/Build/Products -maxdepth 2 -name "*.app" -print
-          APP=$(find build/Build/Products -maxdepth 2 -name "*.app" -type d | grep -v "\.app/" | head -1)
-          if [ -z "$APP" ]; then echo "no .app produced"; ls -R build/Build/Products | head -60; exit 1; fi
           echo "App bundle: $APP"
-          rm -rf Payload FinanceApp-unsigned.ipa
+          rm -rf Payload FinanceApp-ios-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
-          zip -qry FinanceApp-unsigned.ipa Payload
-          unzip -l FinanceApp-unsigned.ipa | tail -15
-          echo "IPA size: $(du -h FinanceApp-unsigned.ipa | cut -f1)"
+          zip -qry FinanceApp-ios-unsigned.ipa Payload
+          unzip -l FinanceApp-ios-unsigned.ipa | tail -20
+          echo "IPA size: $(du -h FinanceApp-ios-unsigned.ipa | cut -f1)"
+          shasum -a 256 FinanceApp-ios-unsigned.ipa
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FinanceApp-unsigned-ipa
-          path: ios/FinanceApp-unsigned.ipa
+          name: FinanceApp-ios-unsigned-ipa
+          path: ios/FinanceApp-ios-unsigned.ipa
           retention-days: 7
           if-no-files-found: error

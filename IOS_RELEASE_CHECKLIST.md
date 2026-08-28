@@ -11,7 +11,7 @@ Navigation page for the iOS track. Two distinct goals — don't confuse them:
 
 **PARTIALLY working today.** The app compiles for iOS (unsigned Release build
 green on the GitHub `macos-latest` runner, Xcode 26.6 / Swift 6.3.3 → 18.2 MB
-`FinanceApp-unsigned.ipa` artifact). Signing + install to a physical iPhone runs
+`FinanceApp-ios-unsigned.ipa` artifact). Signing + install to a physical iPhone runs
 on Windows via AltStore with a free Apple ID. The only non-Windows step is the
 compile, which needs a Mac **or** the free GitHub runner. Full walkthrough:
 [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md).

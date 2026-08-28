@@ -94,8 +94,8 @@ The repo has a workflow `.github/workflows/ios-unsigned.yml`:
 1. GitHub → **Actions** → **"iOS unsigned build"** → **Run workflow**.
 2. It runs on `macos-15`, does `expo prebuild` + `pod install` + an
    **unsigned** `xcodebuild` (`CODE_SIGNING_ALLOWED=NO`), packages
-   `FinanceApp-unsigned.ipa` and uploads it as an artifact.
-3. Download the artifact zip, extract `FinanceApp-unsigned.ipa`.
+   `FinanceApp-ios-unsigned.ipa` and uploads it as an artifact.
+3. Download the artifact zip, extract `FinanceApp-ios-unsigned.ipa`.
 
 Public repositories get **free macOS Actions minutes**. No Apple credentials are
 in CI — the build is unsigned; AltStore signs it on your machine.
@@ -105,7 +105,7 @@ Build time: ~15–25 min.
 ### Sign + install (Windows)
 
 1. Open **AltStore on the iPhone** → **My Apps** → **+** → pick
-   `FinanceApp-unsigned.ipa`.
+   `FinanceApp-ios-unsigned.ipa`.
 2. AltStore signs it with your Personal Team certificate and installs it.
 3. On the iPhone: trust the certificate (VPN & Device Management) if prompted.
 
