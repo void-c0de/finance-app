@@ -77,7 +77,7 @@ const manifest = {
   supabase: {
     migrations: sh('git ls-files supabase/migrations/*.sql')?.split('\n').filter(Boolean).length ?? null,
   },
-  tests: { lastKnown: '48 suites (see CI on the recorded git sha)' },
+  tests: { lastKnown: `${Object.keys(pkg.scripts).filter((k) => k.startsWith('test:')).length} suites (see CI on the recorded git sha)` },
 };
 
 writeFileSync('store-assets/release-manifest.json', JSON.stringify(manifest, null, 2) + '\n');

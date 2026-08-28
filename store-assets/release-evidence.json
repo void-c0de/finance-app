@@ -2,7 +2,7 @@
   "schema": "finance-app/release-evidence@1",
   "comment": "Machine-readable record of what has been REALLY verified against external providers vs only engineered/tested with fixtures. Updated by scripts/update-release-evidence.mjs. NEVER stores tokens, receipts, emails, transaction IDs or any secret - only booleans + timestamps + a git sha.",
   "updatedAt": "2026-08-28",
-  "gitSha": "7f05860",
+  "gitSha": "5ac883c",
   "signing": {
     "production_branch_fixed": true,
     "production_branch_proven_ephemeral": true,
@@ -51,6 +51,8 @@
     "RC7: Google + Apple server verifiers IMPLEMENTED, tested only with synthetic fixtures.",
     "RC8: withFinanceUploadSigning plugin fixed (was silently keeping debug signing for the release buildType), then proven with an ephemeral throwaway key: assembleRelease produced a non-debug cert, verify:release-signing --expect-production passed, key deleted.",
     "RC8: no external credentials configured (Google service account, Play access, product IDs, upload keystore, Apple, Tink production, EAS token) so no real provider roundtrip was possible this milestone.",
-    "RC8: OTA published to the 1.6.0 runtime channel (RC7 client delta). Live-verified: expo-updates function serves manifest id 4551ec42 for runtime 1.6.0; launch asset HTTP 200 (6690315 bytes); 1.0.0 channel now 404."
+    "RC8: OTA published to the 1.6.0 runtime channel (RC7 client delta). Live-verified: expo-updates function serves manifest id 4551ec42 for runtime 1.6.0; launch asset HTTP 200 (6690315 bytes); 1.0.0 channel now 404.",
+    "RC10: the RC8 OTA note above was optimistic — the manifest was HTTP-reachable but expo-updates would still REJECT it (asset keys contained path separators). Fixed in RC10 (flatten keys); test:ota-manifest guards it; on-device UpdateFailedToLoad reproduced then resolved.",
+    "RC10: engineering release-candidate pipeline added (release:candidate/preflight/go-no-go, aab:fingerprint, build:sbom, build:submission). vc7 debug-signed APK installed on the physical S25 Ultra, launches clean, cloud sync ok. No new external credentials this milestone."
   ]
 }

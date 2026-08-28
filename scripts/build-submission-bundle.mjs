@@ -1,0 +1,139 @@
+import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+
+/**
+ * build:submission — assemble everything needed to fill in the Play Console for
+ * the 1.6.0 closed test into one folder: store-assets/submission/.
+ *
+ *   npm run build:submission
+ *
+ * Also validates every store text field against Play's character limits and
+ * fails if anything is over. Pure/offline. The folder is regenerated each run.
+ *
+ * It does NOT invent copy — it pulls from the committed source-of-truth docs
+ * and the deterministic brand assets. Anything still a placeholder is listed in
+ * the generated CHECKLIST.md as blocking.
+ */
+
+const OUT = 'store-assets/submission';
+const problems = [];
+const warnings = [];
+
+// ---- 1. store text limits ------------------------------------------------
+const listing = existsSync('STORE_LISTING.md') ? readFileSync('STORE_LISTING.md', 'utf8') : '';
+function grab(re, label, max) {
+  const m = listing.match(re);
+  if (!m) { warnings.push(`${label}: not found in STORE_LISTING.md`); return null; }
+  const text = m[1].trim();
+  if (text.length > max) problems.push(`${label}: ${text.length} chars > ${max}`);
+  return { label, chars: text.length, max, ok: text.length <= max };
+}
+const limits = [
+  grab(/## Short description \(DE[^)]*\)\s*\n>\s*(.+)/, 'short description (DE)', 80),
+  grab(/## Short description \(EN\)\s*\n>\s*(.+)/, 'short description (EN)', 80),
+  grab(/## App name\s*\n\*\*(.+?)\*\*/, 'app name', 30),
+].filter(Boolean);
+
+// full description ≤ 4000
+const fullDe = listing.match(/## Full description \(DE\)\s*\n([\s\S]*?)\n## /);
+if (fullDe) {
+  const chars = fullDe[1].trim().length;
+  limits.push({ label: 'full description (DE)', chars, max: 4000, ok: chars <= 4000 });
+  if (chars > 4000) problems.push(`full description (DE): ${chars} > 4000`);
+}
+
+// release notes ≤ 500
+const notes = existsSync('PLAY_RELEASE_NOTES.md') ? readFileSync('PLAY_RELEASE_NOTES.md', 'utf8') : '';
+const notesBlock = notes.match(/## First Closed Test release[^\n]*\n+```\n([\s\S]*?)\n```/);
+if (notesBlock) {
+  const chars = notesBlock[1].trim().length;
+  limits.push({ label: 'release notes (DE)', chars, max: 500, ok: chars <= 500 });
+  if (chars > 500) problems.push(`release notes (DE): ${chars} > 500`);
+} else {
+  warnings.push('release notes: first-closed-test block not found in PLAY_RELEASE_NOTES.md');
+}
+
+// ---- 2. assets ------------------------------------------------------
+if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
+mkdirSync(`${OUT}/graphics`, { recursive: true });
+mkdirSync(`${OUT}/screenshots-phone`, { recursive: true });
+
+const assetCopies = [];
+const copy = (src, dest, { required = true } = {}) => {
+  if (!existsSync(src)) { (required ? problems : warnings).push(`asset missing: ${src}`); return; }
+  cpSync(src, dest);
+  assetCopies.push({ src, dest, sha256: createHash('sha256').update(readFileSync(src)).digest('hex') });
+};
+copy('store-assets/play-icon-512.png', `${OUT}/graphics/icon-512.png`);
+copy('store-assets/feature-graphic.png', `${OUT}/graphics/feature-graphic-1024x500.png`);
+
+const shots = existsSync('store-assets/android')
+  ? readdirSync('store-assets/android').filter((f) => /^candidate.*\.(png|jpe?g)$/i.test(f)).sort()
+  : [];
+for (const f of shots) copy(`store-assets/android/${f}`, `${OUT}/screenshots-phone/${f}`);
+if (shots.length < 2) problems.push(`phone screenshots: ${shots.length} (Play needs 2–8)`);
+
+// ---- 3. copy the answer docs ------------------------------------------
+const docs = [
+  'STORE_LISTING.md', 'PLAY_RELEASE_NOTES.md', 'PLAY_DATA_SAFETY.md', 'PLAY_FINANCIAL_FEATURES.md',
+  'PLAY_APP_CONTENT.md', 'PLAY_IARC_PREP.md', 'PLAY_SUBMISSION_PACK.md', 'PLAY_CONSOLE_TRANSCRIPTION.md',
+  'LEGAL_PLACEHOLDERS.md',
+];
+mkdirSync(`${OUT}/answers`, { recursive: true });
+for (const d of docs) {
+  if (existsSync(d)) cpSync(d, `${OUT}/answers/${d}`);
+  else warnings.push(`answer doc missing: ${d}`);
+}
+
+// ---- 4. placeholder scan --------------------------------------------
+const legalOk = (() => { try { execSync('node scripts/check-legal.mjs', { stdio: 'ignore' }); return true; } catch { return false; } })();
+if (!legalOk) warnings.push('legal facts unfilled (npm run check:legal) — blocks the PRODUCTION submission and the REAL closed test, not the engineering closed test');
+
+// ---- 5. write outputs ---------------------------------------------
+const manifest = {
+  schema: 'finance-app/submission-bundle@1',
+  version: JSON.parse(readFileSync('app.json', 'utf8')).expo.version,
+  textLimits: limits,
+  assets: assetCopies.map((a) => ({ file: a.dest.replace(`${OUT}/`, ''), from: a.src, sha256: a.sha256 })),
+  screenshotCount: shots.length,
+  blocking: problems,
+  warnings,
+};
+writeFileSync(`${OUT}/bundle.json`, JSON.stringify(manifest, null, 2) + '\n');
+
+const checklist = `# Play Console submission bundle — 1.6.0
+
+Generated by \`npm run build:submission\`. Regenerated each run — do not hand-edit.
+
+## Character limits
+${limits.map((l) => `- ${l.ok ? '✓' : '✗'} ${l.label}: ${l.chars}/${l.max}`).join('\n')}
+
+## Assets in this bundle
+${assetCopies.map((a) => `- ${a.dest.replace(`${OUT}/`, '')}  \`${a.sha256.slice(0, 16)}…\``).join('\n')}
+- phone screenshots: ${shots.length}
+
+## Blocking
+${problems.length ? problems.map((p) => `- ✗ ${p}`).join('\n') : '- none'}
+
+## Warnings
+${warnings.length ? warnings.map((w) => `- ⚠ ${w}`).join('\n') : '- none'}
+
+## How to use
+1. Open \`answers/PLAY_CONSOLE_TRANSCRIPTION.md\` and work top to bottom.
+2. Upload \`graphics/\` and \`screenshots-phone/\` in Play Console → Store listing.
+3. Paste text from \`answers/STORE_LISTING.md\` / \`answers/PLAY_RELEASE_NOTES.md\`.
+4. Data safety / financial features / app content: transcribe the matching doc.
+`;
+writeFileSync(`${OUT}/CHECKLIST.md`, checklist);
+
+console.log(`submission bundle → ${OUT}/`);
+for (const l of limits) console.log(`  ${l.ok ? '✓' : '✗'} ${l.label}: ${l.chars}/${l.max}`);
+console.log(`  ${assetCopies.length} assets, ${shots.length} screenshots`);
+if (warnings.length) { console.log('  warnings:'); for (const w of warnings) console.log(`    ⚠ ${w}`); }
+if (problems.length) {
+  console.error('  BLOCKING:');
+  for (const p of problems) console.error(`    ✗ ${p}`);
+  process.exit(1);
+}
+console.log('  ✓ no blocking issues for the engineering closed test');

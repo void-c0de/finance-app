@@ -1,0 +1,53 @@
+{
+  "schema": "finance-app/aab-fingerprint@1",
+  "history": [
+    {
+      "schema": "finance-app/aab-fingerprint@1",
+      "file": "android/app/build/outputs/apk/release/app-release.apk",
+      "bytes": 137371882,
+      "rawSha256": "81c6758c5b8923e45321670c0e935a701c3c5212dc9e2542f18ac4051a4cea32",
+      "entryCount": 1391,
+      "semanticEntryCount": 1390,
+      "ignoredEntryCount": 1,
+      "semanticFingerprint": "8d994ec311df9103489a72b06eb0340f4f51c0b2c0298bb026307ee1897c8cdb",
+      "groups": {
+        "manifest": {
+          "entries": 1,
+          "bytes": 16380,
+          "fingerprint": "5db3386bc49e8fd6"
+        },
+        "other": {
+          "entries": 250,
+          "bytes": 1692609,
+          "fingerprint": "b476c202a6c4a2f9"
+        },
+        "assets": {
+          "entries": 5,
+          "bytes": 24454,
+          "fingerprint": "4281f2b681eb0e22"
+        },
+        "js-bundle": {
+          "entries": 1,
+          "bytes": 5879780,
+          "fingerprint": "59279998baec95c4"
+        },
+        "dex": {
+          "entries": 5,
+          "bytes": 52706024,
+          "fingerprint": "e5cf0b075f846f67"
+        },
+        "native-libs": {
+          "entries": 104,
+          "bytes": 107007232,
+          "fingerprint": "a0f8a7039851b7bd"
+        },
+        "resources": {
+          "entries": 1024,
+          "bytes": 3982263,
+          "fingerprint": "a074ebfdfed8eee9"
+        }
+      },
+      "recordedFor": "5ac883c"
+    }
+  ]
+}

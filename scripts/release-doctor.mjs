@@ -145,8 +145,9 @@ add('CLOSED TEST UPLOADED', real('play_console.aab_uploaded_closed_test') ? 'REA
 add('LEGAL', tryRun('node scripts/check-legal.mjs') ? 'PASS' : 'EXTERNAL BLOCKER', 'legal/legal.config.json + docs placeholders (`npm run check:legal`)', true);
 const shots = existsSync('store-assets/android') ? readdirSync('store-assets/android').filter((f) => /\.(png|jpe?g)$/i.test(f)) : [];
 add('SCREENSHOTS', shots.length >= 4 ? 'PASS' : 'WARNING', `${shots.length} candidate screenshot(s)`, true);
-add('FEATURE GRAPHIC', existsSync('store-assets/feature-graphic.png') ? 'PASS' : 'NOT CONFIGURED', existsSync('store-assets/feature-graphic.png') ? 'store-assets/feature-graphic.png (1024×500)' : 'run `npm run build:feature-graphic`', true);
-add('PLAY ICON 512', existsSync('store-assets/play-icon-512.png') ? 'PASS' : 'NOT CONFIGURED', existsSync('store-assets/play-icon-512.png') ? 'store-assets/play-icon-512.png' : 'run `npm run build:play-icon`', true);
+add('FEATURE GRAPHIC', existsSync('store-assets/feature-graphic.png') ? 'PASS' : 'NOT CONFIGURED', existsSync('store-assets/feature-graphic.png') ? 'store-assets/feature-graphic.png (1024×500)' : 'run `npm run build:brand`', true);
+add('PLAY ICON 512', existsSync('store-assets/play-icon-512.png') ? 'PASS' : 'NOT CONFIGURED', existsSync('store-assets/play-icon-512.png') ? 'store-assets/play-icon-512.png' : 'run `npm run build:brand`', true);
+add('OTA MANIFEST', tryRun('node scripts/test-ota-manifest.mjs') ? 'PASS' : 'FAIL', 'docs/api/manifest.json is client-loadable (`npm run test:ota-manifest`)');
 add('DATA SAFETY', existsSync('PLAY_DATA_SAFETY.md') ? 'ENGINEERING PASS' : 'FAIL', 'PLAY_DATA_SAFETY.md → transcribe into the Console form', true);
 add('FINANCIAL FEATURES', existsSync('PLAY_FINANCIAL_FEATURES.md') ? 'ENGINEERING PASS' : 'FAIL', 'PLAY_FINANCIAL_FEATURES.md', true);
 add('APP CONTENT', existsSync('PLAY_APP_CONTENT.md') ? 'ENGINEERING PASS' : 'NOT CONFIGURED', existsSync('PLAY_APP_CONTENT.md') ? 'PLAY_APP_CONTENT.md answer sheet' : 'prepare the App Content answers', true);

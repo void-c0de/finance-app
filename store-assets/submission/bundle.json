@@ -1,0 +1,83 @@
+{
+  "schema": "finance-app/submission-bundle@1",
+  "version": "1.6.0",
+  "textLimits": [
+    {
+      "label": "short description (DE)",
+      "chars": 76,
+      "max": 80,
+      "ok": true
+    },
+    {
+      "label": "short description (EN)",
+      "chars": 79,
+      "max": 80,
+      "ok": true
+    },
+    {
+      "label": "app name",
+      "chars": 11,
+      "max": 30,
+      "ok": true
+    },
+    {
+      "label": "full description (DE)",
+      "chars": 1782,
+      "max": 4000,
+      "ok": true
+    },
+    {
+      "label": "release notes (DE)",
+      "chars": 475,
+      "max": 500,
+      "ok": true
+    }
+  ],
+  "assets": [
+    {
+      "file": "graphics/icon-512.png",
+      "from": "store-assets/play-icon-512.png",
+      "sha256": "0dff5ec0823a8b6bb54a4aaea37b2f6c90ea21b85f75f50553bc4697d2728176"
+    },
+    {
+      "file": "graphics/feature-graphic-1024x500.png",
+      "from": "store-assets/feature-graphic.png",
+      "sha256": "d3c1851597794c305592cfdd97024f4821619b97863902b06f0cc9f3c95c3b1e"
+    },
+    {
+      "file": "screenshots-phone/candidate-01-dashboard.png",
+      "from": "store-assets/android/candidate-01-dashboard.png",
+      "sha256": "2c0da50b00c1859c03dc3dd378128ac0777704cf42a6e7d202c3e7865a8c7b0e"
+    },
+    {
+      "file": "screenshots-phone/candidate-02-transactions.png",
+      "from": "store-assets/android/candidate-02-transactions.png",
+      "sha256": "2e30896997faf34fd99e6ef8110a588393074137af2958896d0170f9b263bc77"
+    },
+    {
+      "file": "screenshots-phone/candidate-03-planning.png",
+      "from": "store-assets/android/candidate-03-planning.png",
+      "sha256": "4b0ba14f3d9e1f1d827cf52847627ca21481454c72887593ba82e1d9d23e91d6"
+    },
+    {
+      "file": "screenshots-phone/candidate-04-analytics.png",
+      "from": "store-assets/android/candidate-04-analytics.png",
+      "sha256": "c0e461b60dd59519b79df9414e0b0943e1534c5a97c744da2057dfba50efed80"
+    },
+    {
+      "file": "screenshots-phone/candidate-05-themes.png",
+      "from": "store-assets/android/candidate-05-themes.png",
+      "sha256": "3efd4b6ae13f01eee6cf69f54f4cbfbeed379303a31307ecb7f802f4d9f2bf02"
+    },
+    {
+      "file": "screenshots-phone/candidate-06-data-privacy.png",
+      "from": "store-assets/android/candidate-06-data-privacy.png",
+      "sha256": "2fedd147df75a53c2909cb20f0a01b69749255b1439f6dd38f55730435da7efa"
+    }
+  ],
+  "screenshotCount": 6,
+  "blocking": [],
+  "warnings": [
+    "legal facts unfilled (npm run check:legal) — blocks the PRODUCTION submission and the REAL closed test, not the engineering closed test"
+  ]
+}
