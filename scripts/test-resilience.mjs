@@ -4,8 +4,10 @@ import { buildMonthlyComparison, buildCategoryTrends } from '../src/services/ana
 import { buildRecurringInsights, buildCashflowForecast, detectMissedRecurring, detectCommitmentPriceChanges } from '../src/services/recurringInsightsCore.ts';
 import { inspectBackup } from '../src/services/backupImportCore.ts';
 import { resolveEntitlement } from '../src/services/billingCore.ts';
-import { baseCurrencyTransactions, foreignCurrencySummary } from '../src/services/currencyScope.ts';
+import { baseCurrencyTransactions, foreignCurrencySummary, canLinkAccountToGoal, transactionCountsForBudget } from '../src/services/currencyScope.ts';
 import { buildSupportDiagnostics } from '../src/services/supportDiagnosticsCore.ts';
+import { parseTinkCallback, classifyTinkCallback } from '../src/banking/tink/tinkCallbackCore.ts';
+import { savingsRuleMatches } from '../src/services/savingsRuleCore.ts';
 
 /**
  * Fehlerinjektion auf Kern-Ebene: leere / defekte / extreme Eingaben dürfen
@@ -63,6 +65,33 @@ noThrow('resolveEntitlement(garbage)', () => resolveEntitlement([{ source: 'coup
 // --- Currency scope: null-ish currencies -------------------------
 noThrow('baseCurrencyTransactions(garbage)', () => baseCurrencyTransactions([{ currency: null }, { currency: undefined }, { currency: 'eur' }]));
 noThrow('foreignCurrencySummary(garbage)', () => foreignCurrencySummary([{ currency: null }, { currency: '' }, { currency: 'usd' }]));
+noThrow('canLinkAccountToGoal(nullish)', () => {
+  assert.equal(canLinkAccountToGoal(null, null).ok, false);
+  assert.equal(canLinkAccountToGoal(undefined, 'EUR').ok, false); // Ziel ohne Währung ≠ EUR-Konto
+});
+noThrow('transactionCountsForBudget(nullish)', () => assert.equal(transactionCountsForBudget(null), false));
+
+// --- Tink callback: malformed / hostile params never throw ---------
+for (const raw of [null, undefined, '', '?', '???&&&', 'financeapp://bank/tink', 'financeapp://bank/tink?code=&state=', { code: [], state: null }, 'x'.repeat(4000), { error: undefined }]) {
+  noThrow(`parseTinkCallback(${JSON.stringify(raw)?.slice(0, 24)})`, () => {
+    const parsed = parseTinkCallback(raw);
+    const decision = classifyTinkCallback(parsed, 'expected-nonce');
+    assert.ok(['exchange', 'cancelled', 'error', 'state_mismatch', 'idle'].includes(decision.kind));
+    // Ein Code ohne passenden state darf NIE zu 'exchange' führen.
+    if (decision.kind === 'exchange') assert.equal(parsed.state, 'expected-nonce');
+  });
+}
+noThrow('classifyTinkCallback(code, wrong state)', () => {
+  assert.equal(classifyTinkCallback({ code: 'AUTH', state: 'evil' }, 'good').kind, 'state_mismatch');
+});
+
+// --- savingsRuleMatches: garbage transaction ----------------------
+for (const tx of [{}, { currency: null }, { direction: 'x' }, { bookingStatus: 'pending' }, { description: null, counterpartyName: null, currency: 'EUR', direction: 'income', bookingStatus: 'booked', isInternalTransfer: false }]) {
+  noThrow('savingsRuleMatches(garbage)', () => {
+    const r = savingsRuleMatches(tx, { keyword: 'sparplan', currency: 'EUR' });
+    assert.equal(typeof r, 'boolean');
+  });
+}
 
 // --- Support diagnostics: missing fields ------------------------
 noThrow('buildSupportDiagnostics(sparse)', () => buildSupportDiagnostics({
