@@ -1,24 +1,34 @@
-// verify-purchase — server-authoritative Play/RevenueCat purchase verification.
+// verify-purchase — server-authoritative store purchase verification.
 //
 // The client sends { platform, productId, purchaseToken } after a store
 // purchase. This function:
 //   1. identifies the caller from the platform-verified JWT (no body identity),
 //   2. validates the request shape,
-//   3. verifies the purchase with the STORE (Google Play Developer API /
-//      RevenueCat) — this step needs external credentials and returns
-//      "not_configured" until they are set,
-//   4. writes the verified state via apply_verified_subscription (service role),
+//   3. verifies the purchase with the STORE:
+//        google_play → Google Play Developer API (purchases.subscriptionsv2)
+//        app_store   → the signed transaction JWS (Apple Root CA - G3) +,
+//                      when configured, the App Store Server API for the
+//                      authoritative current status
+//      Both return "not_configured" until their server credentials are set —
+//      never a fake success.
+//   4. writes the normalized verified state via apply_verified_subscription
+//      (service role), which also enforces first-account-wins replay safety,
 //   5. returns a fresh product-access snapshot.
 //
 // A client purchase claim is NEVER trusted on its own. Premium comes only from
 // the DB row this function writes.
 //
-// Secrets (Supabase Function secrets, never Git, never client):
-//   GOOGLE_PLAY_PACKAGE_NAME          e.g. com.nocta_xz.financeapp
-//   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  a Play Developer API service account key
-//   (REVENUECAT_API_KEY               optional, RevenueCat path)
+// Secrets (Supabase Function secrets, never Git, never client, never logged):
+//   GOOGLE_PLAY_PACKAGE_NAME
+//   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON   (or GOOGLE_PLAY_CLIENT_EMAIL + GOOGLE_PLAY_PRIVATE_KEY)
+//   APP_STORE_ISSUER_ID / APP_STORE_KEY_ID / APP_STORE_PRIVATE_KEY / APP_STORE_BUNDLE_ID
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.95.3';
+
+import { verifyGooglePlayPurchase } from '../_shared/googlePlay.ts';
+import { verifyAppStorePurchase } from '../_shared/appStore.ts';
+import { lifecycleToDbStatus, lifecycleGrantsPremium, type StoreVerifyResult } from '../_shared/storeSubscription.ts';
+import { billingLog } from '../_shared/observability.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +41,26 @@ const j = (status: number, body: Record<string, unknown>) =>
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const PRODUCT_IDS = new Set(['premium.monthly', 'premium.yearly', 'premium_monthly', 'premium_yearly']);
+// Internal product keys the client may claim.
+const INTERNAL_PRODUCT_IDS = new Set(['premium_monthly', 'premium_yearly', 'premium.monthly', 'premium.yearly']);
+
+/** Store product ids we accept from the provider response. Configurable, non-secret. */
+function expectedStoreProductIds(): string[] {
+  const fromEnv = (Deno.env.get('STORE_PRODUCT_IDS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (fromEnv.length > 0) return fromEnv;
+  return ['premium.monthly', 'premium.yearly', 'premium_monthly', 'premium_yearly'];
+}
+
+function internalProductKey(claimed: string): string {
+  return claimed === 'premium.monthly'
+    ? 'premium_monthly'
+    : claimed === 'premium.yearly'
+      ? 'premium_yearly'
+      : claimed;
+}
 
 function jwtSub(token: string): string | null {
   try {
@@ -49,57 +78,20 @@ async function sha256Hex(input: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-type StoreResult =
-  | {
-      ok: true;
-      status: 'active' | 'in_grace' | 'on_hold' | 'paused' | 'cancelled' | 'expired' | 'revoked';
-      autoRenewing: boolean;
-      periodEnd: string | null;
-    }
-  | { ok: false; reason: 'not_configured' | 'invalid_token' | 'store_error' };
-
-/**
- * Verifies an App Store subscription (StoreKit 2 signed transaction / App Store
- * Server API). Isolated; returns not_configured until Apple credentials exist.
- */
-async function verifyWithAppStore(productId: string, purchaseToken: string): Promise<StoreResult> {
-  const issuerId = Deno.env.get('APP_STORE_ISSUER_ID');
-  const keyId = Deno.env.get('APP_STORE_KEY_ID');
-  const privateKey = Deno.env.get('APP_STORE_PRIVATE_KEY');
-  if (!issuerId || !keyId || !privateKey) return { ok: false, reason: 'not_configured' };
-
-  // Real implementation (enable once the secrets are set):
-  //   1. Mint an ES256 JWT for the App Store Server API from (issuerId, keyId, privateKey).
-  //   2. GET https://api.storekit.itunes.apple.com/inApps/v1/subscriptions/{originalTransactionId}
-  //      (purchaseToken carries the originalTransactionId / signed transaction).
-  //   3. Verify the JWS signature chain against Apple's root CA.
-  //   4. Map status + expiresDate → StoreResult; check productId.
-  void productId;
-  void purchaseToken;
-  return { ok: false, reason: 'not_configured' };
-}
-
-/**
- * Verifies a Google Play subscription purchase. Isolated so the rest of the
- * function is fully testable without Google credentials.
- */
-async function verifyWithGooglePlay(productId: string, purchaseToken: string): Promise<StoreResult> {
-  const packageName = Deno.env.get('GOOGLE_PLAY_PACKAGE_NAME');
-  const saJson = Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON');
-  if (!packageName || !saJson) return { ok: false, reason: 'not_configured' };
-
-  // Real implementation (enable once the secret is set):
-  //   1. Build a Google OAuth2 access token from the service account (JWT grant,
-  //      scope https://www.googleapis.com/auth/androidpublisher).
-  //   2. GET https://androidpublisher.googleapis.com/androidpublisher/v3/applications/
-  //        {packageName}/purchases/subscriptionsv2/tokens/{purchaseToken}
-  //   3. Map subscriptionState + lineItems[].expiryTime → StoreResult.
-  //   4. Validate the productId matches a lineItem offer.
-  // Until then, do not pretend to verify.
-  void productId;
-  void purchaseToken;
-  return { ok: false, reason: 'not_configured' };
-}
+const FAILURE_STATUS: Record<string, number> = {
+  not_configured: 501,
+  invalid_token: 400,
+  unknown_product: 400,
+  package_mismatch: 400,
+  bundle_mismatch: 400,
+  signature_invalid: 400,
+  malformed_response: 502,
+  provider_auth_failed: 502,
+  provider_rate_limited: 503,
+  provider_unavailable: 503,
+  provider_not_found: 404,
+  timeout: 504,
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -117,40 +109,87 @@ Deno.serve(async (req: Request) => {
     return j(400, { error: 'bad_request' });
   }
   const platform = body.platform;
-  const productId = String(body.productId ?? '');
+  const claimedProduct = String(body.productId ?? '');
   const purchaseToken = String(body.purchaseToken ?? '');
 
-  if (platform !== 'google_play' && platform !== 'app_store' && platform !== 'revenuecat') {
+  if (platform !== 'google_play' && platform !== 'app_store') {
     return j(400, { error: 'bad_platform' });
   }
-  if (!PRODUCT_IDS.has(productId)) return j(400, { error: 'unknown_product' });
+  if (!INTERNAL_PRODUCT_IDS.has(claimedProduct)) return j(400, { error: 'unknown_product' });
   if (purchaseToken.trim().length < 8) return j(400, { error: 'bad_token' });
 
-  const store = platform === 'google_play'
-    ? await verifyWithGooglePlay(productId, purchaseToken)
-    : platform === 'app_store'
-      ? await verifyWithAppStore(productId, purchaseToken)
-      : ({ ok: false, reason: 'not_configured' } as StoreResult);
+  const internalProductId = internalProductKey(claimedProduct);
+  const env = Deno.env.toObject();
+  const started = Date.now();
+
+  let store: StoreVerifyResult;
+  if (platform === 'google_play') {
+    store = await verifyGooglePlayPurchase({
+      env,
+      internalProductId,
+      expectedStoreProductIds: expectedStoreProductIds(),
+      purchaseToken,
+    });
+  } else {
+    store = await verifyAppStorePurchase({
+      env,
+      internalProductId,
+      expectedStoreProductIds: expectedStoreProductIds(),
+      purchaseToken,
+    });
+  }
 
   if (!store.ok) {
-    return j(store.reason === 'not_configured' ? 501 : 400, { error: store.reason });
+    billingLog('verify-purchase', {
+      provider: platform,
+      result: 'failed',
+      reason: store.reason,
+      ms: Date.now() - started,
+      caller: await sha256Hex(callerId).then((h) => h.slice(0, 12)),
+    });
+    return j(FAILURE_STATUS[store.reason] ?? 400, { error: store.reason });
   }
+
+  const sub = store.subscription;
+  const dbStatus = lifecycleToDbStatus(sub.lifecycle);
+  const grants = lifecycleGrantsPremium(sub.lifecycle, sub.expiresAt);
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const tokenHash = await sha256Hex(`${platform}:${purchaseToken}`);
+
   const { data, error } = await admin.rpc('apply_verified_subscription', {
     p_user_id: callerId,
     p_provider: platform,
-    p_product_id: productId,
+    p_product_id: internalProductId,
     p_token_sha256: tokenHash,
-    p_status: store.status,
-    p_auto_renewing: store.autoRenewing,
-    p_period_end: store.periodEnd,
+    p_status: grants ? dbStatus : dbStatus === 'active' ? 'expired' : dbStatus,
+    p_auto_renewing: sub.autoRenew,
+    p_period_end: sub.expiresAt,
     p_notification_type: 'verify_purchase',
+    p_provider_transaction_id: sub.providerTransactionId || null,
+    p_original_transaction_id: sub.providerOriginalTransactionId,
+    p_environment: sub.environment,
+    p_cancellation_reason: sub.cancellationReason,
+    p_event_at: new Date().toISOString(),
   });
-  if (error) return j(500, { error: 'apply_failed', detail: error.message });
 
+  if (error) {
+    if ((error.message ?? '').includes('subscription_owned_by_other_account')) {
+      billingLog('verify-purchase', { provider: platform, result: 'rejected', reason: 'account_switch' });
+      return j(409, { error: 'subscription_owned_by_other_account' });
+    }
+    billingLog('verify-purchase', { provider: platform, result: 'error', reason: 'apply_failed' });
+    return j(500, { error: 'apply_failed', detail: error.message });
+  }
+
+  billingLog('verify-purchase', {
+    provider: platform,
+    result: 'verified',
+    lifecycle: sub.lifecycle,
+    environment: sub.environment,
+    ms: Date.now() - started,
+  });
   return j(200, { ok: true, access: data });
 });

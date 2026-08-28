@@ -382,6 +382,20 @@ export async function signOutPersonalAccount(): Promise<
       };
     }
 
+    // Konto-Wechsel: keine Kauf-UI-Reste des vorherigen Kontos behalten und das
+    // Entitlement autoritativ auf Standard zurücksetzen, bis der nächste Login
+    // frische Serverdaten liefert.
+    try {
+      const [{ usePurchaseStore }, { useProductAccessStore }] = await Promise.all([
+        import('@/stores/usePurchaseStore'),
+        import('@/stores/useProductAccessStore'),
+      ]);
+      usePurchaseStore.getState().resetForAccountChange();
+      await useProductAccessStore.getState().refresh();
+    } catch {
+      // Der Abmeldevorgang selbst ist erfolgreich — Reset ist Best-Effort.
+    }
+
     return {
       ok: true,
     };

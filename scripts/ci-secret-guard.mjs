@@ -13,7 +13,10 @@ import { readFileSync, statSync } from 'node:fs';
 const FORBIDDEN = [
   { name: 'Supabase secret key', re: /sb_secret_[A-Za-z0-9]{10,}/ },
   { name: 'Supabase legacy anon/service JWT', re: /\beyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{40,}/ },
-  { name: 'private key block', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/ },
+  // A real committed key has base64 material inside the block; a bare delimiter
+  // used in code (e.g. wrapping a runtime-provided .p8) is not a leak.
+  { name: 'private key block', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=]{40,}/ },
+  { name: 'private key block (escaped newlines)', re: /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----(?:\\r)?\\n[A-Za-z0-9+/=]{40,}/ },
   { name: 'Google service account key', re: /"private_key"\s*:\s*"-----BEGIN/ },
   { name: 'Tink client secret assignment', re: /TINK_CLIENT_SECRET\s*[:=]\s*["'][A-Za-z0-9]{8,}/ },
   { name: 'generic long secret assignment', re: /(?:client[_-]?secret|refresh[_-]?token|private[_-]?token)["']?\s*[:=]\s*["'][A-Za-z0-9._-]{28,}["']/i },

@@ -22,6 +22,13 @@ type PurchaseStoreState = {
   restore(): Promise<void>;
   retryVerification(): Promise<void>;
   dismiss(): void;
+  /**
+   * Bei Konto-Wechsel (Ab-/Anmeldung) aufrufen: die lokale Kauf-UI darf keinen
+   * Zustand des vorherigen Kontos behalten. Kein Token, keine „verified"-Anzeige
+   * aus einer fremden Sitzung. Das autoritative Entitlement kommt danach frisch
+   * vom Server (`useProductAccessStore.refresh()`).
+   */
+  resetForAccountChange(): void;
 };
 
 export const usePurchaseStore = create<PurchaseStoreState>((set, get) => {
@@ -116,6 +123,10 @@ export const usePurchaseStore = create<PurchaseStoreState>((set, get) => {
 
     dismiss() {
       dispatch({ type: 'DISMISS' });
+    },
+
+    resetForAccountChange() {
+      set({ machine: initialPurchaseState, products: [], configured: isBillingConfigured() });
     },
   };
 });
