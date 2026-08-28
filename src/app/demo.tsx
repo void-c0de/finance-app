@@ -10,6 +10,7 @@ import { FinanceDialog, type FinanceDialogConfig } from '@/components/feedback/F
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { clearDemoData, countDemoRows, seedDemoData } from '@/services/demoData';
 import { getPersonalAccountInfo } from '@/services/cloud/authService';
+import { canAccessDemo } from '@/services/screenshotMode';
 import { useFinanceStore } from '@/stores/useFinanceStore';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
@@ -38,7 +39,9 @@ export default function DemoScreen() {
   }, [reload]);
 
   if (isLoading) return <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} />;
-  if (!__DEV__ && !access.isSuperuser) return <Redirect href="/(tabs)/more" />;
+  if (!canAccessDemo({ isDev: __DEV__, isSuperuser: access.isSuperuser })) {
+    return <Redirect href="/(tabs)/more" />;
+  }
 
   async function seed() {
     setBusy('seed');

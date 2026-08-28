@@ -43,6 +43,8 @@ import {
   type UpdateStatusKind,
 } from '@/services/appUpdates';
 
+import { canAccessDemo } from '@/services/screenshotMode';
+
 import {
   useCloudSyncStore,
 } from '@/stores/useCloudSyncStore';
@@ -271,7 +273,7 @@ export default function MoreScreen() {
             </>
           ) : null}
 
-          {__DEV__ || productAccess.isSuperuser ? (
+          {canAccessDemo({ isDev: __DEV__, isSuperuser: productAccess.isSuperuser }) ? (
             <>
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <SettingsRow
