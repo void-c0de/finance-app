@@ -93,12 +93,14 @@ jobs:
           echo "=== PrivacyInfo.xcprivacy present? ==="
           find "$APP" -name "PrivacyInfo.xcprivacy" -print 2>/dev/null || true
           echo "=== SQLCipher / SQLite linkage ==="
-          otool -L "$BIN" 2>/dev/null | grep -iE "sqlcipher|sqlite|commoncrypto" || echo "(not dynamically linked in the main binary)"
-          echo "=== expo-sqlite module — SQLCipher symbols ==="
-          SQ=$(find "$APP" -iname "*sqlite*" -type f 2>/dev/null); echo "$SQ"
-          for f in $SQ; do
+          otool -L "$BIN" 2>/dev/null | grep -iE "sqlcipher|sqlite|commoncrypto" || echo "(sqlite not dynamically linked — expo-sqlite links SQLCipher statically)"
+          echo "=== SQLCipher symbols in the app binary (expo-sqlite links it in) ==="
+          CIPHER=$(nm -a "$BIN" 2>/dev/null | grep -iE "exsqlite3_key|sqlite3_key_v2|sqlite3_rekey|sqlcipher_" | head -8)
+          if [ -n "$CIPHER" ]; then echo "$CIPHER"; else echo "WARNING: no SQLCipher keying symbol found in the binary"; fi
+          echo "=== extra sqlite module files (if any are separate) ==="
+          for f in $(find "$APP" -iname "*sqlite*" -type f 2>/dev/null); do
             echo "--- $f"
-            nm -a "$f" 2>/dev/null | grep -iE "sqlite3_key|sqlite3_rekey|codec|sqlcipher" | head -8 || echo "  (no cipher symbols here)"
+            nm -a "$f" 2>/dev/null | grep -iE "sqlite3_key|codec|sqlcipher" | head -5 || echo "  (no cipher symbols here)"
           done
           echo "=== Embedded frameworks ==="
           ls -1 "$APP/Frameworks" 2>/dev/null || echo "(none / static)"
