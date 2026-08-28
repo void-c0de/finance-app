@@ -42,3 +42,49 @@ jobs:
 
       - name: expo-doctor
         run: npx expo-doctor || echo "::warning::expo-doctor reported issues (non-blocking)"
+
+  release-preflight:
+    # Non-blocking release readiness snapshot. No secrets, no build, no signing,
+    # no ship. Just runs the same read-only checks a maintainer would.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: OTA manifest is client-loadable
+        run: npm run test:ota-manifest
+
+      - name: Store image assets valid
+        run: npm run validate:store-assets
+
+      - name: Submission bundle within Play limits
+        run: npm run build:submission
+
+      - name: SBOM current
+        run: npm run build:sbom -- --check || echo "::warning::SBOM stale — run npm run build:sbom"
+
+      - name: Release doctor (informational)
+        run: npm run release:doctor -- --fast || true
+
+      - name: Go / No-Go (engineering track must be GO)
+        run: npm run release:go-no-go -- --fast
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: |
+            store-assets/release-evidence.json
+            store-assets/release-manifest.json
+            store-assets/aab-fingerprint.json
+            store-assets/sbom.json
+            store-assets/submission/bundle.json
+          if-no-files-found: warn

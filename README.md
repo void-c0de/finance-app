@@ -45,6 +45,25 @@ are documented in [`PRODUCT.md`](./PRODUCT.md). The repeatable standalone and
 OTA release contract is documented in [`RELEASE.md`](./RELEASE.md). A
 reality-based status and roadmap is in [`PLAN.md`](./PLAN.md).
 
+### Release path (one command per step)
+
+```bash
+npm run release:preflight        # read-only readiness snapshot
+npm run release:candidate -- --engineering   # debug-signed APK+AAB for internal QA
+npm run release:candidate -- --production     # upload-signed AAB (needs FINANCE_UPLOAD_*)
+npm run release:go-no-go         # GO / NO-GO per track (engineering | real closed test | production)
+```
+
+Supporting: `release:doctor` (gate detail), `providers:doctor` (external
+provider config, names only), `aab:fingerprint` (semantic build diff),
+`build:sbom`, `build:submission` (Play bundle + char-limit check). The change
+policy while a candidate is frozen is [`RELEASE_FREEZE.md`](./RELEASE_FREEZE.md);
+the acceptance matrix is [`RELEASE_ACCEPTANCE.md`](./RELEASE_ACCEPTANCE.md);
+rollback is [`RELEASE_ROLLBACK.md`](./RELEASE_ROLLBACK.md) /
+[`OTA_ROLLBACK.md`](./OTA_ROLLBACK.md); failure drills are
+[`DISASTER_RECOVERY.md`](./DISASTER_RECOVERY.md); the pre-ship security gate is
+[`SECURITY_RELEASE_CHECKLIST.md`](./SECURITY_RELEASE_CHECKLIST.md).
+
 The currently used local APK is development-distribution only because it is
 debug-signed. Public distribution requires a private upload key and an Android
 App Bundle; never commit signing credentials or keystores.
