@@ -57,13 +57,14 @@ Transcribe from **`PLAY_FINANCIAL_FEATURES.md`**. Summary:
 
 | Item | State |
 | --- | --- |
-| Play Billing client | **IMPLEMENTED** — `expo-iap@5.4.0` (Play Billing Library 8.x via `openiap-google`), clears the v7-blocked deadline |
+| Play Billing client | **IMPLEMENTED** — `expo-iap@5.4.0` (Play Billing Library 9.1.0 via `openiap-google`), clears the v7-blocked deadline |
 | Purchase state machine | **IMPLEMENTED + TESTED** — `test:purchase-state-machine`; `verified` only after server confirmation; pending never unlocks; cancel ≠ error |
-| Server verification | **DEPLOYED, NOT CONFIGURED** — `verify-purchase` returns `not_configured` (501) until `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME` are set |
+| Server verification | **IMPLEMENTED + DEPLOYED, NOT CONFIGURED** (RC7) — real Google Play Developer API (`subscriptionsv2`) call; returns `not_configured` (501) until `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME` are set. `test:google-verify`. |
+| RTDN webhook | **IMPLEMENTED + DEPLOYED** (RC7) — Google OIDC-token or `?token=` auth; re-verifies with the API; idempotent. Set `GOOGLE_PUBSUB_SA_EMAIL` (or `PLAY_RTDN_VERIFICATION_TOKEN`) + a Pub/Sub topic. |
+| Replay / account-switch safety | **IMPLEMENTED + TESTED** (RC7) — first Finance account to verify a purchase token owns it; a second account is rejected (HTTP 409). |
 | Store products | **NOT CREATED** — no `premium.monthly` / `premium.yearly` subscription in the Console yet |
 | Product IDs in build | **NOT CONFIGURED** — `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` / `_YEARLY_ID` unset → adapter not registered → UI shows the honest "Preise folgen" state, no fake checkout |
-| Real purchase tested | **NO** — not physically verified against Google Play |
-| RTDN webhook | **DEPLOYED, NOT CONFIGURED** — `billing-webhook` acks until `PLAY_RTDN_VERIFICATION_TOKEN` is set |
+| Real purchase tested | **NO** — not physically verified against Google Play (needs Play Console access) |
 
 External steps remaining: create the subscription + base plans in the Console;
 create a Google Cloud service account (View financial data + Play Developer API),

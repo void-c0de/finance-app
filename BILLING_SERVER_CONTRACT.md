@@ -5,11 +5,74 @@ only after the **server** verifies it. This file defines the contract so the
 verification layer can be added later without touching the client's capability
 model.
 
-Status (2026-08-28, RC6): **server architecture built and deployed; native store
-client (`expo-iap`) IMPLEMENTED; store calls stubbed pending credentials; no store
-products created, no real purchase tested.** `billingCore.ts` holds the pure shapes
-and precedence rules; the server side below is real code; the client adapter below
-is real code that is only registered when `EXPO_PUBLIC_PREMIUM_*_ID` are set.
+Status (2026-08-28, RC7): **server verification is now a real implementation**
+(Google Play Developer API + Apple App Store Server API / JWS), returning
+`not_configured` (501) until provider credentials are set — never a fake success.
+Native client + purchase state machine IMPLEMENTED. No store products created,
+**no real purchase tested** (needs Play Console / App Store Connect access).
+`billingCore.ts` holds the pure client shapes; `supabase/functions/_shared/` the
+server verification domain.
+
+### RC7 — real server verification (IMPLEMENTED, not credential-configured)
+
+- `supabase/functions/_shared/googlePlay.ts` — RS256 JWT-bearer OAuth2
+  (`scope androidpublisher`) → `purchases.subscriptionsv2.tokens.get` → normalized
+  `VerifiedStoreSubscription`. `AbortController` timeouts, one token mint per
+  invocation, full provider-error classification (401/403/404/410/429/5xx/timeout/
+  malformed). `test:google-verify` (state + error matrix vs a mock fetch).
+- `supabase/functions/_shared/appStore.ts` + `appleJws.ts` + `x509.ts` — verify
+  the client's signed transaction JWS against **Apple Root CA - G3** (real x5c
+  chain: leaf signs payload, chain links, pinned root fingerprint, validity
+  windows — no decode-and-trust), then call `getAllSubscriptionStatuses` for the
+  authoritative status and verify those JWS too. ES256 `appstoreconnect-v1`
+  bearer. `test:apple-verify` builds a real openssl chain and proves every
+  tamper is rejected.
+- `supabase/functions/_shared/storeSubscription.ts` / `subscriptionLifecycle.ts`
+  — provider-neutral lifecycle (`active` / `grace_period` / `billing_retry` /
+  `paused` / `cancelled_active` / `expired` / `revoked` / `pending`), the
+  entitlement rule (`lifecycleGrantsPremium`), the DB-status mapping, and
+  documented Google↔Apple differences. `test:store-verification`,
+  `test:subscription-lifecycle`.
+- `supabase/functions/_shared/googleOidc.ts` — verify Google-issued Pub/Sub OIDC
+  identity tokens (RS256 vs JWKS, iss/aud/email/exp) for RTDN authentication.
+  `test:webhook-auth`.
+- `supabase/functions/_shared/observability.ts` — structured billing logs that
+  redact tokens / receipts / JWS / keys / PII.
+
+### RC7 — webhook / notification architecture
+
+- `billing-webhook` rewritten (deployed, `verify_jwt=false`):
+  - **Apple** App Store Server Notifications V2 — `signedPayload` JWS verified,
+    then `signedTransactionInfo` / `signedRenewalInfo` verified, user looked up by
+    `provider_original_transaction_id`.
+  - **Google** RTDN — authenticated by a Google OIDC bearer token *or* a
+    `?token=` shared secret; the notification is a **trigger** → the server
+    re-verifies with `verifyGooglePlayPurchase` and only then applies state.
+  - **RevenueCat** — shared-secret header.
+  - Every event is deduplicated in `billing_webhook_events`
+    (`record_billing_event`, `UNIQUE(provider, event_id)`); an out-of-order event
+    never overwrites newer state.
+- Live-tested: Apple bogus JWS → 401 `signature_invalid`; Google no-auth → 401/200
+  `unauthenticated`; RevenueCat no secret → 200 `not_configured`; bad JSON → 400.
+
+### RC7 — DB (migrations 20260828180000 + repair + 20260828182000)
+
+- `billing_subscriptions` gains `provider_transaction_id`,
+  `provider_original_transaction_id` (+ partial index), `environment`
+  (`production|sandbox`), `cancellation_reason`, `last_event_at`. Additive.
+- `billing_webhook_events` idempotency ledger + `record_billing_event()`
+  (service-role only).
+- `apply_verified_subscription` — new signature (drops the RC4 8-arg version),
+  adds a **first-verified-account-wins** replay guard (a second Finance account
+  cannot claim a token / original-transaction owned by the first →
+  `subscription_owned_by_other_account`, surfaced as HTTP 409) and an
+  out-of-order guard.
+- `db lint` clean; `db advisors --type security` — the RC7 functions are NOT in
+  the "signed-in users can execute" list (correctly `REVOKE`d). 17/17 migration
+  parity. `supabase/tests/billing.sql` exercises the replay + idempotency guards
+  (rollback-only, run against the live DB).
+
+### Legacy status (RC4-RC6, still true)
 
 ### RC6 — native client adapter (IMPLEMENTED, NOT store-tested)
 
@@ -60,16 +123,25 @@ is real code that is only registered when `EXPO_PUBLIC_PREMIUM_*_ID` are set.
   `supabase/tests/billing.sql` (rollback-only: precedence, idempotency,
   non-superuser denial).
 
-### Still needed (external)
+### Still needed (external only — all code is done)
 
-1. Fill in `verifyWithGooglePlay()` (the OAuth2 service-account token + the
-   `purchases.subscriptionsv2.tokens.get` call) — the shape and the DB write are
-   done, only the ~30 lines that talk to Google remain.
-2. ~~Add a v8+ Play Billing client~~ — **DONE (RC6)**: `expo-iap` (Play Billing
-   8.x via `openiap-google`).
-3. Play Console products + Google Cloud service account + Pub/Sub topic + the
-   Function secrets. Set `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` /
-   `EXPO_PUBLIC_PREMIUM_YEARLY_ID` to the real product IDs in the build env.
+1. ~~Fill in `verifyWithGooglePlay()`~~ — **DONE (RC7)**: real OAuth2 + API call
+   in `_shared/googlePlay.ts`.
+2. ~~Fill in `verifyWithAppStore()`~~ — **DONE (RC7)**: real JWS chain + App Store
+   Server API in `_shared/appStore.ts` + `appleJws.ts` + `x509.ts`.
+3. ~~Add a v8+ Play Billing client~~ — **DONE (RC6)**: `expo-iap` (Play Billing
+   9.1.0 via `openiap-google`).
+4. **Google:** a Play Console subscription with `premium.monthly` / `premium.yearly`
+   base plans; a Google Cloud service account (View financial data + Play Developer
+   API); a Pub/Sub topic for RTDN. Set the Function secrets
+   `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME`,
+   `GOOGLE_PUBSUB_SA_EMAIL` (or `PLAY_RTDN_VERIFICATION_TOKEN`).
+5. **Apple:** the paid Apple Developer Program; an App Store Connect API key
+   (`.p8`). Set `APP_STORE_ISSUER_ID` / `APP_STORE_KEY_ID` / `APP_STORE_PRIVATE_KEY`
+   / `APP_STORE_BUNDLE_ID`, and configure App Store Server Notifications V2 to POST
+   to `billing-webhook`.
+6. Set `EXPO_PUBLIC_PREMIUM_MONTHLY_ID` / `EXPO_PUBLIC_PREMIUM_YEARLY_ID` in the
+   build env to the real store product IDs.
 
 ## Components
 

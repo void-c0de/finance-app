@@ -1,5 +1,11 @@
 # Dependency audit — 2026-08-28 (Finance App 1.6.0, Expo SDK 57)
 
+> RC7 (2026-08-28): **no dependency change.** RC7 is Edge Functions + JS + SQL +
+> tests. The server verifiers in `supabase/functions/_shared/` use only Web
+> Crypto and `fetch` (no npm packages, no Deno third-party imports beyond the
+> already-used `@supabase/supabase-js` in the function entrypoints). `npm audit`
+> unchanged (12 moderate, build-tooling only). `expo install --check` up to date.
+
 ## Runtime production dependencies
 
 `npx expo install --check` → **"Dependencies are up to date"**. Every runtime

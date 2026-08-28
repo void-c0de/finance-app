@@ -71,6 +71,9 @@ Legend: **DONE** shipped and validated · **PARTIAL** usable but incomplete ·
   account/transaction read; idempotent import; typed provider errors.
 - **DONE** Re-authorization recovery UX — a consent failure marks the connection
   `requires_action` and offers reconnect without touching local history.
+- **DONE** Connection lifecycle model (`tinkConnectionLifecycle.ts`, RC7) —
+  formal transitions + the hard invariant that only an explicit user disconnect
+  may tombstone imported accounts/transactions.
 - **BLOCKED** Tink continuous access / server-side refresh-token lifecycle and
   consent-expiry webhooks — needs a Tink production agreement and secure server
   token storage. Sandbox is not presented as production.
@@ -298,3 +301,53 @@ a cancellable grace window. Nothing is deleted inside the grace window.
   purchase tested.** Coupon / admin Premium unaffected.
 - 41 test suites, tsc / lint / expo-doctor 21/21 / guard:secrets clean,
   14/14 migrations, db lint clean. No Supabase schema change.
+
+## RC7 production verification, banking lifecycle & release convergence (2026-08-28)
+
+**No native change** — 1.6.0 / versionCode 7 / runtime 1.6.0. Edge Functions +
+JS + SQL migrations + tests + docs.
+
+- **DONE** Google Play server verification — real RS256 JWT-bearer OAuth2 →
+  `purchases.subscriptionsv2.tokens.get` → normalized subscription
+  (`_shared/googlePlay.ts`). `not_configured` (501) until
+  `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` + `GOOGLE_PLAY_PACKAGE_NAME`. Full error
+  taxonomy, timeouts. `test:google-verify`.
+- **DONE** Apple App Store server verification — verify the signed transaction
+  JWS against **Apple Root CA - G3** (real x5c chain: leaf→intermediate→root,
+  pinned fingerprint, validity windows; `_shared/appleJws.ts` + `x509.ts`) then
+  `getAllSubscriptionStatuses` for authoritative status. ES256
+  `appstoreconnect-v1` bearer. `not_configured` until the ASC key.
+  `test:apple-verify` (real openssl chain + tamper matrix).
+- **DONE** Provider-neutral subscription lifecycle
+  (`_shared/subscriptionLifecycle.ts`) — active / grace_period / billing_retry /
+  paused / cancelled_active / expired / revoked / pending, entitlement rule,
+  Google↔Apple difference notes. `test:store-verification`,
+  `test:subscription-lifecycle`.
+- **DONE** `billing-webhook` rewritten — Apple ASSN V2 (JWS-verified), Google
+  RTDN (Google OIDC token or `?token=` shared secret; re-verifies with the
+  provider API — a notification is a trigger, not truth), RevenueCat. Idempotent
+  via `billing_webhook_events` + `record_billing_event()`; out-of-order events
+  ignored. `test:webhook-auth`.
+- **DONE** DB (migrations 15-17, additive): `billing_subscriptions`
+  provider-identity + `environment` columns; idempotency ledger;
+  `apply_verified_subscription` first-verified-account-wins replay guard +
+  out-of-order guard; `deletion_grace_interval()` search_path pinned. `db lint` +
+  `db advisors --type security` clean for the RC7 functions; 17/17 parity.
+  `supabase/tests/billing.sql` exercises the guards (live rollback).
+- **DONE** Client — `usePurchaseStore.resetForAccountChange()` on sign-out;
+  `reconcileSilently()` one silent boot pass to recover an interrupted
+  verification (no dialog, no loop).
+- **DONE** Tink connection lifecycle (`tinkConnectionLifecycle.ts`) — formal
+  transitions + the hard invariant: only an explicit user disconnect may
+  tombstone imported accounts/transactions. `test:tink-lifecycle`.
+- **DONE** Release engineering — `release:doctor` (PASS / WARNING / NOT
+  CONFIGURED / EXTERNAL BLOCKER / FAIL), `check:legal` (production-submission
+  gate), `legal/legal.config.json` + `build:legal` (fill-once → pages),
+  `build:release-manifest`. `PLAY_IARC_PREP.md`. Data Safety / Financial
+  Features re-audited.
+- **BLOCKED** Real purchases — Play Console products + Google service-account key
+  + App Store Connect API `.p8` + `EXPO_PUBLIC_PREMIUM_*_ID`. Verifiers stay
+  `not_configured` until then. **No real store purchase tested.**
+- **BLOCKED** Continuous Tink access / server refresh-token lifecycle — needs the
+  Tink production agreement.
+- 49 test suites, tsc / lint / expo-doctor 21/21 / guard clean.

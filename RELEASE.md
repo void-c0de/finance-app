@@ -577,3 +577,60 @@ Real Play/App Store products + Google service-account key + App Store Server API
 key (`.p8`) are still external. Until then billing is `not_configured` and
 Premium continues via coupon / admin. **No real store purchase was tested** —
 that needs Play Console / App Store Connect access.
+
+## RC7 — 1.6.0 / versionCode 7 / runtime 1.6.0 (UNCHANGED) — server + JS only
+
+**No native boundary.** RC7 is Edge Functions + JS + tests + docs + SQL
+migrations — all compatible with the shipped 1.6.0 native runtime. `expo-iap`,
+`app.json`, `package.json` deps unchanged. No Android/iOS rebuild, no OTA
+published. Version deliberately **not** bumped (RC number ≠ app version).
+
+### Server purchase verification — now real
+
+- `verify-purchase` rewired onto real verifiers in `supabase/functions/_shared/`:
+  - **Google Play** — RS256 JWT-bearer OAuth2 → `purchases.subscriptionsv2.tokens.get`
+    → normalized subscription. Timeouts / AbortController / full error taxonomy.
+  - **App Store** — verify the signed transaction JWS against **Apple Root CA - G3**
+    (real x5c chain check, pinned root, validity windows) + App Store Server API
+    `getAllSubscriptionStatuses` for authoritative status.
+  - Both return `not_configured` (501) until their Function secrets are set —
+    never a fake success. Deployed + live-tested (401 / 400 / 501, no leakage).
+- `billing-webhook` rewritten: Apple App Store Server Notifications V2
+  (JWS-verified), Google RTDN (OIDC- or shared-token-authenticated, re-verifies
+  with the provider API — a notification is a trigger, not truth), RevenueCat.
+  Idempotent via `billing_webhook_events`.
+
+### DB (migrations 15-17, additive, `db lint` clean, 17/17 parity)
+
+`billing_subscriptions` provider-identity + environment columns;
+`billing_webhook_events` + `record_billing_event()`; `apply_verified_subscription`
+gains a **first-verified-account-wins** replay guard and an out-of-order guard.
+`deletion_grace_interval()` search_path pinned (db-advisor 0011 cleared). RC7
+functions are correctly `REVOKE`d from `authenticated` (not in the advisor list).
+
+### Client
+
+`usePurchaseStore.resetForAccountChange()` on sign-out (no stale purchase UI /
+entitlement across accounts) + `reconcileSilently()` — one silent boot-time pass
+that recovers an interrupted verification. No dialog, no loop.
+
+### Tink
+
+`tinkConnectionLifecycle.ts` formalises the connection state machine and the hard
+invariant: **only an explicit user disconnect may tombstone imported data** — no
+provider / consent / error event ever deletes accounts or transactions.
+Production Tink remains an external blocker (Sandbox only).
+
+### Release engineering
+
+`npm run release:doctor` (PASS / WARNING / NOT CONFIGURED / EXTERNAL BLOCKER /
+FAIL overview), `npm run check:legal` (production-submission gate — closed while
+any `[BITTE ERGÄNZEN]` remains), `legal/legal.config.json` + `npm run build:legal`
+(fill-once → rendered pages), `npm run build:release-manifest`
+(`store-assets/release-manifest.json`). New: `PLAY_IARC_PREP.md`.
+
+### Tests: 41 → 49 suites
+
+`test:google-verify`, `test:apple-verify`, `test:store-verification`,
+`test:subscription-lifecycle`, `test:webhook-auth`, `test:tink-lifecycle`,
+`test:legal-metadata`, `test:release-doctor`. `test:billing-server` rewritten.

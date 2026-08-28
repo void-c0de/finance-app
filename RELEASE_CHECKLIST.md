@@ -39,12 +39,12 @@ action · ❌ not started.
 | In-app account deletion | ✅ | `Mehr → Daten & Datenschutz → Konto löschen`. |
 | Web account deletion (no login wall to view, HTTPS, direct link) | ✅ | `https://void-c0de.github.io/finance-app/konto-loeschen.html` — live, tested. |
 | Data actually deleted (not deactivated) | ✅ | `purge_owner_finance_data` + Edge Function; 3-day grace only. |
-| Privacy policy URL (HTTPS) | ✅ (content ⏳) | `.../datenschutz.html` live; `[BITTE ERGÄNZEN]` legal fields remain. |
+| Privacy policy URL (HTTPS) | ✅ (content ⏳) | `.../datenschutz.html` live. Legal facts centralised in `legal/legal.config.json`; `npm run build:legal` renders the pages; `npm run check:legal` blocks a production submission while any `[BITTE ERGÄNZEN]` remains. |
 | Data Safety form answers | ✅ prepared | `PLAY_DATA_SAFETY.md`. Transcribe into console. |
 | Financial Features declaration | ✅ prepared | `PLAY_FINANCIAL_FEATURES.md`. Account aggregation = Yes; everything regulated = No. |
 | Google Play Billing Library v8+ (deadline 31 Aug 2026) | ✅ | `expo-iap@5.4.0` → Play Billing **9.1.0** linked in the AAB (`com.google.android.play.billingclient.version`). Clears the v7 deadline. Store products / credentials still external. |
 | Permissions minimised | ✅ | `SYSTEM_ALERT_WINDOW` removed; INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC/USE_FINGERPRINT, VIBRATE, legacy storage (maxSdk 32), `com.android.vending.BILLING` (Play Billing, added by expo-iap). `test:android-permissions` allowlist enforced against the built APK. |
-| Content rating (IARC) | ❌ | Complete questionnaire (Finance, no ads, no gambling → Everyone/PEGI 3). |
+| Content rating (IARC) | ⏳ prepared | Answer-prep guide in `PLAY_IARC_PREP.md` (LIKELY vs MUST-CONFIRM). Complete the questionnaire in the console. IAP = **Yes** since RC7. |
 | Store listing (text, screenshots, feature graphic, icon 512²) | ⏳ | Text ready (`STORE_LISTING.md`); `npm run screenshots:android` captures the 6 demo surfaces once the device is unlocked with demo data loaded — `store-assets/`. Feature graphic + icon still to draw. |
 | App access (review-team instructions) | ⏳ | Provide a Premium coupon + Tink sandbox note. |
 | Closed test: 12 testers / 14 days (if new personal account) | ❌ | See `CLOSED_TEST_CHECKLIST.md`. Confirm account type first. |
@@ -54,9 +54,11 @@ action · ❌ not started.
 | Item | Status |
 | --- | --- |
 | `npx tsc --noEmit` / `npm run lint` / `npx expo-doctor` clean | ✅ |
-| All `npm run test:*` green (41 suites) + CI green on origin/master | ✅ |
+| All `npm run test:*` green (49 suites) + CI green on origin/master | ✅ |
 | Purchase state machine + product config (pure, tested) | ✅ (`test:purchase-state-machine`, `test:product-config`) |
-| Supabase migration parity + `db lint` | ✅ (14 migrations) |
+| Server purchase verification (Google Play API + Apple JWS/ASSN v2) | ✅ IMPLEMENTED, returns `not_configured` until credentials (`test:google-verify`, `test:apple-verify`, `test:webhook-auth`) |
+| Purchase replay / account-switch guard | ✅ (`apply_verified_subscription` first-owner-wins; `supabase/tests/billing.sql`) |
+| Supabase migration parity + `db lint` + `db advisors` (security) | ✅ (17 migrations; RC7 billing fns correctly REVOKEd) |
 | Live rollback authz tests (deletion, billing) | ✅ (`supabase/tests/*.sql`) |
 | Edge Functions deployed + live-tested | ✅ `finalize-account-deletion`, `verify-purchase`, `billing-webhook` |
 | Runtime boundary test (1.6.0 / vc7) | ✅ |
@@ -80,6 +82,27 @@ action · ❌ not started.
 | Bundle verification in CI (arch / encryption / SQLCipher / privacy manifest) | ✅ | "Verify the app bundle" step. |
 | Sign + install to a physical iPhone | ⏳ | Maintainer: AltStore/Sideloadly on Windows + a free Apple ID. See [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md). |
 | App Store / TestFlight | ❌ | Needs the paid Apple Developer Program. [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md). |
+
+## RC7 — what changed since RC6
+
+**No native change — 1.6.0 / vc7 / runtime 1.6.0 unchanged.** Edge Functions +
+JS + SQL migrations + tests + docs only.
+
+- Server purchase verification is now real: Google Play Developer API
+  (`subscriptionsv2`) and Apple App Store Server API + JWS trust-chain
+  verification against Apple Root CA - G3. Both `not_configured` (501) until
+  Function secrets are set — no fake success. Deployed + live-tested.
+- `billing-webhook` rewritten: Apple ASSN v2 (JWS-verified), Google RTDN (OIDC or
+  shared-token auth, re-verifies with the provider API), RevenueCat. Idempotent.
+- DB migrations 15-17 (additive): provider-identity + environment columns, a
+  webhook idempotency ledger, a first-verified-account-wins replay guard and an
+  out-of-order guard on `apply_verified_subscription`. `db lint` + `db advisors`
+  clean for the new functions; 17/17 parity.
+- Client: purchase UI resets on account switch; one silent boot reconciliation.
+- Tink connection lifecycle formalised (no provider/consent event ever deletes
+  imported data). Production Tink still an external blocker.
+- Release tooling: `release:doctor`, `check:legal` (submission gate),
+  `build:legal` (fill-once → pages), `build:release-manifest`. `PLAY_IARC_PREP.md`.
 
 ## RC6 — what changed since RC5
 
