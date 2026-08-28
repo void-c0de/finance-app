@@ -33,6 +33,47 @@ assert.equal(ios.infoPlist?.ITSAppUsesNonExemptEncryption, false);
 // --- Deep-Link-Schema für Supabase-Auth / Tink-Callback -------------
 assert.equal(appJson.scheme, 'financeapp', 'benutzerdefiniertes Schema für iOS-Deep-Links');
 
+// --- Apple Privacy Manifest: kein Tracking, ehrliche Datentypen ----
+const pm = ios.privacyManifests;
+assert.ok(pm, 'ios.privacyManifests ist gesetzt (PrivacyInfo.xcprivacy)');
+assert.equal(pm.NSPrivacyTracking, false, 'App trackt nicht');
+assert.deepEqual(pm.NSPrivacyTrackingDomains, [], 'keine Tracking-Domains');
+const dataTypes = (pm.NSPrivacyCollectedDataTypes ?? []).map((d) => d.NSPrivacyCollectedDataType);
+assert.ok(dataTypes.includes('NSPrivacyCollectedDataTypeEmailAddress'), 'E-Mail als erfasster Datentyp deklariert');
+assert.ok(
+  dataTypes.includes('NSPrivacyCollectedDataTypeOtherFinancialInfo'),
+  'Finanzinfo als erfasster Datentyp deklariert',
+);
+for (const d of pm.NSPrivacyCollectedDataTypes ?? []) {
+  assert.equal(d.NSPrivacyCollectedDataTypeTracking, false, `${d.NSPrivacyCollectedDataType}: kein Tracking`);
+  assert.deepEqual(
+    d.NSPrivacyCollectedDataTypePurposes,
+    ['NSPrivacyCollectedDataTypePurposeAppFunctionality'],
+    `${d.NSPrivacyCollectedDataType}: nur App-Funktionalität`,
+  );
+}
+const apiReasons = (pm.NSPrivacyAccessedAPITypes ?? []).map((a) => a.NSPrivacyAccessedAPIType);
+for (const cat of [
+  'NSPrivacyAccessedAPICategoryFileTimestamp',
+  'NSPrivacyAccessedAPICategoryDiskSpace',
+  'NSPrivacyAccessedAPICategorySystemBootTime',
+  'NSPrivacyAccessedAPICategoryUserDefaults',
+]) {
+  assert.ok(apiReasons.includes(cat), `Required-Reason-API deklariert: ${cat}`);
+}
+for (const a of pm.NSPrivacyAccessedAPITypes ?? []) {
+  assert.ok(
+    Array.isArray(a.NSPrivacyAccessedAPITypeReasons) && a.NSPrivacyAccessedAPITypeReasons.length > 0,
+    `${a.NSPrivacyAccessedAPIType}: mindestens ein Grund-Code`,
+  );
+}
+
+// --- ATT: keine Tracking-Berechtigung, keine IDFA-Nutzung ---------
+assert.ok(
+  !ios.infoPlist?.NSUserTrackingUsageDescription,
+  'keine NSUserTrackingUsageDescription (App trackt nicht, kein ATT-Prompt)',
+);
+
 // --- SQLCipher gilt auch für iOS -----------------------------------
 const sqlitePlugin = (appJson.plugins ?? []).find((p) => Array.isArray(p) && p[0] === 'expo-sqlite');
 assert.ok(sqlitePlugin, 'expo-sqlite Plugin vorhanden');

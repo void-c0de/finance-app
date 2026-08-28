@@ -20,6 +20,9 @@ action · ❌ not started.
 | [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md) | The facts only the maintainer can supply |
 | [`BILLING_SERVER_CONTRACT.md`](./BILLING_SERVER_CONTRACT.md) | Purchase-verification architecture (built + what's left) |
 | [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md) | Install on a real iPhone for 0 € |
+| [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md) | iOS track navigation (free path + App Store) |
+| [`APPLE_APP_PRIVACY.md`](./APPLE_APP_PRIVACY.md) | App Privacy label + `PrivacyInfo.xcprivacy` source of truth |
+| [`APPLE_EXPORT_COMPLIANCE.md`](./APPLE_EXPORT_COMPLIANCE.md) · [`APPLE_REVIEW_CHECKLIST.md`](./APPLE_REVIEW_CHECKLIST.md) · [`APP_STORE_LISTING.md`](./APP_STORE_LISTING.md) · [`TESTFLIGHT_CHECKLIST.md`](./TESTFLIGHT_CHECKLIST.md) | Future App Store submission (paid program) |
 | [`RELEASE.md`](./RELEASE.md) | Native release contract + per-version history |
 | [`PRODUCT.md`](./PRODUCT.md) · [`PLAN.md`](./PLAN.md) | Product rules · status |
 

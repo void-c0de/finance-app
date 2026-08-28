@@ -398,6 +398,14 @@ an RC2 OTA is prepared but not published.
   Face ID Info.plist string, SQLCipher confirmed on iOS, `eas.json` simulator
   profile, `.github/workflows/ios-unsigned.yml` (macOS-26 runner → **compiles**,
   Swift 6.2). See `IOS_FREE_DEVICE_INSTALL.md`.
+- **iOS privacy manifest** (`app.json → ios.privacyManifests`): `NSPrivacyTracking`
+  false, no tracking domains; collected data types = email / other financial
+  info / other diagnostic data (all linked, none tracking, App-Functionality
+  only); Required-Reason APIs `C617.1` / `E174.1` / `35F9.1` / `CA92.1`. No ATT
+  prompt, no IDFA. `test:ios-config` asserts all of it. Source of truth:
+  `APPLE_APP_PRIVACY.md`. Future App Store prep: `IOS_RELEASE_CHECKLIST.md`,
+  `APPLE_EXPORT_COMPLIANCE.md`, `APPLE_REVIEW_CHECKLIST.md`, `APP_STORE_LISTING.md`,
+  `TESTFLIGHT_CHECKLIST.md`.
 - **CI unchanged** (green). `DEPENDENCY_AUDIT.md`: 12 moderate npm-audit entries
   are build-tooling only (`@expo/config-plugins → xcode → uuid`), no runtime
   exposure, no safe fix without an SDK downgrade.
