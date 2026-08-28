@@ -1,0 +1,53 @@
+{
+  "schema": "finance-app/release-manifest@1",
+  "generatedAt": "2026-08-28T18:58:45+02:00",
+  "git": {
+    "sha": "6a89abd3764eba2d94ef7b9348e44e96dab64ae0",
+    "shortSha": "6a89abd",
+    "branch": "master",
+    "clean": false
+  },
+  "app": {
+    "name": "finance-app",
+    "version": "1.6.0",
+    "androidVersionCode": 7,
+    "iosBuildNumber": "7",
+    "runtimeVersionPolicy": "appVersion",
+    "androidPackage": "com.nocta_xz.financeapp",
+    "iosBundleId": "com.nocta-xz.financeapp"
+  },
+  "android": {
+    "apk": {
+      "path": "android/app/build/outputs/apk/release/app-release.apk",
+      "present": true,
+      "bytes": 138267642,
+      "sha256": "81ebe1d3c7c7dc2546167d700a1bcf320977b960ee874a38fb79cc8b12699944",
+      "signing": "debug"
+    },
+    "aab": {
+      "path": "android/app/build/outputs/bundle/release/app-release.aab",
+      "present": true,
+      "bytes": 102493675,
+      "sha256": "07382f055fdada190402866be4708ac1dcc0c6cc02ba7e867905851801ffece9",
+      "signing": "debug"
+    },
+    "signingClassification": "debug",
+    "productionUploadKeyConfigured": false
+  },
+  "ios": {
+    "unsignedCiWorkflow": ".github/workflows/ios-unsigned.yml",
+    "note": "unsigned Release build; IPA SHA-256 is in the CI \"Package unsigned IPA\" step (changes every build)"
+  },
+  "billing": {
+    "playBillingClient": "9.1.0 (expo-iap / openiap-google)",
+    "storeKit": "openiap-apple (StoreKit 2)",
+    "serverVerification": "deployed; not_configured until provider credentials set",
+    "productIdsConfigured": false
+  },
+  "supabase": {
+    "migrations": 16
+  },
+  "tests": {
+    "lastKnown": "48 suites (see CI on the recorded git sha)"
+  }
+}

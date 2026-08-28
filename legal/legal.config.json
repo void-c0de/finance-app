@@ -1,0 +1,10 @@
+{
+  "$comment": "Single source of truth for the legal / controller facts. Fill each value ONCE; then run `npm run build:legal` to render docs/datenschutz.html + docs/support.html, and `npm run check:legal` to confirm nothing is left blank. null = not yet supplied → the [BITTE ERGÄNZEN] placeholder stays in the page and the production submission gate stays closed. Nothing here is invented.",
+  "controller_name": null,
+  "controller_address": null,
+  "contact_email": null,
+  "supervisory_authority": null,
+  "supabase_region_statement": null,
+  "diagnostics_retention_statement": "Diagnose-Protokolle werden nach 14 Tagen serverseitig automatisch gelöscht (prune_my_debug_logs).",
+  "public_app_name": "Finance App"
+}

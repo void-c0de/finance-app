@@ -4,7 +4,7 @@ Developer-facing mapping of **actual** app data flows to the Google Play Data
 Safety form. Derived from the code, not from memory. Update this file whenever a
 data flow changes, then transcribe it into Play Console.
 
-Last verified: 2026-08-27 against Finance App 1.5.0.
+Last verified: 2026-08-28 against Finance App 1.6.0 (RC7 — native billing added).
 
 ## Third-party SDKs
 
@@ -33,7 +33,7 @@ for their own use — **nothing is shared** in that sense.
 | Password | Not stored by us; hashed server-side by Supabase Auth. HIBP check sends only a 5-char hash prefix. | No | Optional | Authentication, breach protection | Yes |
 | Financial info — user payment/transaction data | Yes, only with a cloud account (accounts, transactions, balances, categories, budgets, savings goals, contributions, recurring series) | No | Optional | App functionality (sync, multi-device, restore) | Yes |
 | Financial info — bank account metadata | Yes if a bank is connected: institution name, account name/type, IBAN, balance. Via Tink. No bank credentials on device. | No | Optional | Account aggregation | Yes |
-| Purchase / entitlement data | Yes if a cloud account: Premium plan, source, start/expiry timestamps | No | Optional | Entitlement enforcement | Yes |
+| Purchase / entitlement data | Yes if a cloud account: Premium plan, source, start/expiry timestamps, provider (google_play/app_store), environment (production/sandbox). The store purchase token is **transmitted transiently** to the verify-purchase function and **stored only as a SHA-256 hash** — never in the clear. Provider transaction identifiers (opaque, non-personal) are stored to correlate renewal/refund notifications. | No | Optional | Entitlement enforcement, subscription lifecycle | Yes |
 | App diagnostics / crash-adjacent logs | Yes if a cloud account: short, **redacted** technical event log (amounts, names, tokens, emails stripped before upload). No stack traces with personal data. | No | Optional (tied to cloud account) | Debugging sync issues, stability | Yes |
 | Deletion requests | Yes if a cloud account: request kind, timestamps, status | No | Optional | Fulfilling deletion within the grace window | Yes |
 | Device or other IDs / Advertising ID | **No** | No | — | — | — |

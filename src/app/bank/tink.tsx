@@ -80,6 +80,8 @@ import {
   startTinkLinkSession,
 } from '@/banking/tink/tinkLinkSession';
 
+import { nextConnectionStatus } from '@/banking/tink/tinkConnectionLifecycle';
+
 import {
   groupTinkTransactionsByLocalAccount,
   mapTinkBookingStatus,
@@ -687,9 +689,9 @@ export default function TinkCallbackScreen() {
 
       if (needsReauth) {
         /*
-         * Freigabe abgelaufen/abgelehnt: bestehende Verbindung auf
-         * "requires_action" setzen, damit die Bankverbindungen-Liste den
-         * Reconnect-Hinweis zeigt. Lokale Konten und Umsätze bleiben erhalten.
+         * Freigabe abgelaufen/abgelehnt: den Lebenszyklus-Übergang anwenden
+         * (consent_expired vs. requires_action) — nie ein Zustand, der Daten
+         * löscht. Lokale Konten und Umsätze bleiben erhalten.
          */
         try {
           const tink = (await getBankConnections()).find(
@@ -697,7 +699,12 @@ export default function TinkCallbackScreen() {
           );
 
           if (tink) {
-            await updateBankConnectionStatus(tink.id, 'requires_action');
+            const event =
+              error instanceof TinkImportError && error.code === 'consent_expired'
+                ? ({ type: 'CONSENT_EXPIRED' } as const)
+                : ({ type: 'REAUTH_REQUIRED' } as const);
+            const nextStatus = nextConnectionStatus(tink.status, event);
+            await updateBankConnectionStatus(tink.id, nextStatus);
             await refreshFinanceData();
           }
         } catch (statusError) {

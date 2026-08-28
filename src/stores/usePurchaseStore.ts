@@ -29,6 +29,14 @@ type PurchaseStoreState = {
    * vom Server (`useProductAccessStore.refresh()`).
    */
   resetForAccountChange(): void;
+  /**
+   * Einmalige, stille Abgleich-Runde beim App-Start: prüft vorhandene
+   * Store-Käufe (z. B. ein Kauf, dessen Verifizierung durch App-Kill/Netzausfall
+   * unterbrochen wurde) serverseitig nach. Öffnet NIE einen Kauf-Dialog, löst NIE
+   * einen neuen Kauf aus und verändert die sichtbare Zustandsmaschine nicht —
+   * nur das autoritative Entitlement wird bei Erfolg neu geladen.
+   */
+  reconcileSilently(): Promise<void>;
 };
 
 export const usePurchaseStore = create<PurchaseStoreState>((set, get) => {
@@ -127,6 +135,22 @@ export const usePurchaseStore = create<PurchaseStoreState>((set, get) => {
 
     resetForAccountChange() {
       set({ machine: initialPurchaseState, products: [], configured: isBillingConfigured() });
+    },
+
+    async reconcileSilently() {
+      if (!get().configured) return;
+      const client = getBillingClient();
+      try {
+        if (!(await client.isAvailable())) return;
+        const outcome = await client.restorePurchases();
+        // Nur bei echter Server-Bestätigung das Entitlement neu laden. Kein
+        // Dispatch in die Zustandsmaschine — die Kauf-UI bleibt unangetastet.
+        if (outcome.kind === 'verified' && outcome.result.ok) {
+          await refreshEntitlement();
+        }
+      } catch {
+        debugLog.warn('BILLING', 'stiller Kauf-Abgleich fehlgeschlagen');
+      }
     },
   };
 });

@@ -75,6 +75,77 @@ BEGIN
   END;
 END; $$;
 
+-- 4c) RC7 replay / account-switch guard: a second Finance account cannot claim
+--     a purchase token (or original transaction id) already owned by the first.
+DO $$
+DECLARE u2 uuid;
+BEGIN
+  SELECT id INTO u2 FROM public.profiles WHERE role='user' AND id <> current_setting('test.u1')::uuid ORDER BY created_at LIMIT 1;
+  IF u2 IS NULL THEN RAISE NOTICE 'skip 4c: only one test user'; RETURN; END IF;
+  DELETE FROM public.user_subscriptions WHERE user_id = u2;
+  DELETE FROM public.billing_subscriptions WHERE user_id = u2;
+
+  -- u1 already owns hash-1 (from test 1). u2 tries the same token → must fail.
+  BEGIN
+    PERFORM public.apply_verified_subscription(
+      u2, 'google_play', 'premium.monthly', 'hash-1', 'active', true, now() + interval '30 days',
+      'verify_purchase', NULL, NULL, 'production', NULL, now());
+    RAISE EXCEPTION 'account-switch replay was allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%subscription_owned_by_other_account%' THEN RAISE; END IF;
+  END;
+
+  -- same original_transaction_id, different token, different user → also blocked.
+  PERFORM public.apply_verified_subscription(
+    current_setting('test.u1')::uuid, 'app_store', 'premium.monthly', 'hash-otx-a', 'active', true,
+    now() + interval '30 days', 'verify_purchase', 'tx-a', 'ORIG-123', 'production', NULL, now());
+  BEGIN
+    PERFORM public.apply_verified_subscription(
+      u2, 'app_store', 'premium.monthly', 'hash-otx-b', 'active', true, now() + interval '30 days',
+      'verify_purchase', 'tx-b', 'ORIG-123', 'production', NULL, now());
+    RAISE EXCEPTION 'account-switch replay via original_transaction_id was allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%subscription_owned_by_other_account%' THEN RAISE; END IF;
+  END;
+
+  DELETE FROM public.user_subscriptions WHERE user_id = u2;
+  DELETE FROM public.billing_subscriptions WHERE user_id = u2;
+END; $$;
+
+-- 4d) RC7 out-of-order guard: an older event never overwrites newer state.
+DO $$
+DECLARE v_end_before timestamptz; v_end_after timestamptz;
+BEGIN
+  -- current state for hash-1 has last_event_at = now() (from test 4).
+  PERFORM public.apply_verified_subscription(
+    current_setting('test.u1')::uuid, 'google_play', 'premium.monthly', 'hash-1', 'active', true,
+    now() + interval '90 days', 'rtdn_2', NULL, NULL, 'production', NULL, now());
+  SELECT current_period_end INTO v_end_before FROM public.billing_subscriptions
+    WHERE purchase_token_sha256 = 'hash-1' AND provider='google_play';
+
+  -- a stale event (event_at in the past) tries to set expiry to expired
+  PERFORM public.apply_verified_subscription(
+    current_setting('test.u1')::uuid, 'google_play', 'premium.monthly', 'hash-1', 'expired', false,
+    now() - interval '1 day', 'rtdn_13', NULL, NULL, 'production', NULL, now() - interval '10 days');
+  SELECT current_period_end INTO v_end_after FROM public.billing_subscriptions
+    WHERE purchase_token_sha256 = 'hash-1' AND provider='google_play';
+
+  IF v_end_after IS DISTINCT FROM v_end_before THEN
+    RAISE EXCEPTION 'stale event overwrote newer billing state: % -> %', v_end_before, v_end_after;
+  END IF;
+END; $$;
+
+-- 4e) record_billing_event: first sighting true, duplicates false.
+DO $$
+DECLARE a boolean; b boolean;
+BEGIN
+  a := public.record_billing_event('google_play', 'evt-rc7-1', 'SUBSCRIPTION_RENEWED', now(), 'sha-x');
+  b := public.record_billing_event('google_play', 'evt-rc7-1', 'SUBSCRIPTION_RENEWED', now(), 'sha-x');
+  IF a IS NOT TRUE OR b IS NOT FALSE THEN
+    RAISE EXCEPTION 'record_billing_event idempotency broken: first=% dup=%', a, b;
+  END IF;
+END; $$;
+
 -- 5) The merge function is not callable by a normal authenticated user
 DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', current_setting('test.u1'), true); END; $$;
 SET LOCAL ROLE authenticated;

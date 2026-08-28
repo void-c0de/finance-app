@@ -4,7 +4,13 @@ Google Play requires a Financial Features declaration for apps with financial
 functionality, including on testing tracks. This maps the **actual** app to the
 declaration categories. Transcribe into Play Console; do not overstate.
 
-Last verified: 2026-08-27 against Finance App 1.5.0.
+Last verified: 2026-08-28 against Finance App 1.6.0 (RC7).
+
+> RC7 note: the app now ships a native in-app **subscription** (Google Play
+> Billing 9.1.0 / StoreKit 2) for its own Premium tier. A subscription to the
+> app's own features is **not** a regulated financial feature — it does not
+> change any answer below. It is declared separately under Play's "In-app
+> purchases" / monetisation, not here.
 
 ## What the app IS
 
