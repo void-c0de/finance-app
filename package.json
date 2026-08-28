@@ -62,10 +62,10 @@
     "release:doctor": "node scripts/release-doctor.mjs",
     "release:evidence": "node scripts/update-release-evidence.mjs",
     "build:release-manifest": "node scripts/build-release-manifest.mjs",
-    "build:play-icon": "node scripts/build-play-icon.mjs",
-    "build:feature-graphic": "node scripts/build-feature-graphic.mjs",
-    "build:store-assets": "node scripts/build-play-icon.mjs && node scripts/build-feature-graphic.mjs",
+    "build:brand": "node scripts/build-brand.mjs",
+    "build:store-assets": "node scripts/build-brand.mjs",
     "validate:aab": "node scripts/validate-aab.mjs",
+    "validate:store-assets": "node scripts/validate-store-assets.mjs",
     "test:all": "node scripts/ci-run-tests.mjs",
     "guard:secrets": "node scripts/ci-secret-guard.mjs",
     "ci": "npm run guard:secrets && npx tsc --noEmit && npm run lint && npm run test:all",
@@ -80,6 +80,7 @@
     "test:signing-gate": "node scripts/test-signing-gate.mjs",
     "test:release-evidence": "node scripts/test-release-evidence.mjs",
     "test:global-error": "node --experimental-strip-types scripts/test-global-error.mjs",
+    "test:brand-assets": "node scripts/test-brand-assets.mjs",
     "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
     "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs",
     "test:recurring-classification": "node --experimental-strip-types scripts/test-recurring-classification.mjs",
@@ -133,7 +134,8 @@
     "ios:device:status": "node scripts/ios-device.mjs status",
     "ios:device:logs": "node scripts/ios-device.mjs logs",
     "ios:device:open": "node scripts/ios-device.mjs open",
-    "screenshots:android": "node scripts/capture-screenshots.mjs"
+    "screenshots:android": "node scripts/capture-screenshots.mjs",
+    "build:brand": "node scripts/build-brand.mjs"
   },
   "private": true
 }

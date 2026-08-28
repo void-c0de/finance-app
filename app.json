@@ -75,10 +75,10 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#000000",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#246BFD",
+        "foregroundImage": "./assets/images/adaptive-foreground.png",
+        "backgroundImage": "./assets/images/adaptive-background.png",
+        "monochromeImage": "./assets/images/adaptive-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -90,10 +90,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/finance-mark.png",
-          "imageWidth": 128,
+          "image": "./assets/images/splash.png",
+          "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#246BFD",
+          "dark": {
+            "image": "./assets/images/splash.png",
+            "backgroundColor": "#0F1B33"
+          }
         }
       ],
       [

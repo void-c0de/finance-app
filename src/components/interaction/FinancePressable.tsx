@@ -1,50 +1,36 @@
-import {
-    useRef,
-} from 'react';
+import { useCallback, useRef } from 'react';
 
 import {
-    Animated,
-    type GestureResponderEvent,
-    Pressable,
-    type PressableProps,
-    type StyleProp,
-    type ViewStyle,
+  Animated,
+  Easing,
+  type GestureResponderEvent,
+  Pressable,
+  type PressableProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 
+import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import {
-    useFinanceTheme,
-} from '@/hooks/use-finance-theme';
-
-import {
-    type InteractionFeedbackVariant,
-    useInteractionFeedback,
+  type InteractionFeedbackVariant,
+  useInteractionFeedback,
 } from '@/providers/InteractionFeedbackProvider';
-
-import {
-    type FinanceHapticKind,
-    performFinanceHaptic,
-} from '@/services/haptics';
-
-import {
-    financeMotion,
-} from '@/theme/finance-motion';
+import { type FinanceHapticKind, performFinanceHaptic } from '@/services/haptics';
+import { financeMotion } from '@/theme/finance-motion';
 
 /**
  * Zentrale Interaction-Policy.
  *
- * - navigation:  subtile visuelle Rückmeldung,
- *                KEINE Vibration (Liste/Detail-Navigation).
- * - important:   kräftige Rückmeldung + Haptic
- *                (Add/Save/Refresh/Connect ...).
+ * - navigation:  subtile visuelle Rückmeldung, KEINE Vibration.
+ * - important:   kräftige Rückmeldung + Haptic (Add/Save/Refresh/Connect …).
  * - destructive: negative Farbrückmeldung + Warning-Haptic.
  *
- * Explizit gesetzte Props überschreiben
- * jeweils die Intent-Vorgabe.
+ * Reaktiv: die Skalier-Animation reagiert SOFORT auf `onPressIn` (Feder), nicht
+ * erst auf den bestätigten Tap. Der „Belohnungs"-Effekt (Farbtropfen + Haptic)
+ * kommt weiterhin nur beim echten, bestätigten `onPress` — beim Scrollen wird
+ * `onPress` abgebrochen, also kein Feedback.
  */
-type FinancePressableIntent =
-  | 'navigation'
-  | 'important'
-  | 'destructive';
+type FinancePressableIntent = 'navigation' | 'important' | 'destructive';
 
 type IntentDefaults = {
   feedbackVariant: InteractionFeedbackVariant;
@@ -67,300 +53,147 @@ const IMPORTANT_DEFAULTS: IntentDefaults = {
   hapticKind: 'action',
 };
 
-const DESTRUCTIVE_SCALE =
-  0.97;
+const DESTRUCTIVE_DEFAULTS: IntentDefaults = {
+  feedbackVariant: 'burst',
+  tapScale: 0.97,
+  hapticFeedback: true,
+  hapticKind: 'warning',
+};
 
-type FinancePressableProps =
-  Omit<
-    PressableProps,
-    'children' | 'onPress'
-  > & {
-    children:
-      PressableProps['children'];
-
-    onPress?:
-      PressableProps['onPress'];
-
-    contentStyle?:
-      StyleProp<ViewStyle>;
-
-    intent?:
-      FinancePressableIntent;
-
-    /**
-     * Legacy-Kompatibilität.
-     *
-     * Alle app-eigenen Buttons besitzen
-     * jetzt grundsätzlich visuelles Feedback.
-     */
-    splashEffect?:
-      boolean;
-
-    hapticFeedback?:
-      boolean;
-
-    hapticKind?:
-      FinanceHapticKind;
-
-    feedbackColor?:
-      string;
-
-    feedbackVariant?:
-      InteractionFeedbackVariant;
-
-    tapScale?:
-      number;
-  };
+type FinancePressableProps = Omit<PressableProps, 'children' | 'onPress'> & {
+  children: PressableProps['children'];
+  onPress?: PressableProps['onPress'];
+  contentStyle?: StyleProp<ViewStyle>;
+  intent?: FinancePressableIntent;
+  /** Legacy-Kompatibilität — alle app-eigenen Controls haben jetzt Feedback. */
+  splashEffect?: boolean;
+  hapticFeedback?: boolean;
+  hapticKind?: FinanceHapticKind;
+  feedbackColor?: string;
+  feedbackVariant?: InteractionFeedbackVariant;
+  tapScale?: number;
+};
 
 export function FinancePressable({
   children,
-
   onPress,
-
   contentStyle,
-
   intent,
-
-  splashEffect:
-    _legacySplashEffect =
-      true,
-
+  splashEffect: _legacySplashEffect = true,
   hapticFeedback,
-
   hapticKind,
-
   feedbackColor,
-
   feedbackVariant,
-
   tapScale,
-
   disabled,
-
+  onPressIn,
+  onPressOut,
   ...pressableProps
 }: FinancePressableProps) {
-  const {
-    colors,
-  } =
-    useFinanceTheme();
+  const { colors } = useFinanceTheme();
+  const interactionFeedback = useInteractionFeedback();
 
-  const interactionFeedback =
-    useInteractionFeedback();
+  const scale = useRef(new Animated.Value(1)).current;
+  const dim = useRef(new Animated.Value(0)).current; // 0 → 1 pressed
+  const isPressed = useRef(false);
 
-  const scale =
-    useRef(
-      new Animated.Value(
-        1
-      )
-    ).current;
-
-  const resolvedIntentDefaults =
+  const defaults =
     intent === 'navigation'
       ? NAVIGATION_DEFAULTS
-
       : intent === 'important'
         ? IMPORTANT_DEFAULTS
-
         : intent === 'destructive'
-          ? {
-              feedbackVariant: 'burst' as const,
-
-              tapScale: DESTRUCTIVE_SCALE,
-
-              hapticFeedback: true,
-
-              hapticKind: 'warning' as const,
-            }
-
+          ? DESTRUCTIVE_DEFAULTS
           : null;
 
-  const resolvedFeedbackVariant =
-    feedbackVariant ??
-    resolvedIntentDefaults?.feedbackVariant ??
-    'burst';
-
-  const resolvedTapScale =
-    tapScale ??
-    resolvedIntentDefaults?.tapScale ??
-    financeMotion
-      .press
-      .scale;
-
-  const resolvedHapticFeedback =
-    hapticFeedback ??
-    resolvedIntentDefaults?.hapticFeedback ??
-    false;
-
-  const resolvedHapticKind =
-    hapticKind ??
-    resolvedIntentDefaults?.hapticKind ??
-    'action';
-
+  const resolvedFeedbackVariant = feedbackVariant ?? defaults?.feedbackVariant ?? 'burst';
+  const resolvedTapScale = tapScale ?? defaults?.tapScale ?? financeMotion.press.scale;
+  const resolvedHapticFeedback = hapticFeedback ?? defaults?.hapticFeedback ?? false;
+  const resolvedHapticKind = hapticKind ?? defaults?.hapticKind ?? 'action';
   const resolvedFeedbackColor =
-    feedbackColor ??
-    (intent === 'destructive'
-      ? colors.negative
-      : colors.primary);
+    feedbackColor ?? (intent === 'destructive' ? colors.negative : colors.primary);
 
-  /*
-   * Der alte Flag bleibt nur erhalten,
-   * damit bestehende Aufrufe nicht brechen.
-   *
-   * Visuelles Feedback ist jetzt ein
-   * Grundprinzip aller app-eigenen Controls.
-   */
   void _legacySplashEffect;
 
-  function runLocalTapAnimation() {
-    if (disabled) {
-      return;
-    }
+  const springTo = useCallback(
+    (toScale: number, toDim: number, pressing: boolean) => {
+      if (disabled) return;
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: toScale,
+          speed: pressing ? financeMotion.press.springSpeed : financeMotion.press.releaseSpeed,
+          bounciness: pressing ? 0 : 6,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dim, {
+          toValue: toDim,
+          duration: pressing ? financeMotion.duration.instant : financeMotion.duration.fast,
+          easing: pressing ? Easing.out(Easing.quad) : Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+    [disabled, dim, scale],
+  );
 
-    scale.stopAnimation();
+  const handlePressIn = useCallback(
+    (event: GestureResponderEvent) => {
+      isPressed.current = true;
+      springTo(resolvedTapScale, 1, true);
+      onPressIn?.(event);
+    },
+    [onPressIn, resolvedTapScale, springTo],
+  );
 
-    scale.setValue(
-      1
-    );
+  const handlePressOut = useCallback(
+    (event: GestureResponderEvent) => {
+      isPressed.current = false;
+      springTo(1, 0, false);
+      onPressOut?.(event);
+    },
+    [onPressOut, springTo],
+  );
 
-    Animated.sequence([
-      Animated.timing(
-        scale,
-        {
-          toValue:
-            resolvedTapScale,
-
-          duration:
-            financeMotion
-              .duration
-              .instant,
-
-          useNativeDriver:
-            true,
-        }
-      ),
-
-      Animated.spring(
-        scale,
-        {
-          toValue:
-            1,
-
-          speed:
-            financeMotion
-              .press
-              .releaseSpeed,
-
-          bounciness:
-            4,
-
-          useNativeDriver:
-            true,
-        }
-      ),
-    ]).start();
-  }
-
-  function emitVisualFeedback(
-    event:
-      GestureResponderEvent
-  ) {
-    const {
-      pageX,
-      pageY,
-    } =
-      event.nativeEvent;
-
-    interactionFeedback
-      ?.emitFeedback({
-        x:
-          pageX,
-
-        y:
-          pageY,
-
-        color:
-          resolvedFeedbackColor,
-
-        variant:
-          resolvedFeedbackVariant,
+  const handlePress = useCallback(
+    (event: GestureResponderEvent) => {
+      if (disabled) return;
+      // confirmed tap → the "reward": a themed feedback burst at the touch point
+      const { pageX, pageY } = event.nativeEvent;
+      interactionFeedback?.emitFeedback({
+        x: pageX,
+        y: pageY,
+        color: resolvedFeedbackColor,
+        variant: resolvedFeedbackVariant,
       });
-  }
+      if (resolvedHapticFeedback) {
+        void performFinanceHaptic(resolvedHapticKind);
+      }
+      onPress?.(event);
+    },
+    [
+      disabled,
+      interactionFeedback,
+      onPress,
+      resolvedFeedbackColor,
+      resolvedFeedbackVariant,
+      resolvedHapticFeedback,
+      resolvedHapticKind,
+    ],
+  );
 
-  function handlePress(
-    event:
-      GestureResponderEvent
-  ) {
-    if (disabled) {
-      return;
-    }
-
-    /*
-     * EXTREM WICHTIG:
-     *
-     * Alles startet erst nach
-     * einem echten bestätigten onPress.
-     *
-     * Beim Scrollen wird onPress
-     * abgebrochen.
-     *
-     * Daher:
-     *
-     * Scrollen -> keine Vibration
-     * Scrollen -> keine Tropfen
-     *
-     * echter Klick -> Feedback
-     */
-    runLocalTapAnimation();
-
-    emitVisualFeedback(
-      event
-    );
-
-    if (
-      resolvedHapticFeedback
-    ) {
-      void performFinanceHaptic(
-        resolvedHapticKind
-      );
-    }
-
-    onPress?.(
-      event
-    );
-  }
+  const opacity = dim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] });
 
   return (
     <Pressable
       {...pressableProps}
-
-      disabled={
-        disabled
-      }
-
-      onPress={
-        handlePress
-      }
+      disabled={disabled}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handlePress}
     >
       {(state) => (
-        <Animated.View
-          style={[
-            contentStyle,
-
-            {
-              transform: [
-                {
-                  scale,
-                },
-              ],
-            },
-          ]}
-        >
-          {typeof children ===
-          'function'
-            ? children(
-                state
-              )
-            : children}
+        <Animated.View style={[contentStyle, { transform: [{ scale }], opacity }]}>
+          {typeof children === 'function' ? children(state) : children}
         </Animated.View>
       )}
     </Pressable>
