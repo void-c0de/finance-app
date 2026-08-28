@@ -12,6 +12,13 @@ Nothing here needs the paid Apple Developer Program. No jailbreak, no stolen
 certificates, no paid signing service. Verified against current Apple / Expo /
 AltStore documentation (2026-08).
 
+> **Windows ↔ iPhone connection:** iOS has no ADB. Before the first install the
+> iPhone must be **paired once over USB** ("Trust This Computer") — on iOS 26 and
+> earlier there is no wireless first-pairing. After that pairing, everything
+> (install, weekly refresh, logs) is Wi-Fi-only. Full diagnosis of *this* PC and
+> the minimal one-time cable step: **[`IOS_WINDOWS_WLAN_BRIDGE.md`](./IOS_WINDOWS_WLAN_BRIDGE.md)**.
+> Run `npm run ios:device:doctor` to see the current state.
+
 ---
 
 ## The three routes
@@ -113,12 +120,30 @@ in CI — the build is unsigned; AltStore signs it on your machine.
 
 Build time: ~15–25 min.
 
-### Sign + install (Windows)
+### One-time pairing (unavoidable — but not iTunes)
 
-1. Open **AltStore on the iPhone** → **My Apps** → **+** → pick
-   `FinanceApp-ios-unsigned.ipa`.
-2. AltStore signs it with your Personal Team certificate and installs it.
-3. On the iPhone: trust the certificate (VPN & Device Management) if prompted.
+Per `npm run ios:device:doctor`, this PC has **never** been paired with the
+iPhone. Once:
+
+1. Unlock the iPhone, connect it by cable. Windows auto-installs the Apple USB
+   driver (Apple Mobile Device Support is already present — no download).
+2. Tap **"Trust This Computer"** + passcode. A pairing record now lives in
+   `C:\ProgramData\Apple\Lockdown`.
+3. Unplug the cable. iTunes is never needed again.
+
+Local network shortcut (no AltServer dialog needed to *get the file* onto the
+phone): `npm run ios:ipa:serve`, then on the iPhone open `http://<PC-IP>:8788/`
+in Safari and save `FinanceApp.ipa` to Files. **Downloading is not installing.**
+
+### Sign + install (Windows, over Wi-Fi)
+
+1. **Shift-click** the AltServer tray icon → **"Sideload .ipa…"** → pick
+   `.artifacts/ios/FinanceApp-ios-unsigned.ipa` (from `npm run ios:unsigned:prepare`).
+   *Or* open **AltStore on the iPhone** → **My Apps** → **+** → the IPA.
+2. AltServer/AltStore signs it with your free Apple ID (entered only in that
+   dialog) and installs it over Wi-Fi.
+3. On the iPhone: **Settings → General → VPN & Device Management** → trust your
+   developer certificate. **Settings → Privacy & Security → Developer Mode** → on.
 
 ### Weekly refresh
 
