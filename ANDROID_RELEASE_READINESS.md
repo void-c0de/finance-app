@@ -20,7 +20,7 @@ the first upload.
 | Concern | State |
 | --- | --- |
 | Render errors | Expo Router `ErrorBoundary` in `src/app/_layout.tsx` — shows a retry screen, not a white screen. |
-| Uncaught promise rejections | No global `ErrorUtils.setGlobalHandler`. Mitigation: async work is wrapped in `try/catch` + `debugLog.error` throughout (billing, sync, banking, updates). A rejection does not crash a release build; worst case a spinner is left — acceptable, and covered by `test:resilience` for the pure cores. *(Optional future: a thin global handler that routes to `debugLog` + the error boundary.)* |
+| Uncaught errors + promise rejections | **RC9: a minimal global handler is installed** (`src/core/globalErrorHandler.ts`, called first in `prepareApplication()`). It wraps `ErrorUtils.setGlobalHandler` and the `promise` rejection tracker, logs each one **once** through the redacted `debugLog`, then **calls the previous RN handler** — nothing is swallowed, the dev red-box and the release default are preserved. No SDK, no upload. `test:global-error` covers the pure `describeUncaught` (single-line, 300/600-char caps, circular-safe) and asserts the install glue keeps the previous handler. Async work is still wrapped in `try/catch` + `debugLog` throughout. |
 | Purchase callbacks | `expoIapAdapter` wraps every listener in `catch` / `void (async () => …)` / `.catch(() => …)`. A `requestPurchase` that throws synchronously settles the pending promise with `{ kind: 'unavailable' }`. A 120 s timeout guards a stuck purchase. |
 | Deep links (`financeapp://bank/tink?…`) | `parseTinkCallback` / `classifyTinkCallback` are pure and defensive — malformed URL, missing `code`, wrong `state`, cancel tokens all map to a safe decision (`test:tink-callback`). No crash on a hostile callback URL. |
 | Process death during a purchase / sync | `usePurchaseStore.reconcileSilently()` runs once on the next boot; sync resumes from its cursor; transaction import is idempotent (`ON CONFLICT`). |
@@ -43,8 +43,22 @@ the first upload.
 - **Critical screens without cloud access:** the app is offline-first; every core screen renders from the local SQLCipher DB with no account. The Premium screen shows "Preise folgen"; Analytics shows the Standard preview.
 - **Reviewer bypass:** none. There is no insecure shortcut for reviewers — they use the coupon like any user.
 
+## Android 16 / targetSdk 36 (RC9 audit)
+
+| Area | State |
+| --- | --- |
+| Edge-to-edge | `edgeToEdgeEnabled=true` (Android 16 requirement) — verified on device (RC-series). |
+| Predictive back | Expo Router / RN 0.86 handles the OnBackInvokedCallback path; no custom back interception that would break it. |
+| 16 KB page size | RN 0.86 + the SDK-57 native module set ship 16 KB-aligned `.so` files; no bespoke prebuilt libs. |
+| Notification permission | Not requested — the app posts no notifications. |
+| Package visibility | No `QUERY_ALL_PACKAGES` (forbidden by `test:android-permissions`); `expo-web-browser` / share-sheet use implicit intents. |
+| Scoped storage | Legacy `READ/WRITE_EXTERNAL_STORAGE` capped at `maxSdkVersion=32`; exports go through the system share sheet (`expo-sharing`). |
+| Biometric | `USE_BIOMETRIC` + legacy `USE_FINGERPRINT`; `expo-local-authentication` handles the API-level differences. |
+| Foreground/background limits | No foreground service, no background location/work; sync runs only while the app is active. |
+
 ## Open items
 
 - Add the app to Play Console and run the pre-launch report on the first
   closed-test upload; triage any device-specific crash then.
-- Consider a minimal global async-error handler (routes to `debugLog`, no SDK).
+- Watch the closed-test crash/ANR feed and the `app_debug_logs` for the new
+  `UncaughtError` / `UnhandledRejection` lines.

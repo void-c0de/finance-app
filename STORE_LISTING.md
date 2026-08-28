@@ -1,7 +1,7 @@
 # Play Store listing — draft (accurate, no exaggeration)
 
 Draft copy for the Google Play listing. German (primary) + English. Only claims
-that are factually true for Finance App 1.5.0.
+that are factually true for Finance App 1.6.0 (verified RC9, 2026-08-28).
 
 ---
 
@@ -76,10 +76,15 @@ launch. Keep the banking disclaimer verbatim.)
 - No analytics/advertising/crash SDKs. No advertising ID.
 
 ## Premium explanation (for the listing + review notes)
-- Premium is unlocked today via coupon codes or a Superuser grant. There is **no
-  in-app purchase flow yet** and the app never grants itself Premium — entitlement
-  is server state only. Pricing shown in-app is honest ("prices follow with the
-  store release").
+- The native store purchase path is **implemented** (Google Play Billing 9.1.0 +
+  a server-authoritative verification layer). It is **not yet activated**: no
+  store products are configured, so the Premium screen honestly shows
+  "Preise folgen" and there is no buy button. Premium is unlocked today via
+  **coupon codes** (or a Superuser grant). The app **never grants itself
+  Premium** — entitlement is server state only, and a store purchase becomes
+  Premium only after the server verifies it against Google.
+- Review-team access: create a Premium coupon under *Mehr → Administration →
+  Premium-Coupons* and redeem it under *Mehr → Abos & Premium*. No backdoor.
 
 ## Banking disclaimer (must appear in listing + first-run + review notes)
 > Finance App ist keine Bank und kein Zahlungsdienst. / Finance App is not a bank
@@ -103,4 +108,10 @@ Finance.
 
 ## Contact / support
 - Support URL: https://void-c0de.github.io/finance-app/support.html
-- Support email: [BITTE ERGÄNZEN]
+- Support email: from `legal/legal.config.json` → `contact_email` (run `npm run build:legal`; `npm run check:legal` blocks submission while unset)
+
+## Closed test note
+The Closed Testing track can go live with banking clearly presented as **sandbox
+/ demo** (the in-app "Demo-Verbindung" produces synthetic accounts; the real
+Tink flow runs against Tink's sandbox). The listing must not imply production
+banking. See `PLAY_FINANCIAL_FEATURES.md`.

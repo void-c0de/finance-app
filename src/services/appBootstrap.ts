@@ -18,8 +18,17 @@ import {
     initBilling,
 } from '@/services/billing/registerBilling';
 
+import {
+    installGlobalErrorHandler,
+} from '@/core/globalErrorHandler';
+
 export async function prepareApplication():
 Promise<void> {
+  // Zuerst: nicht abgefangene Fehler/Promise-Ablehnungen ins redigierte
+  // debugLog spiegeln (Closed-Test-Beobachtbarkeit; kein Crash-SDK, kein Upload,
+  // der bisherige RN-Handler läuft danach weiter).
+  installGlobalErrorHandler();
+
   await Promise.all([
     useThemeStore
       .getState()
