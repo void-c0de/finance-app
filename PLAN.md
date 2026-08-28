@@ -242,3 +242,19 @@ a cancellable grace window. Nothing is deleted inside the grace window.
 - **VERIFIED** no silent iOS no-op (`Platform.OS` audit); 37 test suites,
   tsc/lint/expo-doctor clean, 14/14 migrations, db lint clean.
 - Native unchanged: 1.5.0 / versionCode 6 / runtime 1.5.0 (JS/server/CI only).
+
+## RC5 physical-device bridge (2026-08-28)
+
+- **DONE** Windows↔iPhone diagnosis (`npm run ios:device:doctor`, read-only) —
+  this PC: Apple stack healthy, AltServer installed, same subnet as the phone;
+  but **never USB-paired, no lockdown record, no WLAN advertisement**. Cableless
+  first-pairing is impossible on iOS ≤ 26 → **one** USB "Trust" (no iTunes UI),
+  then Wi-Fi-only. `IOS_WINDOWS_WLAN_BRIDGE.md`.
+- **DONE** `npm run ios:ipa:serve` (LAN IPA + private AltStore source),
+  `ios:device:status | logs | open` (`pymobiledevice3` wrappers, degrade with no
+  device). `.tools/` isolated venv, gitignored. Apple trust/signing material
+  blocked by `.gitignore` + `guard:secrets`. `test:ios-tooling`.
+- **PARTIAL** Store screenshots — Android emulator (API 36) runs the release APK
+  (SQLCipher fine on x86_64); 4 clean data-free surfaces captured. Data-rich
+  surfaces need a debug build (`__DEV__` opens `/demo`).
+- 38 test suites, tsc/lint/expo-doctor clean. No Supabase / native change.
