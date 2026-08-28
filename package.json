@@ -60,6 +60,7 @@
     "check:legal": "node scripts/check-legal.mjs",
     "check:upload-signing": "node scripts/check-upload-signing.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
+    "providers:doctor": "node scripts/providers-doctor.mjs",
     "release:evidence": "node scripts/update-release-evidence.mjs",
     "build:release-manifest": "node scripts/build-release-manifest.mjs",
     "build:brand": "node scripts/build-brand.mjs",
@@ -81,6 +82,7 @@
     "test:release-evidence": "node scripts/test-release-evidence.mjs",
     "test:global-error": "node --experimental-strip-types scripts/test-global-error.mjs",
     "test:brand-assets": "node scripts/test-brand-assets.mjs",
+    "test:ota-manifest": "node scripts/test-ota-manifest.mjs",
     "test:debug-redaction": "node --experimental-strip-types scripts/test-debug-redaction.mjs",
     "test:recurring": "node --experimental-strip-types scripts/test-recurring-detection.mjs",
     "test:recurring-classification": "node --experimental-strip-types scripts/test-recurring-classification.mjs",
@@ -134,8 +136,7 @@
     "ios:device:status": "node scripts/ios-device.mjs status",
     "ios:device:logs": "node scripts/ios-device.mjs logs",
     "ios:device:open": "node scripts/ios-device.mjs open",
-    "screenshots:android": "node scripts/capture-screenshots.mjs",
-    "build:brand": "node scripts/build-brand.mjs"
+    "screenshots:android": "node scripts/capture-screenshots.mjs"
   },
   "private": true
 }

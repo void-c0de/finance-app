@@ -267,10 +267,20 @@ function pushFile(
     ext ??
     normalized.split('.').pop();
 
+  // The expo-updates client stores every asset on disk as `<key><fileExtension>`
+  // and REJECTS the whole manifest if either contains a path separator
+  // ("... is not a valid filename"). `expo export` names each artefact after the
+  // md5 of its contents, so the bare basename is a safe, unique, stable key that
+  // also matches the embedded manifest's key format (no needless re-download).
+  const baseName = normalized.split('/').pop();
+  const keyName = baseName
+    .replace(/^entry-/, '')
+    .replace(/\.(hbc|js)$/, '');
+
   collectedFiles.push({
     relPath: normalized,
 
-    key: normalized,
+    key: keyName,
 
     ext: resolvedExt,
   });
