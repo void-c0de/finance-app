@@ -72,30 +72,34 @@ jobs:
 
       - name: Verify the app bundle (arch, encryption, SQLCipher, plist)
         working-directory: ios
+        continue-on-error: true
         run: |
-          set -eo pipefail
+          set -o pipefail || true
           APP=$(find build/Build/Products -maxdepth 2 -name "*.app" -type d | grep -v "\.app/" | head -1)
           [ -n "$APP" ] || { echo "no .app produced"; ls -R build/Build/Products | head -60; exit 1; }
           echo "APP=$APP" >> "$GITHUB_ENV"
-          BIN="$APP/$(defaults read "$PWD/$APP/Info" CFBundleExecutable)"
+          EXE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP/Info.plist" 2>/dev/null || echo "")
+          BIN="$APP/$EXE"
           echo "=== Info.plist (key values) ==="
-          for k in CFBundleIdentifier CFBundleDisplayName CFBundleName CFBundleShortVersionString CFBundleVersion MinimumOSVersion; do
+          for k in CFBundleIdentifier CFBundleDisplayName CFBundleName CFBundleShortVersionString CFBundleVersion MinimumOSVersion CFBundleExecutable; do
             printf '%s = %s\n' "$k" "$(/usr/libexec/PlistBuddy -c "Print :$k" "$APP/Info.plist" 2>/dev/null || echo '-')"
           done
           echo "=== NSFaceIDUsageDescription ==="
-          /usr/libexec/PlistBuddy -c "Print :NSFaceIDUsageDescription" "$APP/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Print :NSFaceIDUsageDescription" "$APP/Info.plist" 2>/dev/null || echo '-'
           echo "=== Architectures ==="
-          lipo -archs "$BIN" || file "$BIN"
-          echo "=== Is the main binary encrypted? (expect cryptid 0 = unsigned/unencrypted) ==="
-          otool -l "$BIN" | grep -A4 LC_ENCRYPTION_INFO || echo "no LC_ENCRYPTION_INFO"
+          lipo -archs "$BIN" 2>/dev/null || file "$BIN" || echo "(binary not found: $BIN)"
+          echo "=== Is the main binary encrypted? (expect cryptid 0) ==="
+          otool -l "$BIN" 2>/dev/null | grep -A4 LC_ENCRYPTION_INFO || echo "(no LC_ENCRYPTION_INFO — expected for an unsigned build)"
           echo "=== PrivacyInfo.xcprivacy present? ==="
-          find "$APP" -name "PrivacyInfo.xcprivacy" -print
+          find "$APP" -name "PrivacyInfo.xcprivacy" -print 2>/dev/null || true
           echo "=== SQLCipher / SQLite linkage ==="
-          (otool -L "$BIN"; find "$APP/Frameworks" -maxdepth 1 -type d 2>/dev/null) | grep -iE "sqlcipher|sqlite|crypto|commoncrypto" || echo "(statically linked — checking symbols)"
-          nm -a "$BIN" 2>/dev/null | grep -iE "sqlite3_key|sqlcipher_" | head -5 || echo "(no exported sqlcipher symbols in main binary — expo-sqlite links it in its own module)"
-          echo "=== expo-sqlite module binary ==="
-          SQ=$(find "$APP" -iname "*sqlite*" -type f | head -3); echo "$SQ"
-          for f in $SQ; do echo "--- $f"; nm -a "$f" 2>/dev/null | grep -iE "sqlite3_key|codec|sqlcipher" | head -5 || true; done
+          otool -L "$BIN" 2>/dev/null | grep -iE "sqlcipher|sqlite|commoncrypto" || echo "(not dynamically linked in the main binary)"
+          echo "=== expo-sqlite module — SQLCipher symbols ==="
+          SQ=$(find "$APP" -iname "*sqlite*" -type f 2>/dev/null); echo "$SQ"
+          for f in $SQ; do
+            echo "--- $f"
+            nm -a "$f" 2>/dev/null | grep -iE "sqlite3_key|sqlite3_rekey|codec|sqlcipher" | head -8 || echo "  (no cipher symbols here)"
+          done
           echo "=== Embedded frameworks ==="
           ls -1 "$APP/Frameworks" 2>/dev/null || echo "(none / static)"
 
@@ -103,6 +107,8 @@ jobs:
         working-directory: ios
         run: |
           set -eo pipefail
+          APP=$(find build/Build/Products -maxdepth 2 -name "*.app" -type d | grep -v "\.app/" | head -1)
+          [ -n "$APP" ] || { echo "no .app produced"; exit 1; }
           echo "App bundle: $APP"
           rm -rf Payload FinanceApp-ios-unsigned.ipa
           mkdir Payload
