@@ -82,6 +82,7 @@
     "test:budgets": "node --experimental-strip-types scripts/test-budget-insights.mjs",
     "test:attention": "node --experimental-strip-types scripts/test-attention.mjs",
     "test:analytics": "node --experimental-strip-types scripts/test-analytics.mjs",
+    "test:auto-categorization": "node --experimental-strip-types scripts/test-auto-categorization.mjs",
     "test:export": "node --experimental-strip-types scripts/test-export.mjs",
     "test:password-security": "node --experimental-strip-types scripts/test-password-security.mjs",
     "test:themes": "node --experimental-strip-types scripts/test-themes.mjs",
