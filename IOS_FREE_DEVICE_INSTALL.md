@@ -161,14 +161,21 @@ rest**. This is not a plain-SQLite fallback. The encryption key lives in the iOS
 
 ## Data preservation across the weekly re-sign
 
+**Status: expected from how iOS works — confirm it once on the device
+(`IOS_PHYSICAL_QA.md` → "Re-sign survival test"). The GitHub build proves the
+app compiles *with* SQLCipher; it cannot prove the key survives a real re-sign.**
+
 - SecureStore (the SQLCipher key) uses the iOS Keychain with the app's default
   access group, derived from **Team ID + bundle identifier**.
-- Re-signing with the **same Apple ID** → same Team ID → same access group.
-  AltStore's refresh and Xcode's ▶ both do **install-over-existing**, so the app
-  container **and** the Keychain entry survive → the encrypted database stays
-  readable. **You do not need to delete the app weekly.**
+- Re-signing with the **same Apple ID** keeps the same Team ID → same access
+  group. AltStore's refresh and Xcode's ▶ both do **install-over-existing**, so
+  the app container **and** the Keychain entry are expected to survive → the
+  encrypted database stays readable. **You do not need to delete the app weekly.**
+- Apple's own docs are explicit that free provisioning profiles expire after
+  7 days and that the app then simply won't launch until re-signed — the data is
+  not wiped by the expiry itself.
 - Data is lost only if: you use a **different Apple ID**, you **delete** the app,
-  or iOS revokes the profile because AltServer wasn't reachable for a long time.
+  or you let iOS remove a long-unrefreshed app.
 - **Defense in depth:** before any re-provisioning you're unsure about, create a
   backup in the app — `Mehr → Daten & Datenschutz → Backup erstellen` — and, if
   you use cloud sync, confirm it's synced. A fresh install can then be restored

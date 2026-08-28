@@ -116,9 +116,32 @@ detect upgrades/downgrades).
    module). **Do not add an older billing library** (v7 is blocked for new
    submissions from 31 Aug 2026).
 
+## App Store (RC4 — added)
+
+- `verify-purchase` accepts `platform: 'app_store'`; `verifyWithAppStore()` is an
+  isolated branch that returns `not_configured` (501) until
+  `APP_STORE_ISSUER_ID` / `APP_STORE_KEY_ID` / `APP_STORE_PRIVATE_KEY` (App Store
+  Server API key) are set. Real impl outline is in the function comment.
+- Migration `20260828160000` widened `user_subscriptions.source`,
+  `billing_subscriptions.provider` and the `apply_verified_subscription` guard to
+  include `app_store` — additive, `db lint` clean, parity 14/14.
+- Same `apply_verified_subscription` merge → same central entitlement. A verified
+  purchase on either platform produces account-level Premium.
+
+## Client interface (RC4 — added)
+
+`src/services/billingClient.ts` — provider-neutral `BillingClient`
+(`queryProducts` / localized prices / `purchase` / `restorePurchases`). Ships as
+`nullBillingClient` (honest "not available"). A Google Play Billing v8 / StoreKit
+adapter registers via `registerBillingClient()` when it exists; the UI is
+unchanged. `handoffToServer()` is the only path to Premium — the adapter never
+touches `productAccess`.
+
 ## Client-side rule (enforced today)
 
 `resolveEntitlement` (billingCore): superuser wins; else the candidate with the
 latest expiry wins; `permanent` beats any date. So a store purchase, a coupon
 and an admin grant coexist deterministically and the longest one always wins.
-`scripts/test-billing-readiness.mjs` covers this.
+It is **source-agnostic** — `google_play`, `app_store`, `revenuecat`, `coupon`,
+`admin` all flow through the same function. `scripts/test-billing-readiness.mjs`
+covers this.

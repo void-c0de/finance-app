@@ -12,13 +12,15 @@ action · ❌ not started.
 | [`PLAY_DATA_SAFETY.md`](./PLAY_DATA_SAFETY.md) | Source of truth for the Data Safety form |
 | [`PLAY_FINANCIAL_FEATURES.md`](./PLAY_FINANCIAL_FEATURES.md) | Source of truth for the Financial Features declaration |
 | [`STORE_LISTING.md`](./STORE_LISTING.md) | DE/EN listing copy + banking disclaimer + "claims not to make" |
-| [`SCREENSHOT_PLAN.md`](./SCREENSHOT_PLAN.md) | Synthetic-data screenshot capture plan |
+| [`SCREENSHOT_PLAN.md`](./SCREENSHOT_PLAN.md) · [`store-assets/`](./store-assets/) | Synthetic-data screenshot plan + `npm run screenshots:android` |
+| [`RELEASE_ARTIFACTS.md`](./RELEASE_ARTIFACTS.md) | APK / AAB / iOS unsigned IPA index |
+| [`IOS_PHYSICAL_QA.md`](./IOS_PHYSICAL_QA.md) | First-run + re-sign-survival checklist for the iPhone |
 | [`CLOSED_TEST_CHECKLIST.md`](./CLOSED_TEST_CHECKLIST.md) | 12-testers / 14-days closed test |
 | [`REAL_USER_QA.md`](./REAL_USER_QA.md) | Tester script |
 | [`PRIVACY_DATA_MAP.md`](./PRIVACY_DATA_MAP.md) | Engineering data-flow reference |
 | [`THREAT_MODEL.md`](./THREAT_MODEL.md) | Per-threat mitigation / residual risk |
 | [`LEGAL_PLACEHOLDERS.md`](./LEGAL_PLACEHOLDERS.md) | The facts only the maintainer can supply |
-| [`BILLING_SERVER_CONTRACT.md`](./BILLING_SERVER_CONTRACT.md) | Purchase-verification architecture (built + what's left) |
+| [`BILLING_SERVER_CONTRACT.md`](./BILLING_SERVER_CONTRACT.md) | Purchase-verification architecture — google_play / app_store / revenuecat (built + what's left) |
 | [`IOS_FREE_DEVICE_INSTALL.md`](./IOS_FREE_DEVICE_INSTALL.md) | Install on a real iPhone for 0 € |
 | [`IOS_RELEASE_CHECKLIST.md`](./IOS_RELEASE_CHECKLIST.md) | iOS track navigation (free path + App Store) |
 | [`APPLE_APP_PRIVACY.md`](./APPLE_APP_PRIVACY.md) | App Privacy label + `PrivacyInfo.xcprivacy` source of truth |
@@ -42,7 +44,7 @@ action · ❌ not started.
 | Google Play Billing Library v8+ (deadline 31 Aug 2026) | ✅ N/A | No billing library present. Applies only when billing is added. |
 | Permissions minimised | ✅ | `SYSTEM_ALERT_WINDOW` removed; only INTERNET, ACCESS_NETWORK_STATE, USE_BIOMETRIC/USE_FINGERPRINT, VIBRATE, legacy storage (maxSdk 32). |
 | Content rating (IARC) | ❌ | Complete questionnaire (Finance, no ads, no gambling → Everyone/PEGI 3). |
-| Store listing (text, screenshots, feature graphic, icon 512²) | ⏳ | Text ready (`STORE_LISTING.md`); screenshots need a synthetic-data capture pass (`SCREENSHOT_PLAN.md`). |
+| Store listing (text, screenshots, feature graphic, icon 512²) | ⏳ | Text ready (`STORE_LISTING.md`); `npm run screenshots:android` captures the 6 demo surfaces once the device is unlocked with demo data loaded — `store-assets/`. Feature graphic + icon still to draw. |
 | App access (review-team instructions) | ⏳ | Provide a Premium coupon + Tink sandbox note. |
 | Closed test: 12 testers / 14 days (if new personal account) | ❌ | See `CLOSED_TEST_CHECKLIST.md`. Confirm account type first. |
 

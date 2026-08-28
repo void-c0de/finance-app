@@ -439,3 +439,39 @@ an RC2 OTA is prepared but not published.
 
 3 migrations pushed this milestone (`20260828120000`, `20260828140000`), db lint
 clean, parity 13/13. 3 Edge Functions deployed/updated.
+
+## RC4 — 1.5.0 / versionCode 6 (unchanged), dual-platform convergence (2026-08-28)
+
+**No native boundary.** JS + one additive migration + one Edge Function redeploy
++ CI/docs. `versionName` / `versionCode` / `runtimeVersion` stay `1.5.0` / `6` /
+`1.5.0`.
+
+- **iOS Tink banking** — the hosted `link.tink.com` browser flow is the correct
+  architecture (no native SDK). New `tinkCallbackCore.ts` (pure, `test:tink-callback`):
+  mandatory `state` nonce in the authorize URL, `WebBrowser.openAuthSessionAsync`
+  (iOS `ASWebAuthenticationSession`) with the deep-link route as cold-start
+  fallback, callback classification (`exchange` / `cancelled` / `error` /
+  `state_mismatch` / `idle`), one-shot SecureStore nonce (replay protection),
+  provider errors → bank-connection health status. Cancel leaves no broken record.
+- **Currency-safe budgets & goals (no FX)** — `buildMonthlyCategorySpending`
+  takes a `baseCurrency`; a foreign-currency transaction can't consume a EUR
+  budget. `savingsRuleCore.ts`: rule-based goal contributions require a currency
+  match. Linking a EUR goal to a non-EUR account is blocked (`canLinkAccountToGoal`).
+  No schema change — Budget is implicitly base-currency, `SavingsGoal.currency`
+  already existed.
+- **`app_store` billing provider** — migration `20260828160000` (additive: widen
+  the `source` / `provider` CHECKs + the `apply_verified_subscription` guard).
+  `verify-purchase` redeployed with an isolated `verifyWithAppStore` →
+  `not_configured` (501) until `APP_STORE_ISSUER_ID` / `_KEY_ID` / `_PRIVATE_KEY`
+  are set. New `billingClient.ts`: provider-neutral `BillingClient` interface +
+  `nullBillingClient` (no native adapter yet, honest "not available"). One
+  entitlement resolver, no per-platform Premium.
+- **IPA Windows handoff** — `npm run ios:unsigned:download` / `:prepare` pull and
+  verify the artifact (SHA-256, `Payload/*.app`, `Info.plist`, Mach-O) into
+  `.artifacts/ios/` (gitignored); detect AltServer / Sideloadly / iTunes.
+- New docs: `RELEASE_ARTIFACTS.md`, `IOS_PHYSICAL_QA.md`, `store-assets/` +
+  `npm run screenshots:android` (deep-link capture; refuses on a real email/IBAN
+  in the UI; never bypasses the OS lockscreen).
+- `Platform.OS` audit: no silent iOS no-op. 37/37 suites, tsc, lint, expo-doctor
+  21/21, secret guard clean. 1 migration pushed (`20260828160000`), db lint
+  clean, parity **14/14**. `verify-purchase` redeployed.

@@ -184,12 +184,15 @@ a cancellable grace window. Nothing is deleted inside the grace window.
 
 ## Not started / partial
 
-- **PARTIAL** Paid billing. Server is **built + deployed** (`verify-purchase`,
-  `billing-webhook`, `billing_subscriptions`, `apply_verified_subscription`).
-  Missing: a Play Billing client library (waits on Play Console products) and
-  Google service-account credentials. The client never grants itself Premium.
-- **PARTIAL** iOS — see the RC3 section below and `IOS_RELEASE_CHECKLIST.md`.
-- **NEXT** Multi-currency goals and budgets (base-currency scoping shipped; no FX).
+- **PARTIAL** Paid billing. Server built + deployed (`verify-purchase` for
+  google_play/app_store/revenuecat, `billing-webhook`, `billing_subscriptions`,
+  `apply_verified_subscription`). Client interface (`billingClient.ts`) exists as
+  `nullBillingClient`. Missing: a Play Billing / StoreKit native adapter (waits
+  on store products) + Google/Apple server credentials. The client never grants
+  Premium.
+- **PARTIAL** iOS — the unsigned IPA exists and is verified; Tink callback is
+  iOS-safe. Remaining is user-owned Apple signing. See `IOS_RELEASE_CHECKLIST.md`
+  + the RC4 section below.
 
 ## RC2 hardening milestone (2026-08-28)
 
@@ -215,3 +218,27 @@ a cancellable grace window. Nothing is deleted inside the grace window.
 - **VERIFIED** Android cold-start clean on the physical device (SM-S938B,
   Android 16), no Metro; 35/35 test suites, tsc, lint, expo-doctor 21/21 green.
 - Native unchanged: 1.5.0 / versionCode 6 / runtime 1.5.0.
+
+## RC4 dual-platform convergence (2026-08-28)
+
+- **DONE** iOS Tink banking — confirmed the hosted Tink-Link browser flow is the
+  correct architecture (no native SDK). `tinkCallbackCore.ts` (pure, tested):
+  mandatory `state` nonce, `WebBrowser.openAuthSessionAsync`, callback
+  classification (exchange / cancelled / error / state_mismatch), replay
+  protection via a one-shot SecureStore nonce. Cancel leaves no broken record;
+  provider errors map to the connection-health status. `test:tink-callback`.
+- **DONE** Currency-safe budgets + savings goals (no FX). A foreign-currency
+  transaction cannot consume a EUR budget; rule-based goal contributions require
+  a currency match; linking a EUR goal to a non-EUR account is blocked with
+  clear copy. `currencyScope.ts` + `savingsRuleCore.ts`. No schema change.
+- **DONE** `app_store` as a billing provider (migration `20260828160000`,
+  additive; `verify-purchase` gains an isolated `verifyWithAppStore` →
+  `not_configured` until Apple creds). Provider-neutral `BillingClient`
+  interface + `nullBillingClient`. One entitlement resolver.
+- **DONE** `npm run ios:unsigned:download` / `:prepare` — pull + verify the
+  unsigned IPA on Windows (SHA-256, `Payload/*.app`, Mach-O); detects
+  AltServer/Sideloadly/iTunes. `RELEASE_ARTIFACTS.md`, `IOS_PHYSICAL_QA.md`,
+  `store-assets/` + `npm run screenshots:android`.
+- **VERIFIED** no silent iOS no-op (`Platform.OS` audit); 37 test suites,
+  tsc/lint/expo-doctor clean, 14/14 migrations, db lint clean.
+- Native unchanged: 1.5.0 / versionCode 6 / runtime 1.5.0 (JS/server/CI only).
