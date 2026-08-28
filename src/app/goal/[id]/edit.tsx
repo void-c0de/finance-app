@@ -76,6 +76,7 @@ import {
   useFinanceStore,
 } from '@/stores/useFinanceStore';
 
+import { canLinkAccountToGoal } from '@/services/currencyScope';
 import { hasCapability } from '@/services/entitlementCore';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
@@ -139,6 +140,7 @@ export default function GoalEditScreen() {
 
   const [trackingMode, setTrackingMode] = useState<'manual' | 'transaction_rule' | 'account_balance'>('manual');
   const [linkedAccountId, setLinkedAccountId] = useState<string | null>(null);
+  const [goalCurrency, setGoalCurrency] = useState('EUR');
 
   const [
     isLoaded,
@@ -229,6 +231,7 @@ export default function GoalEditScreen() {
                   : 'manual',
               );
               setLinkedAccountId(goal.linkedAccountId ?? null);
+              setGoalCurrency(goal.currency || 'EUR');
             }
 
             setIsLoaded(true);
@@ -338,6 +341,15 @@ export default function GoalEditScreen() {
     if (trackingMode === 'account_balance' && !linkedAccountId) {
       Alert.alert('Konto auswählen', 'Bitte wähle ein verfügbares Konto.');
       return;
+    }
+
+    if (trackingMode === 'account_balance' && linkedAccountId) {
+      const linkedAccount = accounts.find((account) => account.id === linkedAccountId);
+      const currencyCheck = canLinkAccountToGoal(goalCurrency, linkedAccount?.currency);
+      if (!currencyCheck.ok) {
+        Alert.alert('Währung passt nicht', currencyCheck.reason ?? 'Konto-Währung weicht vom Ziel ab.');
+        return;
+      }
     }
 
     setIsBusy(true);

@@ -11,6 +11,7 @@ import {
 
 import {
     baseCurrencyTransactions,
+    FINANCE_BASE_CURRENCY,
 } from '@/services/currencyScope';
 
 import {
@@ -426,6 +427,7 @@ export function buildFinanceInsights(
     spendingByCategory: buildMonthlyCategorySpending(
       input.transactions,
       input.referenceDate,
+      FINANCE_BASE_CURRENCY,
     ),
   });
 

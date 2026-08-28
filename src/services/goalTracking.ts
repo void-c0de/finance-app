@@ -16,6 +16,10 @@ import {
     hasActiveContributionForTransaction,
 } from '@/db/repositories/savingsGoals';
 
+import {
+    savingsRuleMatches,
+} from '@/services/savingsRuleCore';
+
 import type {
     Transaction,
 } from '@/types/finance';
@@ -32,52 +36,10 @@ type RuleGoalRow = {
 
   linked_account_id:
     string | null;
+
+  currency:
+    string | null;
 };
-
-function transactionMatchesRule(
-  transaction:
-    Transaction,
-
-  goal:
-    RuleGoalRow,
-
-  keyword:
-    string,
-): boolean {
-  if (
-    transaction.bookingStatus ===
-      'pending'
-  ) {
-    return false;
-  }
-
-  if (
-    transaction.direction !==
-      'income'
-  ) {
-    return false;
-  }
-
-  if (transaction.isInternalTransfer) {
-    return false;
-  }
-
-  if (
-    goal.linked_account_id &&
-    transaction.accountId !==
-      goal.linked_account_id
-  ) {
-    return false;
-  }
-
-  const haystack =
-    `${transaction.description} ${transaction.counterpartyName ?? ''}`
-      .toLowerCase();
-
-  return haystack.includes(
-    keyword,
-  );
-}
 
 /**
  * M3 — Automatisches Sparziel-Tracking.
@@ -122,7 +84,8 @@ export async function applySavingsGoalRules(
             id,
             name,
             rule_keyword,
-            linked_account_id
+            linked_account_id,
+            currency
           FROM savings_goals
           WHERE deleted_at IS NULL
             AND status = 'active'
@@ -172,13 +135,11 @@ export async function applySavingsGoalRules(
       transactions
     ) {
       if (
-        !transactionMatchesRule(
-          transaction,
-
-          goal,
-
+        !savingsRuleMatches(transaction, {
           keyword,
-        )
+          linkedAccountId: goal.linked_account_id,
+          currency: goal.currency ?? 'EUR',
+        })
       ) {
         continue;
       }

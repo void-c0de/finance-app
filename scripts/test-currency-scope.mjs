@@ -60,4 +60,35 @@ const eurOnly = foreignCurrencySummary([acc('EUR', 'e1')]);
 assert.equal(eurOnly.hasForeign, false);
 assert.equal(foreignCurrencyNote(eurOnly), null);
 
-console.log('Currency scope: base = EUR, foreign accounts partitioned & labelled, never summed together');
+// --- RC4: Währungs-Kompatibilität für Budgets & Sparziele -----------
+import {
+  sameCurrency,
+  transactionCountsForBudget,
+  goalRuleAcceptsTransaction,
+  canLinkAccountToGoal,
+} from '../src/services/currencyScope.ts';
+
+assert.equal(sameCurrency('EUR', 'eur'), true);
+assert.equal(sameCurrency(' EUR ', 'EUR'), true);
+assert.equal(sameCurrency('EUR', 'USD'), false);
+assert.equal(sameCurrency('', ''), false, 'leer gilt als ungleich');
+assert.equal(sameCurrency(null, undefined), false);
+
+assert.equal(transactionCountsForBudget('EUR'), true, 'EUR-Umsatz zählt gegen EUR-Budget (Default)');
+assert.equal(transactionCountsForBudget('USD'), false);
+assert.equal(transactionCountsForBudget('USD', 'USD'), true);
+
+assert.equal(goalRuleAcceptsTransaction('EUR', 'EUR'), true);
+assert.equal(goalRuleAcceptsTransaction('EUR', 'USD'), false, 'kein FX: USD-Eingang füllt kein EUR-Ziel');
+
+const okLink = canLinkAccountToGoal('EUR', 'EUR');
+assert.equal(okLink.ok, true);
+const badLink = canLinkAccountToGoal('EUR', 'USD');
+assert.equal(badLink.ok, false);
+assert.match(badLink.reason, /EUR/);
+assert.match(badLink.reason, /USD/);
+const noCur = canLinkAccountToGoal('EUR', '');
+assert.equal(noCur.ok, false);
+assert.match(noCur.reason, /keine erkennbare Währung/);
+
+console.log('Currency scope: base = EUR, foreign accounts partitioned & labelled, budget/goal currency guards');

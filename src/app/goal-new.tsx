@@ -61,6 +61,11 @@ import {
 } from '@/hooks/use-finance-theme';
 
 import {
+  canLinkAccountToGoal,
+  FINANCE_BASE_CURRENCY,
+} from '@/services/currencyScope';
+
+import {
   performFinanceHaptic,
 } from '@/services/haptics';
 
@@ -207,6 +212,21 @@ export default function GoalNewScreen() {
     if (trackingMode === 'account_balance' && !selectedAccountId) {
       setDialog({ title: 'Konto auswählen', message: 'Bitte wähle das Konto, dessen Kontostand dieses Sparziel verfolgen soll.', confirmLabel: 'Verstanden' });
       return;
+    }
+
+    if (trackingMode === 'account_balance' && selectedAccountId) {
+      const linkedAccount = accounts.find((account) => account.id === selectedAccountId);
+      const currencyCheck = canLinkAccountToGoal(FINANCE_BASE_CURRENCY, linkedAccount?.currency);
+      if (!currencyCheck.ok) {
+        setDialog({
+          title: 'Währung passt nicht',
+          message:
+            currencyCheck.reason ??
+            'Das gewählte Konto wird nicht in Euro geführt und kann nicht als Fortschrittsquelle dienen.',
+          confirmLabel: 'Verstanden',
+        });
+        return;
+      }
     }
 
     if (trackingMode === 'account_balance' && !canUseAdvancedTracking) {

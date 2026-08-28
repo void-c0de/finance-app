@@ -98,4 +98,28 @@ const big = buildBudgetProgress({
 assert.equal(big[0].remainingMinor, -300_000_000);
 assert.equal(big[0].progress, 1_200_000_000 / 900_000_000);
 
-console.log('Budget insights: all tests passed');
+// --- Multi-Currency (RC4): ein EUR-Budget zählt nur EUR-Umsätze -------
+const mixedCurrency = buildMonthlyCategorySpending(
+  [
+    { id: 'eur1', bookingDate: '2026-08-04', direction: 'expense', amountMinor: 3_000, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false, currency: 'EUR' },
+    { id: 'usd1', bookingDate: '2026-08-05', direction: 'expense', amountMinor: 9_999, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false, currency: 'USD' },
+    { id: 'chf1', bookingDate: '2026-08-06', direction: 'expense', amountMinor: 5_000, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false, currency: 'chf' },
+    { id: 'nocur', bookingDate: '2026-08-07', direction: 'expense', amountMinor: 1_000, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false },
+  ],
+  new Date('2026-08-15T12:00:00Z'),
+  'EUR',
+);
+assert.equal(mixedCurrency.get('food'), 4_000, 'USD/CHF verbrauchen kein EUR-Budget; fehlende Währung = Basis');
+
+// USD-Budget-Sicht (baseCurrency='USD'): nur der USD-Umsatz zählt
+const usdView = buildMonthlyCategorySpending(
+  [
+    { id: 'eur1', bookingDate: '2026-08-04', direction: 'expense', amountMinor: 3_000, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false, currency: 'EUR' },
+    { id: 'usd1', bookingDate: '2026-08-05', direction: 'expense', amountMinor: 9_999, categoryId: 'food', bookingStatus: 'booked', isInternalTransfer: false, currency: 'USD' },
+  ],
+  new Date('2026-08-15T12:00:00Z'),
+  'USD',
+);
+assert.equal(usdView.get('food'), 9_999, 'baseCurrency-Parameter schaltet den Geltungsbereich um');
+
+console.log('Budget insights: all tests passed (incl. multi-currency scoping)');

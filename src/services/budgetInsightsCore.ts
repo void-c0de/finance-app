@@ -8,21 +8,30 @@ function monthKey(date: Date): string {
  * Gebuchte, eigene, kategorisierte Ausgaben des Referenzmonats je Kategorie.
  * Spiegelt exakt die Regeln aus `buildFinanceInsights`: vorgemerkte Umsätze,
  * erkannte Eigenüberweisungen und nicht kategorisierte Ausgaben zählen nicht.
+ *
+ * `baseCurrency`: Budgets sind in der Basiswährung denominiert; ein Umsatz in
+ * einer anderen Währung darf ein EUR-Budget nicht verbrauchen (keine FX).
  */
 export function buildMonthlyCategorySpending(
   transactions: readonly Transaction[],
   referenceDate = new Date(),
+  baseCurrency = 'EUR',
 ): Map<string, number> {
   const key = monthKey(referenceDate);
+  const base = baseCurrency.toUpperCase().trim();
   const spending = new Map<string, number>();
 
   for (const transaction of transactions) {
+    // Fehlende Währung = Basiswährung annehmen (jeder echte Umsatz hat eine);
+    // eine ausdrücklich fremde Währung verbraucht aber nie ein Basis-Budget.
+    const txCurrency = (transaction.currency ?? '').toUpperCase().trim() || base;
     if (
       !transaction.bookingDate.startsWith(key) ||
       transaction.bookingStatus === 'pending' ||
       transaction.isInternalTransfer ||
       transaction.direction !== 'expense' ||
-      !transaction.categoryId
+      !transaction.categoryId ||
+      txCurrency !== base
     ) {
       continue;
     }

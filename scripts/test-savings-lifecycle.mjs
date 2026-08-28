@@ -130,4 +130,66 @@ assert.equal(goalProgressPercent(1500, 1000), 150, 'über 100 % bleibt numerisch
 assert.equal(goalProgressBarPercent(1500, 1000), 100, 'Balken bei 100 % gedeckelt');
 assert.equal(goalProgressBarPercent(1, 1000), 2, 'Balken mindestens 2 %');
 
-console.log('Savings goal lifecycle: all tests passed');
+// --- RC4: regelbasiertes Tracking respektiert die Ziel-Währung -------
+const { savingsRuleMatches } = await import('../src/services/savingsRuleCore.ts');
+
+const income = (over = {}) => ({
+  bookingStatus: 'booked',
+  direction: 'income',
+  isInternalTransfer: false,
+  accountId: 'acc-1',
+  description: 'Gehalt Sparplan',
+  counterpartyName: 'Arbeitgeber',
+  currency: 'EUR',
+  ...over,
+});
+
+assert.equal(
+  savingsRuleMatches(income(), { keyword: 'sparplan', currency: 'EUR' }),
+  true,
+  'EUR-Eingang mit Stichwort füllt EUR-Ziel',
+);
+assert.equal(
+  savingsRuleMatches(income({ currency: 'USD' }), { keyword: 'sparplan', currency: 'EUR' }),
+  false,
+  'USD-Eingang füllt KEIN EUR-Ziel (kein FX)',
+);
+assert.equal(
+  savingsRuleMatches(income({ currency: 'USD' }), { keyword: 'sparplan', currency: 'USD' }),
+  true,
+  'USD-Eingang füllt USD-Ziel',
+);
+assert.equal(
+  savingsRuleMatches(income({ direction: 'expense' }), { keyword: 'sparplan', currency: 'EUR' }),
+  false,
+  'Ausgaben erzeugen nie Beiträge',
+);
+assert.equal(
+  savingsRuleMatches(income({ bookingStatus: 'pending' }), { keyword: 'sparplan', currency: 'EUR' }),
+  false,
+  'vorgemerkte Umsätze zählen nicht',
+);
+assert.equal(
+  savingsRuleMatches(income({ isInternalTransfer: true }), { keyword: 'sparplan', currency: 'EUR' }),
+  false,
+  'Eigenüberweisungen zählen nicht',
+);
+assert.equal(
+  savingsRuleMatches(income({ accountId: 'acc-2' }), {
+    keyword: 'sparplan',
+    currency: 'EUR',
+    linkedAccountId: 'acc-1',
+  }),
+  false,
+  'nur das verknüpfte Konto',
+);
+assert.equal(
+  savingsRuleMatches(income({ description: 'Miete', counterpartyName: 'Vermieter' }), {
+    keyword: 'sparplan',
+    currency: 'EUR',
+  }),
+  false,
+  'ohne Stichwort kein Beitrag',
+);
+
+console.log('Savings goal lifecycle: all tests passed (incl. currency-scoped rule tracking)');

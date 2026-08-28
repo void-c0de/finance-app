@@ -17,6 +17,62 @@ function norm(code: string | null | undefined): string {
   return (code ?? '').toUpperCase().trim();
 }
 
+/** Gleiche Währung (case-insensitiv, getrimmt). Leere Codes gelten als ungleich. */
+export function sameCurrency(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = norm(a);
+  const y = norm(b);
+  return x.length > 0 && x === y;
+}
+
+/**
+ * Budgets sind (noch) implizit in der Basiswährung denominiert — es gibt kein
+ * `currency`-Feld auf `Budget`. Diese Funktion ist die EINE Stelle, an der das
+ * steht; ein späteres Feld würde nur hier eingehängt.
+ */
+export function budgetCurrency(): string {
+  return FINANCE_BASE_CURRENCY;
+}
+
+/** Zählt dieser Umsatz gegen ein Budget in `budgetCur`? Nur bei Währungsgleichheit. */
+export function transactionCountsForBudget(
+  transactionCurrency: string | null | undefined,
+  budgetCur: string = FINANCE_BASE_CURRENCY,
+): boolean {
+  return sameCurrency(transactionCurrency, budgetCur);
+}
+
+/** Darf eine Regel-Transaktion einen Beitrag zu einem Ziel dieser Währung erzeugen? */
+export function goalRuleAcceptsTransaction(
+  goalCurrency: string | null | undefined,
+  transactionCurrency: string | null | undefined,
+): boolean {
+  return sameCurrency(goalCurrency, transactionCurrency);
+}
+
+export type GoalLinkCheck = { ok: boolean; reason?: string };
+
+/**
+ * Darf ein Sparziel mit `goalCurrency` an ein Konto mit `accountCurrency`
+ * gekoppelt werden? Ohne FX-Umrechnung nur bei gleicher Währung.
+ */
+export function canLinkAccountToGoal(
+  goalCurrency: string | null | undefined,
+  accountCurrency: string | null | undefined,
+): GoalLinkCheck {
+  if (!norm(accountCurrency)) {
+    return { ok: false, reason: 'Das Konto hat keine erkennbare Währung.' };
+  }
+  if (sameCurrency(goalCurrency, accountCurrency)) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    reason: `Das Ziel ist in ${norm(goalCurrency) || FINANCE_BASE_CURRENCY}, das Konto in ${norm(
+      accountCurrency,
+    )}. Ohne Währungsumrechnung lässt sich der Kontostand nicht als Fortschritt übernehmen.`,
+  };
+}
+
 /** Nur Umsätze in der Basiswährung – für belastbare Einnahmen/Ausgaben/Cashflow. */
 export function baseCurrencyTransactions(
   transactions: readonly Transaction[],
