@@ -15,8 +15,8 @@ SDK) and produces the re-signable artifact:
 
 | Fact (verified in the compiled bundle) | Value |
 | --- | --- |
-| Artifact | `FinanceApp-ios-unsigned.ipa` — 18.2 MB (zip), 19 MB on disk, 122 files |
-| SHA-256 | `c833342e667396e9dfd90aa614ccf1405874e97eedbd08bce0fb106edce80b7c` (per-build) |
+| Artifact | `FinanceApp-ios-unsigned.ipa` — 18.3 MB (zip), 19 MB on disk, 122 files (run `33164472562`) |
+| SHA-256 | `9f3b4c37eda7417a4ae01adfed4f220a3d15bbb252cd430fee9773c9788b3b75` (per-build) |
 | `CFBundleIdentifier` | `com.nocta-xz.financeapp` |
 | Version | `CFBundleShortVersionString 1.5.0` / `CFBundleVersion 6` |
 | Architecture | `arm64` (device slice) |

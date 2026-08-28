@@ -27,11 +27,12 @@ maintainer supplies `FINANCE_UPLOAD_*`.
 
 | | |
 | --- | --- |
-| Workflow run | `33159727525` (macos-26 / Xcode 26.6 / iPhoneOS 26.5 SDK) |
-| SHA-256 | `c833342e667396e9dfd90aa614ccf1405874e97eedbd08bce0fb106edce80b7c` (changes every build) |
-| Size | 18.2 MB (zip), 122 files |
-| Bundle id | `com.nocta-xz.financeapp` |
-| SQLCipher | `_exsqlite3_key_v2` symbol present in the binary |
+| Workflow run | `33164472562` on `a21eb2b` (macos-26 / Xcode 26.6 / iPhoneOS 26.5 SDK) |
+| SHA-256 | `9f3b4c37eda7417a4ae01adfed4f220a3d15bbb252cd430fee9773c9788b3b75` (changes every build) |
+| Size | 18.3 MB (zip), 122 files |
+| Bundle id / version | `com.nocta-xz.financeapp` · 1.5.0 (6) · min iOS 16.4 |
+| Arch / signing | `arm64` · unsigned (`cryptid 0`) |
+| SQLCipher | `_exsqlite3_key_v2 T` present in the app binary (statically linked) |
 | Privacy manifest | `PrivacyInfo.xcprivacy` at the app root + aggregated module manifests |
 
 Retention is 7 days — re-run `npm run ios:unsigned` (or `:prepare`) when it expires.
