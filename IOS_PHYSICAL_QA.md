@@ -1,5 +1,10 @@
 # iOS physical-device QA — Finance App
 
+**Prerequisite:** the iPhone must be paired with the signing PC once over USB
+("Trust This Computer") — see [`IOS_WINDOWS_WLAN_BRIDGE.md`](./IOS_WINDOWS_WLAN_BRIDGE.md).
+`npm run ios:device:doctor` shows the current state; after pairing,
+`npm run ios:device:status` / `ios:device:logs` work over Wi-Fi.
+
 Run once after the **first** sideload, and again after the **first re-sign**
 (you don't need to wait 7 days — re-signing immediately exercises the same
 install-over-existing path). All data below is synthetic.
