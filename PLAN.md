@@ -351,3 +351,38 @@ JS + SQL migrations + tests + docs.
 - **BLOCKED** Continuous Tink access / server refresh-token lifecycle — needs the
   Tink production agreement.
 - 49 test suites, tsc / lint / expo-doctor 21/21 / guard clean.
+
+## RC8 first-real-roundtrip prep + release signing (2026-08-28)
+
+**No native / runtime change** — 1.6.0 / versionCode 7 / runtime 1.6.0. Config
+plugin fix + release tooling + docs + a JS-only OTA of the RC7 client delta.
+
+- **DONE** Production upload signing FIXED — `withFinanceUploadSigning` matched
+  only `signingConfig signingConfigs.debug` (space form); RN 0.86 writes
+  `signingConfig = signingConfigs.debug`. Even with all four `FINANCE_UPLOAD_*`
+  set, the release AAB would have stayed debug-signed. Now handles both syntaxes
+  and throws if the anchor is missing. **Proven** with an ephemeral throwaway
+  keystore: `assembleRelease` → non-debug cert, `verify:release-signing
+  --expect-production` passed, key deleted. `test:signing-gate`.
+- **DONE** `check:upload-signing` — pre-build gate: 0/4 → informational, 1–3/4 →
+  refuse loudly, 4/4 → validate the keystore.
+- **DONE** `release:doctor` 2.0 — ENGINEERING PASS vs REAL PROVIDER PASS, reads
+  `store-assets/release-evidence.json`. `release:evidence` updater (rejects
+  secret-looking values). `test:release-doctor`, `test:release-evidence`.
+- **DONE** `validate:aab` (structural + optional bundletool → `aab-validation.json`),
+  `build:play-icon` (512² Play icon from the real 1024² source),
+  `build:release-manifest` refreshed.
+- **DONE** `ANDROID_RELEASE_READINESS.md` (crash/ANR/pre-launch audit — no SDK
+  added), `PLAY_IARC_PREP.md` already present, `CLOSED_TEST_CHECKLIST.md` +
+  `REAL_USER_QA.md` updated (12/14 rule gates production access only, not the
+  closed test itself; billing test steps).
+- **DONE** Debug-signed APK + AAB rebuilt (`--rerun-tasks`), aapt/structure
+  verified (pkg, vc7, 4 ABIs, SQLCipher, 97.7 MB AAB).
+- **DONE** OTA of the RC7 client delta (billing recovery + account-switch reset +
+  Tink lifecycle) to the 1.6.0 runtime channel.
+- **BLOCKED** The first real Google Play roundtrip — no Google service account,
+  no Play Console access, no product IDs, no upload keystore. All *engineering*
+  around it is complete; every REAL PROVIDER PASS in `release-evidence.json` is
+  `false`.
+- 51 test suites, tsc / lint / expo-doctor 21/21 / guard clean. Supabase
+  unchanged (17/17 parity).

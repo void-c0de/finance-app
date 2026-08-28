@@ -1,0 +1,55 @@
+{
+  "schema": "finance-app/release-evidence@1",
+  "comment": "Machine-readable record of what has been REALLY verified against external providers vs only engineered/tested with fixtures. Updated by scripts/update-release-evidence.mjs. NEVER stores tokens, receipts, emails, transaction IDs or any secret - only booleans + timestamps + a git sha.",
+  "updatedAt": "2026-08-28",
+  "gitSha": "164fe8e",
+  "signing": {
+    "production_branch_fixed": true,
+    "production_branch_proven_ephemeral": true,
+    "upload_key_configured": false,
+    "aab_upload_signed": false
+  },
+  "google": {
+    "service_account_configured": false,
+    "package_name_configured": false,
+    "api_auth_real": false,
+    "api_reached_real": false,
+    "product_ids_configured": false,
+    "product_query_real": false,
+    "test_purchase_real": false,
+    "server_verify_real": false,
+    "entitlement_real": false,
+    "restore_real": false,
+    "account_switch_block_real": false,
+    "cancellation_real": false,
+    "expiry_real": false,
+    "rtdn_configured": false,
+    "rtdn_real": false
+  },
+  "apple": {
+    "server_config_real": false,
+    "api_auth_real": false
+  },
+  "play_console": {
+    "access_available": false,
+    "app_exists": false,
+    "products_created": false,
+    "closed_test_track_created": false,
+    "aab_uploaded_closed_test": false,
+    "data_safety_submitted": false,
+    "financial_features_submitted": false,
+    "iarc_submitted": false,
+    "iarc_result": null,
+    "testers_opted_in": 0,
+    "tester_days_continuous": 0,
+    "production_access_applied": false
+  },
+  "tink": {
+    "production_configured": false
+  },
+  "notes": [
+    "RC7: Google + Apple server verifiers IMPLEMENTED, tested only with synthetic fixtures.",
+    "RC8: withFinanceUploadSigning plugin fixed (was silently keeping debug signing for the release buildType), then proven with an ephemeral throwaway key: assembleRelease produced a non-debug cert, verify:release-signing --expect-production passed, key deleted.",
+    "RC8: no external credentials configured (Google service account, Play access, product IDs, upload keystore, Apple, Tink production, EAS token) so no real provider roundtrip was possible this milestone."
+  ]
+}

@@ -33,10 +33,22 @@ function withFinanceUploadSigning(config) {
         '                keyPassword financeUploadKeyPassword\n' +
         '            }\n' +
         '        }\n';
+      if (!source.includes(signingAnchor)) {
+        throw new Error('withFinanceUploadSigning: could not find the "signingConfigs { … } buildTypes {" anchor in app/build.gradle.');
+      }
       source = source.replace(signingAnchor, `${uploadConfig}    }\n    buildTypes {`);
+
+      // The RN template writes either `signingConfig signingConfigs.debug` or
+      // `signingConfig = signingConfigs.debug` (RN 0.73+). Handle both, and
+      // refuse to continue silently if neither is present — a debug-signed
+      // "release" AAB must never leave this build without the maintainer knowing.
+      const releaseSigningRe = /(release\s*\{[\s\S]*?)signingConfig(\s*=\s*|\s+)signingConfigs\.debug/;
+      if (!releaseSigningRe.test(source)) {
+        throw new Error('withFinanceUploadSigning: could not find `signingConfig … signingConfigs.debug` in the release buildType — the upload-signing switch was NOT applied. Update the plugin.');
+      }
       source = source.replace(
-        /(release\s*\{[\s\S]*?)signingConfig signingConfigs\.debug/,
-        '$1signingConfig hasFinanceUploadSigning ? signingConfigs.upload : signingConfigs.debug',
+        releaseSigningRe,
+        '$1signingConfig$2hasFinanceUploadSigning ? signingConfigs.upload : signingConfigs.debug',
       );
     }
 

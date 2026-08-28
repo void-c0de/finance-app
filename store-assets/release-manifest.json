@@ -1,9 +1,9 @@
 {
   "schema": "finance-app/release-manifest@1",
-  "generatedAt": "2026-08-28T18:58:45+02:00",
+  "generatedAt": "2026-08-28T19:19:45+02:00",
   "git": {
-    "sha": "6a89abd3764eba2d94ef7b9348e44e96dab64ae0",
-    "shortSha": "6a89abd",
+    "sha": "164fe8ea25faf924868fbc4fe59b1b6739ebfcc3",
+    "shortSha": "164fe8e",
     "branch": "master",
     "clean": false
   },
@@ -20,15 +20,15 @@
     "apk": {
       "path": "android/app/build/outputs/apk/release/app-release.apk",
       "present": true,
-      "bytes": 138267642,
-      "sha256": "81ebe1d3c7c7dc2546167d700a1bcf320977b960ee874a38fb79cc8b12699944",
+      "bytes": 138271186,
+      "sha256": "7a7706732936ad62f84131aaa2ca9768fe77c2713b9ef4a4b32ec6c58cd21364",
       "signing": "debug"
     },
     "aab": {
       "path": "android/app/build/outputs/bundle/release/app-release.aab",
       "present": true,
-      "bytes": 102493675,
-      "sha256": "07382f055fdada190402866be4708ac1dcc0c6cc02ba7e867905851801ffece9",
+      "bytes": 102495213,
+      "sha256": "441a2681a8eb799d36b4673d68d3f576305386fe910271f27a5affc3957277b5",
       "signing": "debug"
     },
     "signingClassification": "debug",
@@ -45,7 +45,7 @@
     "productIdsConfigured": false
   },
   "supabase": {
-    "migrations": 16
+    "migrations": 17
   },
   "tests": {
     "lastKnown": "48 suites (see CI on the recorded git sha)"

@@ -634,3 +634,62 @@ any `[BITTE ERGÄNZEN]` remains), `legal/legal.config.json` + `npm run build:leg
 `test:google-verify`, `test:apple-verify`, `test:store-verification`,
 `test:subscription-lifecycle`, `test:webhook-auth`, `test:tink-lifecycle`,
 `test:legal-metadata`, `test:release-doctor`. `test:billing-server` rewritten.
+
+## RC8 — 1.6.0 / versionCode 7 / runtime 1.6.0 (UNCHANGED) — signing + release enablement
+
+**No native module change, no runtime boundary.** RC8 is a config-plugin fix +
+release tooling + docs + a JS-only OTA of the accumulated client delta. Version
+deliberately **not** bumped — versionCode 7 has never been uploaded to Play, so
+it stays 7 for the first upload (Phase 5).
+
+### Production signing — fixed and proven
+
+`plugins/withFinanceUploadSigning.js` previously matched only
+`signingConfig signingConfigs.debug` (space form). RN 0.86 writes
+`signingConfig = signingConfigs.debug` (`=` form), so the regex **silently did
+not apply** — even with all four `FINANCE_UPLOAD_*` set, the release AAB would
+have been debug-signed. **Fixed:** both syntaxes handled; the plugin now
+`throw`s if it cannot find the anchor. Verified with an **ephemeral throwaway
+keystore** (generated in a gitignored temp path, random password, deleted after):
+`assembleRelease` with `FINANCE_UPLOAD_*` set → APK signed by a non-debug cert,
+`verify:release-signing --expect-production` **passed**; same build with the vars
+unset → debug-signed. `npm run check:upload-signing` refuses a partial (1–3 of 4)
+config loudly instead of falling through to debug.
+
+### Release tooling
+
+- `npm run release:doctor` (2.0) — distinguishes **ENGINEERING PASS** from
+  **REAL PROVIDER PASS**; reads `store-assets/release-evidence.json` for the
+  "real" facts. `--fast` / `--json`.
+- `npm run release:evidence` — flips booleans in `release-evidence.json` as
+  milestones are really verified; refuses secret-looking values.
+- `npm run validate:aab` — structural AAB validation (zip members, ABIs,
+  SQLCipher) + optional bundletool; writes `store-assets/aab-validation.json`.
+- `npm run build:play-icon` — exact 2:1 box downscale of `assets/images/icon.png`
+  → `store-assets/play-icon-512.png` (512², verified).
+- `npm run check:upload-signing` — the pre-build signing gate.
+- Docs: `ANDROID_RELEASE_READINESS.md` (crash/ANR/pre-launch audit),
+  `store-assets/SPEC-feature-graphic.md` (1024×500 design task),
+  `store-assets/SPEC-bundletool.md`. `CLOSED_TEST_CHECKLIST.md` +
+  `REAL_USER_QA.md` updated (12/14 rule gates production only, not the closed
+  test; billing test steps).
+
+### Tests: 49 → 51 suites
+
+`test:signing-gate`, `test:release-evidence`. `test:release-doctor` rewritten.
+
+### External state (unchanged from RC7 — nothing configured)
+
+No Google service account, no Play Console access, no product IDs, no upload
+keystore, no Apple credentials, no Tink production, no EAS token. Every
+"REAL PROVIDER PASS" is `false`. RC8 completed all **engineering** around the
+first real Google Play roundtrip; the roundtrip itself is credential-blocked.
+
+### OTA
+
+The RC7 client delta (billing recovery + account-switch reset + Tink lifecycle)
+is JS-only and native-compatible with the shipped 1.6.0 binary → published as an
+OTA to the `1.6.0` runtime channel (`docs/api/manifest.json` +
+`docs/updates/1.6.0/`, served by the `expo-updates` Edge Function). The config-
+plugin fix is **not** in the OTA (build-time only). The embedded RC6 bundle
+remains the anti-brick fallback.

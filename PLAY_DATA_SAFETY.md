@@ -4,7 +4,7 @@ Developer-facing mapping of **actual** app data flows to the Google Play Data
 Safety form. Derived from the code, not from memory. Update this file whenever a
 data flow changes, then transcribe it into Play Console.
 
-Last verified: 2026-08-28 against Finance App 1.6.0 (RC7 — native billing added).
+Last verified: 2026-08-28 against Finance App 1.6.0 (RC8 — no data-flow change since RC7).
 
 ## Third-party SDKs
 

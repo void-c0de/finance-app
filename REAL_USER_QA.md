@@ -28,8 +28,23 @@ over the 14 days.
 | 11 | `Daten & Datenschutz → Lokale Daten zurücksetzen` with an unsynced change | You get a warning naming the unsynced count. |
 | 12 | Request account deletion, then **cancel** it within the grace window | Banner shows the deadline; cancel restores normal state. |
 | 13 | Web: open `.../konto-loeschen.html`, sign in, view status, sign out | Works on a phone browser; no errors. |
-| 14 | Sign out, sign back in on the same device | Data still there. |
+| 14 | Sign out, sign back in on the same device | Data still there. Premium status matches the server (not stale from before sign-out). |
 | 15 | Airplane mode, cold-start the app | Opens to your data; no error wall; sync catches up later. |
+
+## Premium / store purchase (only if store products are live for testers)
+
+> When `EXPO_PUBLIC_PREMIUM_*_ID` are unset the Premium screen shows "Preise
+> folgen" and there is no buy button — that is correct, skip this block.
+
+| # | Scenario | Watch for |
+| --- | --- | --- |
+| P1 | Open Premium Center | If products are live: real localized price from Google Play (e.g. "3,99 €"), never a hard-coded number. "Käufe wiederherstellen" is visible. |
+| P2 | Start a test purchase, then **cancel** the Google dialog | Back to the plan list, no error, Premium still OFF. |
+| P3 | Complete a **test** purchase | Brief "wird geprüft"; Premium turns ON **only after** the check. If it says "serverseitige Prüfung… noch nicht eingerichtet" → Premium stays OFF, nothing was charged wrongly, report it. |
+| P4 | Force-close the app right after buying, reopen | Premium is correct on reopen (silent reconcile). No second purchase prompt. |
+| P5 | With Premium active: sign out, sign back in | Premium recovers from the server. No duplicate subscription in the account. |
+| P6 | Tap "Käufe wiederherstellen" | Premium restored if you own it; a clear message if not. Never a charge. |
+| P7 | (Play test track) turn off auto-renew for the test sub | Premium stays until the period end, then ends. Your budgets/goals/themes are **still there** afterwards. |
 
 ## Data-loss red flags (report immediately)
 

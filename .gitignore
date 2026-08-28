@@ -80,3 +80,6 @@ store-assets/**/raw/
 **/Lockdown/*.plist
 anisette*.json
 adi.pb
+
+# bundletool jar (dev tool, not a dependency)
+/tools/

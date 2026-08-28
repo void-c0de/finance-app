@@ -1,0 +1,56 @@
+{
+  "schema": "finance-app/aab-validation@1",
+  "aab": "android/app/build/outputs/bundle/release/app-release.aab",
+  "sizeMB": 97.7,
+  "uploadSizeBytes": 102495213,
+  "sha256": "441a2681a8eb799d36b4673d68d3f576305386fe910271f27a5affc3957277b5",
+  "gitSha": "164fe8e",
+  "app": {
+    "version": "1.6.0",
+    "versionCode": 7,
+    "package": "com.nocta_xz.financeapp"
+  },
+  "structural": {
+    "ok": true,
+    "checks": [
+      {
+        "requirement": "BundleConfig.pb",
+        "present": true
+      },
+      {
+        "requirement": "base manifest",
+        "present": true
+      },
+      {
+        "requirement": "base dex",
+        "present": true
+      },
+      {
+        "requirement": "base resources.pb",
+        "present": true
+      },
+      {
+        "requirement": "base native libs",
+        "present": true
+      },
+      {
+        "requirement": "base assets",
+        "present": true
+      }
+    ]
+  },
+  "nativeAbis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "sqlcipherLinked": true,
+  "bundletool": {
+    "available": false,
+    "validated": null,
+    "downloadSizeBytes": null,
+    "note": "bundletool jar not present — see store-assets/SPEC-bundletool.md"
+  },
+  "distinction": "sizeMB / uploadSizeBytes = the .aab you upload. bundletool.downloadSizeBytes ≈ what a device downloads (per-device split). They are NOT the same."
+}
