@@ -99,7 +99,9 @@
     "test:support-diagnostics": "node --experimental-strip-types scripts/test-support-diagnostics.mjs",
     "test:resilience": "node --experimental-strip-types scripts/test-resilience.mjs",
     "ios:unsigned": "node scripts/ios-unsigned-build.mjs",
-    "ios:unsigned:info": "node scripts/ios-unsigned-build.mjs --info"
+    "ios:unsigned:info": "node scripts/ios-unsigned-build.mjs --info",
+    "ios:unsigned:download": "node scripts/ios-unsigned-build.mjs --download",
+    "ios:unsigned:prepare": "node scripts/ios-unsigned-build.mjs --prepare"
   },
   "private": true
 }

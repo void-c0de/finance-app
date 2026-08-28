@@ -60,3 +60,6 @@ example
 # local Supabase CLI link/cache
 /supabase/.temp/
 deno.lock
+
+# CI build artifacts pulled locally (iOS unsigned IPA, etc.) — never commit
+.artifacts/
