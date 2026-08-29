@@ -338,18 +338,16 @@ export function FinanceSearchField<T>({
             : placeholder}
         </Text>
 
-        <Text
-          style={[
-            typography.caption,
-
-            {
-              color:
-                colors.textMuted,
-            },
-          ]}
-        >
-          Tippen
-        </Text>
+        {value.length > 0 ? (
+          <Text
+            style={[
+              typography.caption,
+              { color: colors.primary },
+            ]}
+          >
+            Ändern
+          </Text>
+        ) : null}
       </FinancePressable>
 
       <Modal

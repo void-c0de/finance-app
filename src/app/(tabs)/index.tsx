@@ -1802,6 +1802,10 @@ export default function HomeScreen() {
                   account.id
                 }
 
+                accessibilityRole="button"
+
+                accessibilityLabel={`${account.name}, Kontostand ${formatMinorUnits(account.balanceMinor, account.currency)}`}
+
                 onPress={() =>
                   openAccount(
                     account
