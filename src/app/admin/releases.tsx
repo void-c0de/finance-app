@@ -1,4 +1,5 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -39,7 +40,7 @@ export default function AdminReleasesScreen() {
     finally { setBusy(false); }
   }
   return <FinanceKeyboardScreen backgroundColor={colors.background} contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-    <View style={styles.header}><FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} /><Text style={[typography.title, { color: colors.text }]}>Release-Steuerung</Text><View style={styles.spacer} /></View>
+    <ScreenHeader title="Release-Steuerung" />
     <FinanceCard style={{ marginTop: spacing.xl }}>
       <FinanceTextField label="App-Version" value={version} onChangeText={setVersion} />
       <FinanceTextField label="Android Build-Nummer" value={build} keyboardType="number-pad" onChangeText={setBuild} containerStyle={{ marginTop: spacing.lg }} />

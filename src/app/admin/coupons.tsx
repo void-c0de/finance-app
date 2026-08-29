@@ -1,4 +1,5 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -71,7 +72,7 @@ export default function CouponAdminScreen() {
   return (
     <>
       <FinanceKeyboardScreen backgroundColor={colors.background} contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-        <View style={styles.header}><FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} /><Text style={[typography.title, { color: colors.text }]}>Premium-Coupons</Text><View style={styles.spacer} /></View>
+        <ScreenHeader title="Premium-Coupons" />
         <FinanceCard style={{ marginTop: spacing.xl }}>
           <FinanceTextField label="Coupon-Code" value={code} placeholder="WELCOME30" autoCapitalize="characters" autoCorrect={false} maxLength={32} onChangeText={(value) => setCode(value.toUpperCase().replace(/\s/g, ''))} />
           <Text style={[typography.label, { color: colors.textSecondary, marginTop: spacing.lg }]}>Premium-Dauer</Text>

@@ -1,4 +1,5 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,11 +77,7 @@ export default function AdminAuditScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-        <View style={styles.header}>
-          <FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} />
-          <Text style={[typography.title, { color: colors.text }]}>Audit-Protokoll</Text>
-          <View style={styles.spacer} />
-        </View>
+        <ScreenHeader title="Audit-Protokoll" />
         <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.lg }]}>
           Operative Ereignisse mit sicheren Metadaten. Keine Finanzinhalte, keine Tokens, keine Passwörter.
         </Text>

@@ -1,11 +1,11 @@
 import { Redirect, router, type Href } from 'expo-router';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FinanceCard } from '@/components/finance/FinanceCard';
 import { SettingsRow } from '@/components/finance/SettingsRow';
-import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { useProductAccessStore } from '@/stores/useProductAccessStore';
 
@@ -18,7 +18,7 @@ export default function AdminScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-        <View style={styles.header}><FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} /><Text style={[typography.title, { color: colors.text }]}>Administration</Text><View style={styles.spacer} /></View>
+        <ScreenHeader title="Administration" />
         <FinanceCard variant="highlight" style={{ marginTop: spacing.xl }}>
           <Text style={[typography.cardTitle, { color: colors.text }]}>Superuser Control Center</Text>
           <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>Administrative Aktionen werden serverseitig autorisiert und revisionssicher protokolliert.</Text>

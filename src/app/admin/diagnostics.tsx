@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import * as Updates from 'expo-updates';
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FinanceCard } from '@/components/finance/FinanceCard';
-import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { getRecentDebugLogs } from '@/core/debugLog';
 import { getDatabase } from '@/db/database';
 import { getBankConnectionHealth } from '@/services/bankConnectionHealth';
@@ -85,7 +85,7 @@ export default function AdminDiagnosticsScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-        <View style={styles.header}><FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} /><Text style={[typography.title, { color: colors.text }]}>Diagnose</Text><View style={styles.spacer} /></View>
+        <ScreenHeader title="Diagnose" />
         <Text style={[typography.body, { color: colors.textSecondary, marginTop: spacing.lg }]}>Sichere Betriebsinformationen für Supportfälle. Zugangsdaten, Tokens und Finanztransaktionen werden hier nicht angezeigt.</Text>
         <FinanceCard style={{ marginTop: spacing.xl }}>
           {rows.map(([label, value]) => <View key={label} style={{ marginBottom: spacing.md }}><Text style={[typography.caption, { color: colors.textMuted }]}>{label.toUpperCase()}</Text><Text style={[typography.bodyMedium, { color: colors.text, marginTop: spacing.xxs }]}>{value}</Text></View>)}

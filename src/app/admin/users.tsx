@@ -1,4 +1,5 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect } from 'expo-router';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -41,7 +42,7 @@ export default function AdminUsersScreen() {
 
   return <>
     <FinanceKeyboardScreen backgroundColor={colors.background} contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}>
-      <View style={styles.header}><FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} /><Text style={[typography.title, { color: colors.text }]}>Nutzer-Entitlements</Text><View style={styles.spacer} /></View>
+      <ScreenHeader title="Nutzer-Entitlements" />
       <FinanceCard style={{ marginTop: spacing.xl }}>
         <Text style={[typography.body, { color: colors.textSecondary }]}>Gezielte Premium-Grants verwenden das bestehende Supabase-Auth-Konto. Passwörter oder Auth-Secrets sind hier niemals sichtbar.</Text>
         <FinanceTextField label="E-Mail des Kontos" value={email} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} onChangeText={setEmail} containerStyle={{ marginTop: spacing.lg }} />

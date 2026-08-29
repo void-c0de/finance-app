@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -6,6 +5,7 @@ import { FinanceCard } from '@/components/finance/FinanceCard';
 import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { FinanceTextField } from '@/components/forms/FinanceTextField';
 import { FinanceKeyboardScreen } from '@/components/layout/FinanceKeyboardScreen';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
 import { PREMIUM_PILLARS } from '@/services/entitlementCore';
 import { formatPriceLine, PREMIUM_PRICING } from '@/services/billingCore';
@@ -73,13 +73,7 @@ export default function PremiumScreen() {
     <FinanceKeyboardScreen
       backgroundColor={colors.background}
       contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xxxl }}
-      header={
-        <View style={styles.header}>
-          <FinanceButton label="‹" variant="ghost" size="small" onPress={() => router.back()} />
-          <Text style={[typography.title, { color: colors.text }]}>Abos & Premium</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      }
+      header={<ScreenHeader title="Abos & Premium" />}
     >
       <FinanceCard variant="highlight" style={{ marginTop: spacing.md }}>
         <Text style={[typography.caption, { color: colors.primary }]}>DEIN PLAN</Text>
@@ -253,8 +247,6 @@ export default function PremiumScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerSpacer: { width: 44 },
   pointRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   dot: { width: 5, height: 5, marginTop: 8 },
 });
