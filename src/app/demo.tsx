@@ -8,7 +8,7 @@ import { FinanceButton } from '@/components/interaction/FinanceButton';
 import { FinancePressable } from '@/components/interaction/FinancePressable';
 import { FinanceDialog, type FinanceDialogConfig } from '@/components/feedback/FinanceDialog';
 import { useFinanceTheme } from '@/hooks/use-finance-theme';
-import { clearDemoData, countDemoRows, seedDemoData } from '@/services/demoData';
+import { clearDemoData, countDemoRows, resetDemoData, seedDemoData } from '@/services/demoData';
 import { getPersonalAccountInfo } from '@/services/cloud/authService';
 import { canAccessDemo } from '@/services/screenshotMode';
 import { useFinanceStore } from '@/stores/useFinanceStore';
@@ -62,13 +62,12 @@ export default function DemoScreen() {
   async function reset() {
     setBusy('reset');
     try {
-      await clearDemoData();
-      const seedResult = await seedDemoData();
+      const seedResult = await resetDemoData();
       await refreshFinanceData();
       await reload();
       setDialog(
         seedResult.ok
-          ? { title: 'Demo-Daten zurückgesetzt', message: 'Der bekannte synthetische Datensatz wurde wiederhergestellt.', confirmLabel: 'OK' }
+          ? { title: 'Demo-Daten zurückgesetzt', message: `Der synthetische Datensatz wurde neu aufgebaut (${seedResult.written} Einträge).`, confirmLabel: 'OK' }
           : { title: 'Fehlgeschlagen', message: 'Der Reset konnte nicht abgeschlossen werden.', confirmLabel: 'OK' },
       );
     } finally {
@@ -143,7 +142,7 @@ export default function DemoScreen() {
         </View>
 
         <Text style={[typography.caption, { color: colors.textMuted, marginTop: spacing.lg }]}>
-          {'„Entfernen" markiert nur demo-Zeilen als gelöscht; echte Finanzdaten werden nie angetastet.'}
+          {'„Entfernen" markiert nur Demo-Zeilen als gelöscht; echte Finanzdaten werden nie angetastet.'}
         </Text>
       </ScrollView>
 

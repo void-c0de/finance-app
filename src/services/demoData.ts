@@ -81,6 +81,32 @@ export async function clearDemoData(): Promise<{ ok: boolean; removed: number }>
   });
 }
 
+/**
+ * Harte Löschung aller `demo-`-Zeilen. Nur für den Reset-Pfad (clear → reseed):
+ * `clearDemoData()` setzt frische Tombstones, die der konservative Restore-Merge
+ * NICHT überschreibt – ohne Hard-Delete käme nach dem Reseed ein leerer Zustand
+ * heraus. Fasst wegen des `demo-`-Präfix-Filters nie echte Daten an.
+ */
+async function hardClearDemoData(): Promise<void> {
+  await withDbLock(async () => {
+    const db = await getDatabase();
+    await withWriteTransaction(db, async (txn) => {
+      await txn.runAsync('PRAGMA defer_foreign_keys = ON');
+      for (const table of DEMO_TABLES) {
+        await txn.runAsync(`DELETE FROM ${table} WHERE id LIKE ?`, DEMO_LIKE);
+      }
+    });
+  });
+}
+
+/**
+ * Sauberer Reset: harte Löschung der alten Demo-Zeilen, dann frisches Seeding.
+ */
+export async function resetDemoData(now: Date = new Date()): Promise<DemoSeedResult> {
+  await hardClearDemoData();
+  return seedDemoData(now);
+}
+
 export async function countDemoRows(): Promise<number> {
   const db = await getDatabase();
   let total = 0;
