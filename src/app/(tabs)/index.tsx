@@ -1187,15 +1187,6 @@ export default function HomeScreen() {
               </Text>
             </FinancePressable>
           </FinanceCard>
-        ) : analyticsPreview ? (
-          <PremiumPreviewCard
-            style={{ marginTop: spacing.md }}
-            eyebrow="Analysen"
-            title={analyticsPreview.title}
-            teaser={analyticsPreview.teaser}
-            context="analytics"
-            onOpen={setPremiumGate}
-          />
         ) : null}
 
         <View
@@ -1391,6 +1382,17 @@ export default function HomeScreen() {
             </View>
           </View>
         </FinanceCard>
+
+        {!forecast && analyticsPreview ? (
+          <PremiumPreviewCard
+            style={{ marginTop: spacing.md }}
+            eyebrow="Analysen"
+            title={analyticsPreview.title}
+            teaser={analyticsPreview.teaser}
+            context="analytics"
+            onOpen={setPremiumGate}
+          />
+        ) : null}
 
         <View
           style={[

@@ -72,7 +72,7 @@ readonly Category[] = [
       'Mobilität',
 
     icon:
-      '⇢',
+      '→',
 
     isIncomeCategory:
       false,
@@ -206,8 +206,7 @@ function mapCategoryRow(
  */
 const LEGACY_DEFAULT_ICONS: Record<string, readonly string[]> = {
   'cat-income': ['↓'],
-  'cat-groceries': ['●'],
-  'cat-mobility': ['→'],
+  'cat-groceries': ['●'],
   'cat-shopping': ['◇'],
   'cat-telecom': ['⌁'],
   'cat-dining': ['○'],

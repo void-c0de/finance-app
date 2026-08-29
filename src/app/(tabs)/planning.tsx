@@ -1223,6 +1223,10 @@ export default function PlanningScreen() {
                         <FinanceButton
                           label="Übernehmen"
 
+                          variant="secondary"
+
+                          size="small"
+
                           loading={
                             savingCategoryId ===
                             suggestion.categoryId

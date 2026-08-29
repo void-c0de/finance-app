@@ -32,6 +32,10 @@ import {
 } from '@/components/interaction/FinanceButton';
 
 import {
+  FinancePressable,
+} from '@/components/interaction/FinancePressable';
+
+import {
   performFinanceHaptic,
 } from '@/services/haptics';
 
@@ -317,13 +321,15 @@ export default function MoreScreen() {
           ) : null}
         </FinanceCard>
 
+        <FinancePressable
+          accessibilityRole="button"
+          accessibilityLabel="Sicherheit und Datenschutz öffnen"
+          intent="navigation"
+          onPress={() => router.push('/data-privacy' as Href)}
+          style={{ marginTop: spacing.xxl }}
+        >
         <FinanceCard
           variant="highlight"
-
-          style={{
-            marginTop:
-              spacing.xxl,
-          }}
         >
           <View
             style={
@@ -391,11 +397,21 @@ export default function MoreScreen() {
                   },
                 ]}
               >
-                Biometrie und verschlüsselte lokale SQLCipher-Datenbank
+                App-Sperre per Biometrie · lokale SQLCipher-Verschlüsselung
               </Text>
             </View>
+
+            <Text
+              style={[
+                typography.smallMedium,
+                { color: colors.primary },
+              ]}
+            >
+              ›
+            </Text>
           </View>
         </FinanceCard>
+        </FinancePressable>
 
         <Text
           style={[
@@ -764,40 +780,6 @@ export default function MoreScreen() {
             false
           }
         >
-          <SettingsRow
-            title="Sicherheit"
-
-            description="App-Sperre und Biometrie"
-
-            icon={
-              <Text
-                style={[
-                  styles.rowGlyph,
-
-                  {
-                    color:
-                      colors.positive,
-                  },
-                ]}
-              >
-                ✓
-              </Text>
-            }
-
-            value="Aktiv"
-          />
-
-          <View
-            style={[
-              styles.divider,
-
-              {
-                backgroundColor:
-                  colors.border,
-              },
-            ]}
-          />
-
           <SettingsRow
             title="Daten & Datenschutz"
 
