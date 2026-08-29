@@ -29,6 +29,10 @@ import {
 } from '@/components/finance/MoneyText';
 
 import {
+    initialFor,
+} from '@/components/finance/TransactionRow';
+
+import {
     FinancePressable,
 } from '@/components/interaction/FinancePressable';
 
@@ -531,9 +535,7 @@ export default function TransactionDetailScreen() {
                 },
               ]}
             >
-              {isIncome
-                ? '↓'
-                : '↑'}
+              {initialFor(title)}
             </Text>
           </View>
 
@@ -581,7 +583,7 @@ export default function TransactionDetailScreen() {
               isIncome
                 ? 'positive'
 
-                : null
+                : 'negative'
             }
 
             align="center"
@@ -856,7 +858,7 @@ export default function TransactionDetailScreen() {
 
               value={
                 selectedCategory
-                  ? `${selectedCategory.icon ?? ''} ${selectedCategory.name}`.trim()
+                  ? selectedCategory.name
                   : 'Noch nicht kategorisiert'
               }
             />

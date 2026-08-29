@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-import { getSupabaseClient } from '@/services/cloud/cloudClient';
+import { getSupabaseClient, hasCloudSession } from '@/services/cloud/cloudClient';
 import {
   normalizeProductAccess,
   STANDARD_ACCESS,
@@ -21,6 +21,10 @@ export async function getCachedProductAccess(): Promise<ProductAccess> {
 export async function refreshProductAccess(): Promise<ProductAccess> {
   const client = getSupabaseClient();
   if (!client) return getCachedProductAccess();
+  // Without a signed-in session the RPC would fail with "permission denied"
+  // (anon role) — that is not a server outage, so don't call it and don't
+  // log noise. A logged-out user is STANDARD by definition.
+  if (!(await hasCloudSession())) return STANDARD_ACCESS;
   try {
     const { data, error } = await client.rpc('get_my_product_access');
     if (error) throw error;
@@ -28,7 +32,7 @@ export async function refreshProductAccess(): Promise<ProductAccess> {
     await SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(access));
     return access;
   } catch (error) {
-    console.warn('[ACCESS] Serverstatus nicht erreichbar, Cache wird verwendet:', error);
+    console.warn('[ACCESS] Produktzugriff konnte nicht aktualisiert werden, Cache wird verwendet:', error);
     return getCachedProductAccess();
   }
 }

@@ -285,6 +285,7 @@ export function getInstalledVersionInfo() {
     runtimeVersion: typeof Constants.expoConfig?.runtimeVersion === 'string'
       ? Constants.expoConfig.runtimeVersion
       : Constants.expoConfig?.version ?? 'unbekannt',
+    androidVersionCode: Constants.expoConfig?.android?.versionCode ?? null,
   };
 }
 

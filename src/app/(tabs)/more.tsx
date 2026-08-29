@@ -206,6 +206,37 @@ export default function MoreScreen() {
           style={[
             typography.caption,
 
+            styles.eyebrow,
+
+            {
+              color:
+                colors.textMuted,
+            },
+          ]}
+        >
+          EINSTELLUNGEN
+        </Text>
+
+        <Text
+          style={[
+            typography.screenTitle,
+
+            {
+              color:
+                colors.text,
+
+              marginTop:
+                spacing.xs,
+            },
+          ]}
+        >
+          Mehr
+        </Text>
+
+        <Text
+          style={[
+            typography.caption,
+
             styles.sectionLabel,
 
             {
@@ -213,7 +244,7 @@ export default function MoreScreen() {
                 colors.textMuted,
 
               marginTop:
-                spacing.xxxl,
+                spacing.xxl,
 
               marginBottom:
                 spacing.sm,
@@ -285,37 +316,6 @@ export default function MoreScreen() {
             </>
           ) : null}
         </FinanceCard>
-
-        <Text
-          style={[
-            typography.caption,
-
-            styles.eyebrow,
-
-            {
-              color:
-                colors.textMuted,
-            },
-          ]}
-        >
-          EINSTELLUNGEN
-        </Text>
-
-        <Text
-          style={[
-            typography.screenTitle,
-
-            {
-              color:
-                colors.text,
-
-              marginTop:
-                spacing.xs,
-            },
-          ]}
-        >
-          Mehr
-        </Text>
 
         <FinanceCard
           variant="highlight"
@@ -616,7 +616,7 @@ export default function MoreScreen() {
           <SettingsRow
             title="Kategorien & Regeln"
 
-            description="Automatische Zuordnung wird im Demo-Build bereits verwendet"
+            description="Automatische Zuordnung von Umsätzen mit eigenen Regeln"
 
             icon={
               <Text
@@ -665,7 +665,7 @@ export default function MoreScreen() {
         <FinanceCard>
           <SettingsRow
             title={`Finance ${getInstalledVersionInfo().version}`}
-            description={`Runtime ${getInstalledVersionInfo().runtimeVersion}`}
+            description={`Version ${getInstalledVersionInfo().version} (${getInstalledVersionInfo().androidVersionCode ?? '–'})`}
             value="Installiert"
           />
 
@@ -837,7 +837,7 @@ export default function MoreScreen() {
           <SettingsRow
             title="Über die App"
 
-            description={`Finance App · Demo Build`}
+            description={`Finance · Version ${getInstalledVersionInfo().version} (${getInstalledVersionInfo().androidVersionCode ?? '–'})`}
           />
         </FinanceCard>
       </ScrollView>

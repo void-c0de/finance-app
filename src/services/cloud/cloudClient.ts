@@ -105,7 +105,36 @@ export type CloudSignInResult =
 
       message:
         string;
+
+      /**
+       * `unconfigured` – kein Client (Env fehlt).
+       * `signed-out`   – normaler Zustand: der Nutzer hat sich nie angemeldet.
+       * `unreachable`  – die Session-Prüfung selbst ist fehlgeschlagen
+       *                  (Netzwerk / Token-Refresh). Nur DAS ist ein echter Fehler.
+       */
+      reason:
+        | 'unconfigured'
+        | 'signed-out'
+        | 'unreachable';
     };
+
+/**
+ * Schneller, netzwerkfreier Check, ob eine persistierte Cloud-Session
+ * existiert. Liest nur SecureStore (kein RPC, kein Refresh). Für Aufrufer,
+ * die serverseitige Daten nur dann anfragen sollen, wenn der Nutzer
+ * angemeldet ist – ein anonymer RPC-Aufruf würde sonst mit „permission
+ * denied" scheitern und als vermeintlicher Serverausfall protokolliert.
+ */
+export async function hasCloudSession(): Promise<boolean> {
+  const client = getSupabaseClient();
+  if (!client) return false;
+  try {
+    const { data } = await client.auth.getSession();
+    return Boolean(data.session?.user?.id);
+  } catch {
+    return false;
+  }
+}
 
 function shouldRefreshSession(
   session: Session,
@@ -168,6 +197,8 @@ export async function ensureCloudSession(): Promise<CloudSignInResult> {
 
       message:
         'Cloud nicht konfiguriert',
+
+      reason: 'unconfigured',
     };
   }
 
@@ -212,10 +243,12 @@ export async function ensureCloudSession(): Promise<CloudSignInResult> {
 
       message:
         'Anmeldung erforderlich',
+
+      reason: 'signed-out',
     };
   } catch (error) {
-    console.error(
-      '[CLOUD] Session-Fehler:',
+    console.warn(
+      '[CLOUD] Session-Prüfung fehlgeschlagen:',
       error,
     );
 
@@ -224,6 +257,8 @@ export async function ensureCloudSession(): Promise<CloudSignInResult> {
 
       message:
         'Cloud nicht erreichbar',
+
+      reason: 'unreachable',
     };
   }
 }

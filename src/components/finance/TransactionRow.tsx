@@ -11,8 +11,8 @@ import {
 } from '@/components/interaction/FinancePressable';
 
 import {
-    formatMinorUnits,
-} from '@/core/money';
+    MoneyText,
+} from '@/components/finance/MoneyText';
 
 import {
     buildDisplayTitle,
@@ -116,6 +116,16 @@ export function getTransactionTitle(
   );
 }
 
+/**
+ * Erstes aussagekräftiges Zeichen des Titels als Avatar-Initiale.
+ * Deutlich wiedererkennbarer als ein generisches Richtungssymbol und
+ * braucht keine Icon-Bibliothek.
+ */
+export function initialFor(title: string): string {
+  const match = title.match(/\p{L}|\p{N}/u);
+  return match ? match[0].toUpperCase() : '•';
+}
+
 export function TransactionRow({
   transaction,
 
@@ -139,6 +149,11 @@ export function TransactionRow({
   const isIncome =
     transaction.direction ===
     'income';
+
+  const title =
+    getTransactionTitle(
+      transaction
+    );
 
   const content = (
     <View
@@ -183,9 +198,7 @@ export function TransactionRow({
             },
           ]}
         >
-          {isIncome
-            ? '↓'
-            : '↑'}
+          {initialFor(title)}
         </Text>
       </View>
 
@@ -207,9 +220,7 @@ export function TransactionRow({
             },
           ]}
         >
-          {getTransactionTitle(
-            transaction
-          )}
+          {title}
         </Text>
 
         <Text
@@ -249,27 +260,26 @@ export function TransactionRow({
           styles.amountColumn
         }
       >
-        <Text
-          style={[
-            typography.smallMedium,
-
-            {
-              color:
-                isIncome
-                  ? colors.positive
-                  : colors.text,
-            },
-          ]}
-        >
-          {isIncome
-            ? '+'
-            : '−'}
-
-          {formatMinorUnits(
-            transaction.amountMinor,
+        <MoneyText
+          amountMinor={
+            transaction.amountMinor
+          }
+          currency={
             transaction.currency
-          )}
-        </Text>
+          }
+          size="s"
+          tone={
+            isIncome
+              ? 'positive'
+              : 'neutral'
+          }
+          forceSign={
+            isIncome
+              ? 'positive'
+              : 'negative'
+          }
+          align="right"
+        />
 
         {transaction.isRecurring && (
           <Text

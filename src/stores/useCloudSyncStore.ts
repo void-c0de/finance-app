@@ -62,7 +62,7 @@ function friendlyMessage(
     status ===
     'error'
   ) {
-    return 'Später erneut versucht wird';
+    return 'Wird später erneut versucht';
   }
 
   return 'Auf dem neuesten Stand';

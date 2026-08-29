@@ -16,7 +16,7 @@ readonly Category[] = [
       'Einnahmen',
 
     icon:
-      '↓',
+      '↑',
 
     isIncomeCategory:
       true,
@@ -44,7 +44,7 @@ readonly Category[] = [
       'Lebensmittel',
 
     icon:
-      '●',
+      '◈',
 
     isIncomeCategory:
       false,
@@ -72,7 +72,7 @@ readonly Category[] = [
       'Mobilität',
 
     icon:
-      '→',
+      '⇢',
 
     isIncomeCategory:
       false,
@@ -86,7 +86,7 @@ readonly Category[] = [
       'Shopping',
 
     icon:
-      '◇',
+      '▣',
 
     isIncomeCategory:
       false,
@@ -100,7 +100,7 @@ readonly Category[] = [
       'Mobilfunk & Internet',
 
     icon:
-      '⌁',
+      '≈',
 
     isIncomeCategory:
       false,
@@ -128,7 +128,7 @@ readonly Category[] = [
       'Essen & Ausgehen',
 
     icon:
-      '○',
+      '◔',
 
     isIncomeCategory:
       false,
@@ -142,7 +142,7 @@ readonly Category[] = [
       'Gesundheit & Drogerie',
 
     icon:
-      '+',
+      '✚',
 
     isIncomeCategory:
       false,
@@ -156,7 +156,7 @@ readonly Category[] = [
       'Sonstiges',
 
     icon:
-      '·',
+      '⋯',
 
     isIncomeCategory:
       false,
@@ -198,6 +198,23 @@ function mapCategoryRow(
   };
 }
 
+/**
+ * Frühere Icon-Glyphen der Standardkategorien. Wenn eine Standardkategorie noch
+ * exakt eine dieser (nie vom Nutzer gewählten) Glyphen trägt, wird sie beim
+ * nächsten Start leise auf das aktuelle, klarere Symbol gehoben. Nutzer­eigene
+ * Icons bleiben unangetastet.
+ */
+const LEGACY_DEFAULT_ICONS: Record<string, readonly string[]> = {
+  'cat-income': ['↓'],
+  'cat-groceries': ['●'],
+  'cat-mobility': ['→'],
+  'cat-shopping': ['◇'],
+  'cat-telecom': ['⌁'],
+  'cat-dining': ['○'],
+  'cat-health': ['+'],
+  'cat-other': ['·'],
+};
+
 export async function ensureDefaultCategories():
 Promise<void> {
   const db =
@@ -231,6 +248,20 @@ Promise<void> {
             ? 1
             : 0
         );
+
+        const legacy = LEGACY_DEFAULT_ICONS[category.id];
+        if (legacy && category.icon) {
+          await db.runAsync(
+            `UPDATE categories
+               SET icon = ?
+             WHERE id = ?
+               AND deleted_at IS NULL
+               AND icon IN (${legacy.map(() => '?').join(', ')});`,
+            category.icon,
+            category.id,
+            ...legacy,
+          );
+        }
       }
     }
   );

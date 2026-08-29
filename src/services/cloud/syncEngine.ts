@@ -1243,30 +1243,24 @@ async function executeCloudSync(): Promise<CloudSyncResult> {
       await ensureCloudSession();
 
     if (!session.ok) {
-      debugLog.error(
+      // A signed-out (or cloud-unconfigured) device is a NORMAL local-first
+      // state, not an error: no noise, no failed debug upload, and the UI
+      // shows "Cloud inaktiv" rather than an alarm.
+      if (session.reason !== 'unreachable') {
+        return {
+          status: 'unconfigured',
+
+          message:
+            session.reason === 'signed-out'
+              ? 'Cloud-Sync nicht eingerichtet'
+              : session.message,
+        };
+      }
+
+      debugLog.warn(
         'CLOUD',
-        `Keine Cloud-Session: ${session.message}`,
+        `Cloud-Session nicht verfügbar: ${session.message}`,
       );
-
-      void (async () => {
-        const client =
-          getSupabaseClient();
-
-        if (!client) return;
-
-        try {
-          await client
-            .from('app_debug_logs')
-            .insert(
-              buildDebugUploadPayload(40),
-            );
-        } catch {
-          /*
-           * Ohne Session kein Upload möglich -
-           * Einträge bleiben im Ring-Puffer.
-           */
-        }
-      })();
 
       return {
         status: 'error',
